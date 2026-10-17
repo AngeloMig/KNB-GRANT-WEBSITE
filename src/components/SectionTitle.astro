@@ -1,0 +1,8 @@
+---
+interface Props { title: string; detail?: string; id?: string; as?: 'h1' | 'h2'; }
+const { title, detail, id, as: Tag = 'h2' } = Astro.props;
+---
+<div class="section-title" id={id}>
+  <Tag class="display">{title}</Tag>
+  {detail && <span class="section-detail">{detail}</span>}
+</div>

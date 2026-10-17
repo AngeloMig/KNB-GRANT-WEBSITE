@@ -1,0 +1,15 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import SectionTitle from '../components/SectionTitle.astro';
+import Arrow from '../components/Arrow.astro';
+import { experience, profile } from '../data/profile';
+---
+<BaseLayout title="About Grant Payad — Website Developer & Team Lead" description="Meet Grant Payad, a Shopify, Webflow, and WordPress developer with experience in ecommerce, custom development, migrations, and development team leadership.">
+  <div class="wrap">
+    <SectionTitle title="ABOUT GRANT" detail="The person behind the build" as="h1" />
+    <section class="intro-split about-intro"><div class="intro-aside"><span class="tiny-heading">HELLO, I’M GRANT.</span><p>{profile.fullName}<br />Philippines</p><a class="text-link" href="/resume/grant-payad-resume.pdf" download>Download résumé <Arrow diagonal /></a></div><div><p class="lead">A developer with an eye for detail. And a mindset for making things work.</p><div class="prose"><p>I build websites across Shopify, Webflow, and WordPress, working with brands and agencies to turn designs into responsive, usable web experiences.</p><p>My experience spans ecommerce development, custom themes, platform migrations, third-party integrations, and technical SEO. Alongside hands-on development, I’ve led development teams and coordinated projects from planning through delivery.</p><p>I care about the details you see, and the foundations you don’t: clear structure, maintainable code, and a site that feels good to use.</p></div></div></section>
+    <section class="about-experience" aria-labelledby="career-heading"><h2 class="medium-heading" id="career-heading">Experience</h2>{experience.map((item) => <article class="career-row"><span>{item.dates}</span><div><h3>{item.company}</h3><h4>{item.role}</h4><p>{item.summary}</p></div></article>)}</section>
+    <section class="skills-section"><h2 class="medium-heading">Tools of the trade</h2><div class="skill-groups"><div><h3>Development</h3><p>HTML, CSS, JavaScript, jQuery, PHP, Liquid, SASS, MySQL</p></div><div><h3>Platforms</h3><p>Shopify, Shopify Plus, Webflow, WordPress, WooCommerce, BigCommerce</p></div><div><h3>Design & integrations</h3><p>Figma, GSAP, Adobe Photoshop, HubSpot, ActiveCampaign, Klaviyo</p></div></div></section>
+    <section class="education-row"><h2>Education</h2><div><h3>BS Information Technology</h3><p>Major in Web Development<br />Bulacan State University · 2019</p></div></section>
+  </div>
+</BaseLayout>

@@ -1,0 +1,9 @@
+---
+import Arrow from './Arrow.astro';
+import { profile } from '../data/profile';
+---
+<footer class="site-footer wrap">
+  <div class="footer-invitation"><p>Have something in mind?</p><a href={`mailto:${profile.email}`}>Let’s build it together. <Arrow diagonal /></a></div>
+  <a class="footer-name" href={`mailto:${profile.email}`} aria-label="Email Grant Payad">GRANT PAYAD<span>↗</span></a>
+  <div class="footer-meta"><span>© {new Date().getFullYear()} Grant Payad</span><span>Built with care. Based in the Philippines.</span><a href={profile.linkedin} target="_blank" rel="noopener noreferrer">LinkedIn ↗</a><a href="#top">Back to top ↑</a></div>
+</footer>

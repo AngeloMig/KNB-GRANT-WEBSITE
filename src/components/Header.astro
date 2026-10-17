@@ -1,0 +1,36 @@
+---
+import Arrow from './Arrow.astro';
+import { profile } from '../data/profile';
+const path = Astro.url.pathname;
+---
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header wrap">
+  <a class="wordmark" href="/" aria-label="Grant Payad home">Grant<br />Payad<span class="wordmark-dot">.</span></a>
+  <div class="header-right">
+    <a class="header-contact" href={`mailto:${profile.email}`}>Let’s talk <Arrow diagonal /></a>
+    <button class="menu-toggle" type="button" aria-label="Open navigation" aria-haspopup="dialog" aria-controls="site-menu"><span></span><span></span></button>
+  </div>
+</header>
+<dialog id="site-menu" class="menu-dialog" aria-label="Main navigation">
+  <div class="menu-top"><a class="wordmark" href="/">Grant<br />Payad.</a><button type="button" class="menu-close" aria-label="Close navigation">×</button></div>
+  <nav class="menu-links" aria-label="Main">
+    <a href="/" aria-current={path === '/' ? 'page' : undefined}>Selected work <Arrow /></a>
+    <a href="/about/" aria-current={path === '/about/' ? 'page' : undefined}>About Grant <Arrow /></a>
+    <a href="/#services">Services <Arrow /></a>
+    <a href="/contact/" aria-current={path === '/contact/' ? 'page' : undefined}>Get in touch <Arrow /></a>
+  </nav>
+  <div class="menu-bottom"><a href={`mailto:${profile.email}`}>{profile.email}</a><a href={profile.linkedin} target="_blank" rel="noopener noreferrer">LinkedIn ↗</a></div>
+</dialog>
+<script>
+  const dialog = document.querySelector<HTMLDialogElement>('#site-menu');
+  const toggle = document.querySelector<HTMLButtonElement>('.menu-toggle');
+  const closeButton = document.querySelector<HTMLButtonElement>('.menu-close');
+  if (dialog && toggle && closeButton) {
+    toggle.addEventListener('click', () => { dialog.showModal(); document.documentElement.classList.add('menu-open'); });
+    const close = () => dialog.close();
+    closeButton.addEventListener('click', close);
+    dialog.addEventListener('click', (event) => { if (event.target === dialog) close(); });
+    dialog.querySelectorAll('a').forEach((link) => link.addEventListener('click', close));
+    dialog.addEventListener('close', () => { document.documentElement.classList.remove('menu-open'); toggle.focus(); });
+  }
+</script>
