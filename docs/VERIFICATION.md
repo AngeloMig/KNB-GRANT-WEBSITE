@@ -50,3 +50,15 @@ The registered Sites deployment is owner-private by default. Public search index
 Exact project contribution, agency credits beyond those documented, approved historical screenshots, availability, and domain choice remain content decisions for Grant. Project pages avoid unconfirmed responsibilities, dates, and outcomes.
 
 QA reports and screenshots are kept in ignored `tmp/` and `output/` directories. They are not shipped in the public static build.
+
+## GitHub Pages export
+
+Prepared a second static build for `https://angelomig.github.io/KNB-GRANT-WEBSITE/`, with the entry page at `docs/index.html`. The ordinary root-hosted build still succeeds.
+
+- Astro check: 19 files, zero errors, warnings, or hints.
+- GitHub export: ten HTML pages; CSS, scripts, images, fonts, and internal links use the repository prefix.
+- Thirty-two distinct resources and page links returned HTTP 200 when served under `/KNB-GRANT-WEBSITE/` locally.
+- All generated HTML canonical URLs use the intended GitHub Pages origin and repository path.
+- Browser review confirmed font loading, the homepage presentation, and project navigation under the repository path.
+- The upload ZIP contains the complete `docs/` website and upload instructions. It excludes this verification document.
+- GitHub publication is not verified; the current Git credentials do not have push permission to the target repository.

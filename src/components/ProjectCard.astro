@@ -1,14 +1,15 @@
 ---
 import Arrow from './Arrow.astro';
 import type { Project } from '../data/projects';
+import { withBase } from '../utils/paths';
 interface Props { project: Project; index: number; featured?: boolean; }
 const { project, index, featured = false } = Astro.props;
 ---
 <article class:list={['project-card', { featured }]} data-platform={project.platform}>
-  <a href={`/work/${project.slug}/`} class="project-link">
+  <a href={withBase(`/work/${project.slug}/`)} class="project-link">
     <div class="project-heading"><h2>{project.name}</h2><span>{String(index + 1).padStart(2, '0')}</span><Arrow diagonal /></div>
     <div class:list={['project-canvas', project.canvas]}>
-      <div class="project-browser"><div class="browser-bar" aria-hidden="true"><i></i><i></i><i></i><span>{new URL(project.url).hostname.replace('www.', '')}</span></div><img src={`/images/projects/${project.slug}.webp`} srcset={`/images/projects/${project.slug}-640.webp 640w, /images/projects/${project.slug}-960.webp 960w, /images/projects/${project.slug}.webp 1275w`} sizes="(max-width: 640px) calc(86vw - 42px), (max-width: 1720px) calc(38vw - 12px), 620px" alt={`${project.name} website homepage`} width="1275" height="717" loading="lazy" decoding="async" /></div>
+      <div class="project-browser"><div class="browser-bar" aria-hidden="true"><i></i><i></i><i></i><span>{new URL(project.url).hostname.replace('www.', '')}</span></div><img src={withBase(`/images/projects/${project.slug}.webp`)} srcset={`${withBase(`/images/projects/${project.slug}-640.webp`)} 640w, ${withBase(`/images/projects/${project.slug}-960.webp`)} 960w, ${withBase(`/images/projects/${project.slug}.webp`)} 1275w`} sizes="(max-width: 640px) calc(86vw - 42px), (max-width: 1720px) calc(38vw - 12px), 620px" alt={`${project.name} website homepage`} width="1275" height="717" loading="lazy" decoding="async" /></div>
       <span class="project-view">Explore project <Arrow diagonal /></span>
     </div>
     <div class="project-caption"><span>{project.category}</span><span>{project.platform}</span></div>

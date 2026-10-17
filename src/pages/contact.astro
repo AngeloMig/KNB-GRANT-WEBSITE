@@ -1,4 +1,5 @@
 ---
+import { withBase } from '../utils/paths';
 import BaseLayout from '../layouts/BaseLayout.astro';
 import SectionTitle from '../components/SectionTitle.astro';
 import Arrow from '../components/Arrow.astro';
@@ -8,6 +9,6 @@ import { profile } from '../data/profile';
   <div class="wrap">
     <SectionTitle title="LET’S TALK" detail="Every good website starts with a conversation" as="h1" />
     <section class="intro-split contact-intro"><div class="intro-aside"><span class="tiny-heading">GET IN TOUCH</span><p>Based in the Philippines.<br />Working across time zones.</p></div><div><p class="lead">A new website?<br />A better online store?<br />Let’s make it happen.</p><p class="intro-support">Tell me a little about your project, the platform you’re using, and what you have in mind.</p></div></section>
-    <div class="contact-options"><a href={`mailto:${profile.email}?subject=Website%20project%20inquiry`}><span>Email</span><strong>{profile.email}</strong><Arrow diagonal /></a><a href={profile.linkedin} target="_blank" rel="noopener noreferrer"><span>Connect</span><strong>Find me on LinkedIn</strong><Arrow diagonal /></a><a href="/resume/grant-payad-resume.pdf" download><span>Background</span><strong>Download my résumé</strong><Arrow diagonal /></a></div>
+    <div class="contact-options"><a href={`mailto:${profile.email}?subject=Website%20project%20inquiry`}><span>Email</span><strong>{profile.email}</strong><Arrow diagonal /></a><a href={profile.linkedin} target="_blank" rel="noopener noreferrer"><span>Connect</span><strong>Find me on LinkedIn</strong><Arrow diagonal /></a><a href={withBase('/resume/grant-payad-resume.pdf')} download><span>Background</span><strong>Download my résumé</strong><Arrow diagonal /></a></div>
   </div>
 </BaseLayout>

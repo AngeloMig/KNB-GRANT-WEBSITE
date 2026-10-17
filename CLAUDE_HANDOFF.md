@@ -4,6 +4,8 @@
 
 The user approved implementation on October 17, 2026. Codex has built the portfolio in this checkout. Continue from the existing code; do not scaffold a replacement or restart the planning interview.
 
+The user subsequently requested a plain `index.html` version for GitHub Pages. `npm run build:github` exports the static website to `docs/`, starting at `docs/index.html`. The target is `https://angelomig.github.io/KNB-GRANT-WEBSITE/`; publish branch `main` from `/docs`. Internal links and assets use `src/utils/paths.ts`; font files are bundled from `src/assets/fonts` to support both root hosting and repository subdirectories. Do not hand-edit the generated HTML; regenerate after source changes. The root-hosted Sites build still uses `npm run build`.
+
 ## Stack and commands
 
 Astro 7, TypeScript, custom CSS, static output. Use Node 22.22+; `.nvmrc` selects Node 24. In Codex, the bundled executable is `/Users/angelomiguel/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node`. Ensure its directory is first on PATH when invoking npm.
