@@ -3,6 +3,8 @@ export interface VideoReview {
   role: string;
   /** Video file in /public, e.g. "/videos/client-name.mp4". */
   src?: string;
+  /** Preview image in /public shown before the video plays, e.g. "/videos/client-name.jpg". */
+  poster?: string;
   /** WebVTT captions file in /public; needed for accessibility. */
   captions?: string;
   duration: string;

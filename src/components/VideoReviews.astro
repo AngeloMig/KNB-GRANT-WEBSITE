@@ -3,12 +3,12 @@ import { videoReviews } from '../data/videoReviews';
 import { withBase } from '../utils/paths';
 // Placeholders and their generated clips only exist in dev; production builds drop both.
 const reviews = videoReviews.filter((review) => !review.placeholder || import.meta.env.DEV);
-let devClips: string[] = [];
+let devClips: { src: string; poster: string }[] = [];
 if (import.meta.env.DEV) {
   devClips = [
-    (await import('../assets/dev/talking-1.webm?url')).default,
-    (await import('../assets/dev/talking-2.webm?url')).default,
-    (await import('../assets/dev/talking-3.webm?url')).default,
+    { src: (await import('../assets/dev/talking-1.webm?url')).default, poster: (await import('../assets/dev/talking-1.jpg?url')).default },
+    { src: (await import('../assets/dev/talking-2.webm?url')).default, poster: (await import('../assets/dev/talking-2.jpg?url')).default },
+    { src: (await import('../assets/dev/talking-3.webm?url')).default, poster: (await import('../assets/dev/talking-3.jpg?url')).default },
   ];
 }
 const initials = (name: string) => name.split(/\s+/).map((part) => part[0]).join('').slice(0, 2).toUpperCase();
@@ -21,19 +21,19 @@ const initials = (name: string) => name.split(/\s+/).map((part) => part[0]).join
     </div>
     <div class="video-grid">
       {reviews.map((review, index) => {
-        const src = review.placeholder ? devClips[index % devClips.length] : review.src && withBase(review.src);
+        const clip = review.placeholder ? devClips[index % devClips.length] : undefined;
+        const src = clip?.src ?? (review.src && withBase(review.src));
+        const poster = clip?.poster ?? (review.poster && withBase(review.poster));
         return (
           <figure class="video-review" data-reveal style={`--reveal-index:${index}`}>
             <div class:list={['video-frame', `canvas-${review.canvas}`]}>
-              {/* The #t=1 fragment shows a frame from one second in as the preview image. */}
-              <video src={src ? `${src}#t=1` : undefined} preload="metadata" playsinline>
+              <video src={src} poster={poster} preload="none" playsinline>
                 {review.captions && <track kind="captions" src={withBase(review.captions)} srclang="en" label="English" default />}
               </video>
               <button class="video-play" type="button" aria-label={`Play video review from ${review.name}`}><span aria-hidden="true">▶</span></button>
               <span class="video-length">{review.duration}</span>
-              {review.placeholder && <span class="video-badge">Placeholder · dev only</span>}
             </div>
-            <figcaption><span class="review-avatar" aria-hidden="true">{initials(review.name)}</span><span><strong>{review.name}</strong><span>{review.role}</span></span></figcaption>
+            <figcaption><span class="review-avatar" aria-hidden="true">{initials(review.name)}</span><span><strong>{review.name}</strong><span>{review.role}</span></span>{review.placeholder && <span class="video-badge">Placeholder · dev only</span>}</figcaption>
           </figure>
         );
       })}
@@ -67,10 +67,9 @@ const initials = (name: string) => name.split(/\s+/).map((part) => part[0]).join
     video.addEventListener('ended', () => {
       video.controls = false;
       frame.classList.remove('is-playing');
-      if (index + 1 < frames.length) {
-        video.currentTime = 1;
-        start(index + 1);
-      }
+      // Reloading puts the poster back in place of the last frame.
+      video.load();
+      if (index + 1 < frames.length) start(index + 1);
     });
   });
 </script>

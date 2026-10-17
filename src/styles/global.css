@@ -928,27 +928,27 @@ html.menu-closing,
 .video-frame:hover .video-play {
   transform: scale(1.1);
 }
-.video-length,
-.video-badge {
+.video-length {
   position: absolute;
+  left: 14px;
   bottom: 14px;
   padding: 3px 8px;
   border-radius: 999px;
+  background: var(--bg);
   font-size: 11px;
   transition: opacity 0.3s;
 }
-.video-length {
-  left: 14px;
-  background: var(--bg);
-}
 .video-badge {
-  right: 14px;
+  margin-left: auto;
+  padding: 3px 8px;
+  border-radius: 999px;
   background: var(--ink);
   color: var(--bg);
+  font-size: 10px;
+  white-space: nowrap;
 }
 .video-frame.is-playing .video-play,
-.video-frame.is-playing .video-length,
-.video-frame.is-playing .video-badge {
+.video-frame.is-playing .video-length {
   opacity: 0;
   pointer-events: none;
 }
@@ -1880,7 +1880,8 @@ html.menu-closing,
   font-size: 13px;
   pointer-events: none;
   scale: 0;
-  transition: scale 0.35s var(--ease);
+  will-change: transform;
+  transition: scale 0.3s var(--ease);
 }
 .view-cursor .arrow-icon {
   width: 15px;
@@ -1892,8 +1893,10 @@ html.menu-closing,
 .menu-open .view-cursor {
   scale: 0;
 }
-.has-view-cursor .project-link {
-  cursor: none;
+/* Hide the system pointer only while the circle stands in for it. */
+.view-cursor-on,
+.view-cursor-on * {
+  cursor: none !important;
 }
 .has-view-cursor .project-devices .project-view {
   display: none;

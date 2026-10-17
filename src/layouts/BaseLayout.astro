@@ -23,7 +23,7 @@ const person = { '@context': 'https://schema.org', '@type': 'Person', name: prof
     <meta name="generator" content={Astro.generator} />
     {noindex && <meta name="robots" content="noindex, follow" />}
     <title>{title}</title>
-    <link rel="canonical" href={canonical} />
+    {!noindex && <link rel="canonical" href={canonical} />}
     <link rel="icon" type="image/svg+xml" href={withBase('/favicon.svg')} />
     <link rel="apple-touch-icon" href={withBase('/apple-touch-icon.png')} />
     <link rel="preload" href={archivoFont} as="font" type="font/woff2" crossorigin />
@@ -32,7 +32,7 @@ const person = { '@context': 'https://schema.org', '@type': 'Person', name: prof
     <meta property="og:site_name" content="Grant Payad" />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
-    <meta property="og:url" content={canonical} />
+    {!noindex && <meta property="og:url" content={canonical} />}
     <meta property="og:image" content={socialImage} />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
@@ -109,22 +109,53 @@ const person = { '@context': 'https://schema.org', '@type': 'Person', name: prof
   const finePointer = matchMedia('(hover: hover) and (pointer: fine)').matches;
   if (cursor && finePointer && root.classList.contains('motion') && document.querySelector('.project-link')) {
     root.classList.add('has-view-cursor');
-    const pos = { x: 0, y: 0, tx: 0, ty: 0 };
+    const pos = { x: 0, y: 0 };
+    const target = { x: -1, y: -1 };
+    let visible = false;
     let frame = 0;
-    const follow = () => {
-      pos.x += (pos.tx - pos.x) * 0.2;
-      pos.y += (pos.ty - pos.y) * 0.2;
-      cursor.style.transform = `translate3d(${pos.x.toFixed(1)}px, ${pos.y.toFixed(1)}px, 0)`;
-      frame = Math.abs(pos.tx - pos.x) + Math.abs(pos.ty - pos.y) > 0.3 ? requestAnimationFrame(follow) : 0;
+    let last = 0;
+
+    // Frame-rate independent easing, so the circle trails the pointer by the same amount on any screen.
+    const tick = (now: number) => {
+      const dt = Math.min(64, now - last);
+      last = now;
+      const k = 1 - Math.exp(-dt / 60);
+      pos.x += (target.x - pos.x) * k;
+      pos.y += (target.y - pos.y) * k;
+      cursor.style.transform = `translate3d(${pos.x.toFixed(2)}px, ${pos.y.toFixed(2)}px, 0)`;
+      frame = visible ? requestAnimationFrame(tick) : 0;
+    };
+    const setVisible = (show: boolean) => {
+      if (show === visible) return;
+      visible = show;
+      cursor.classList.toggle('is-active', show);
+      root.classList.toggle('view-cursor-on', show);
+      if (show && !frame) {
+        last = performance.now();
+        frame = requestAnimationFrame(tick);
+      }
+    };
+    // Over a card the circle shows; over the gaps between cards it keeps its state, so moving from card to card never flickers.
+    const update = (under: Element | null) => {
+      if (target.x < 0 || root.classList.contains('menu-open')) { setVisible(false); return; }
+      if (under?.closest('.project-link')) {
+        if (!visible) { pos.x = target.x; pos.y = target.y; }
+        setVisible(true);
+      } else if (!under?.closest('.project-grid')) {
+        setVisible(false);
+      }
     };
     document.addEventListener('pointermove', (event) => {
-      const overProject = !!(event.target as Element | null)?.closest?.('.project-link');
-      if (overProject && !cursor.classList.contains('is-active')) { pos.x = event.clientX; pos.y = event.clientY; }
-      pos.tx = event.clientX;
-      pos.ty = event.clientY;
-      cursor.classList.toggle('is-active', overProject);
-      if (!frame) frame = requestAnimationFrame(follow);
-    });
-    document.addEventListener('pointerleave', () => cursor.classList.remove('is-active'));
+      if (event.pointerType !== 'mouse' && event.pointerType !== 'pen') return;
+      target.x = event.clientX;
+      target.y = event.clientY;
+      update(event.target as Element | null);
+    }, { passive: true });
+    // Scrolling moves cards under a still pointer, so check what is underneath again.
+    window.addEventListener('scroll', () => {
+      if (target.x >= 0) update(document.elementFromPoint(target.x, target.y));
+    }, { passive: true });
+    document.documentElement.addEventListener('pointerleave', () => setVisible(false));
+    window.addEventListener('blur', () => setVisible(false));
   }
 </script>
