@@ -1,15 +1,16 @@
 ---
 import type { Project } from '../data/projects';
 import { withBase } from '../utils/paths';
-interface Props { project: Project; sizes: string; eager?: boolean; priority?: boolean; }
-const { project, sizes, eager = false, priority = false } = Astro.props;
+interface Props { project: Project; sizes: string; phoneSizes: string; eager?: boolean; priority?: boolean; }
+const { project, sizes, phoneSizes, eager = false, priority = false } = Astro.props;
+const image = (suffix: string) => withBase(`/images/projects/${project.slug}${suffix}.webp`);
 const hostname = new URL(project.url).hostname.replace('www.', '');
 const loading = eager ? 'eager' : 'lazy';
 ---
 <div class="device-laptop">
-  <div class="laptop-lid"><div class="laptop-screen"><span class="laptop-notch" aria-hidden="true"></span><div class="laptop-toolbar" aria-hidden="true"><i></i><i></i><i></i><span>{hostname}</span></div><img src={withBase(`/images/projects/${project.slug}.webp`)} srcset={`${withBase(`/images/projects/${project.slug}-640.webp`)} 640w, ${withBase(`/images/projects/${project.slug}-960.webp`)} 960w, ${withBase(`/images/projects/${project.slug}.webp`)} 1275w`} sizes={sizes} alt={`${project.name} website homepage on desktop`} width="1275" height="717" loading={loading} fetchpriority={priority ? 'high' : undefined} decoding="async" /></div></div>
+  <div class="laptop-lid"><div class="laptop-screen"><span class="laptop-notch" aria-hidden="true"></span><div class="laptop-toolbar" aria-hidden="true"><i></i><i></i><i></i><span>{hostname}</span></div><img src={withBase(`/images/projects/${project.slug}.webp`)} srcset={`${image('-320')} 320w, ${image('-480')} 480w, ${image('-640')} 640w, ${image('-960')} 960w, ${image('')} 1275w`} sizes={sizes} alt={`${project.name} website homepage on desktop`} width="1275" height="717" loading={loading} fetchpriority={priority ? 'high' : undefined} decoding="async" /></div></div>
   <div class="laptop-base" aria-hidden="true"></div>
 </div>
 <div class="device-phone">
-  <div class="phone-body"><div class="phone-bezel"><div class="phone-screen"><div class="phone-status" style={`--bar-bg:${project.mobileBar.bg};--bar-fg:${project.mobileBar.fg}`} aria-hidden="true"><span>9:41</span><span class="phone-battery"></span></div><img src={withBase(`/images/projects/${project.slug}-mobile.jpg`)} alt={`${project.name} website homepage on mobile`} width="440" height="956" loading={loading} decoding="async" /></div></div><span class="phone-island" aria-hidden="true"></span></div>
+  <div class="phone-body"><div class="phone-bezel"><div class="phone-screen"><div class="phone-status" style={`--bar-bg:${project.mobileBar.bg};--bar-fg:${project.mobileBar.fg}`} aria-hidden="true"><span>9:41</span><span class="phone-battery"></span></div><img src={image('-mobile-440')} srcset={`${image('-mobile-220')} 220w, ${image('-mobile-330')} 330w, ${image('-mobile-440')} 440w`} sizes={phoneSizes} alt={`${project.name} website homepage on mobile`} width="440" height="956" loading={loading} decoding="async" /></div></div><span class="phone-island" aria-hidden="true"></span></div>
 </div>

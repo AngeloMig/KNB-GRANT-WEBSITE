@@ -1,11 +1,11 @@
 ---
 import { videoReviews, showPlaceholdersLive } from '../data/videoReviews';
 import talking1 from '../assets/placeholder/talking-1.webm?url';
-import talking1Poster from '../assets/placeholder/talking-1.jpg?url';
+import talking1Poster from '../assets/placeholder/talking-1.webp?url';
 import talking2 from '../assets/placeholder/talking-2.webm?url';
-import talking2Poster from '../assets/placeholder/talking-2.jpg?url';
+import talking2Poster from '../assets/placeholder/talking-2.webp?url';
 import talking3 from '../assets/placeholder/talking-3.webm?url';
-import talking3Poster from '../assets/placeholder/talking-3.jpg?url';
+import talking3Poster from '../assets/placeholder/talking-3.webp?url';
 import { withBase } from '../utils/paths';
 // Placeholders always show in dev; on the published site only while showPlaceholdersLive is on.
 const reviews = videoReviews.filter((review) => !review.placeholder || import.meta.env.DEV || showPlaceholdersLive);
@@ -30,7 +30,7 @@ const initials = (name: string) => name.split(/\s+/).map((part) => part[0]).join
         return (
           <figure class="video-review" data-reveal style={`--reveal-index:${index}`}>
             <div class:list={['video-frame', `canvas-${review.canvas}`]}>
-              <video src={src} poster={poster} preload="none" playsinline>
+              <video src={src} data-poster={poster} preload="none" playsinline>
                 {review.captions && <track kind="captions" src={withBase(review.captions)} srclang="en" label="English" default />}
               </video>
               <button class="video-play" type="button" aria-label={`Play video review from ${review.name}`}><span aria-hidden="true">▶</span></button>
@@ -46,6 +46,16 @@ const initials = (name: string) => name.split(/\s+/).map((part) => part[0]).join
 <script>
   // Videos play one by one: starting one pauses the others, and when one ends the next begins.
   const frames = [...document.querySelectorAll<HTMLElement>('.video-frame')];
+  // Posters load when the section gets close, so they don't compete with the first screen.
+  const posterObserver = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      if (!entry.isIntersecting) return;
+      const video = entry.target.querySelector('video');
+      if (video?.dataset.poster) video.poster = video.dataset.poster;
+      posterObserver.unobserve(entry.target);
+    });
+  }, { rootMargin: '600px 0px' });
+  frames.forEach((frame) => posterObserver.observe(frame));
   const start = (index: number) => {
     frames.forEach((frame, other) => {
       const video = frame.querySelector('video');

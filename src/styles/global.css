@@ -480,7 +480,7 @@ html.menu-closing,
   gap: 16px;
   margin-bottom: 15px;
 }
-.project-heading h3 {
+.project-heading h2 {
   font-size: 17px;
   font-weight: 500;
   letter-spacing: -0.025em;
@@ -1488,7 +1488,7 @@ html.menu-closing,
   .project-heading {
     margin-bottom: 12px;
   }
-  .project-heading h3 {
+  .project-heading h2 {
     font-size: 16px;
   }
   .project-canvas {
@@ -1825,6 +1825,53 @@ html.menu-closing,
   opacity: 0;
 }
 
+/* Top-of-page elements enter with CSS keyframes from the first frame instead of waiting for scroll. */
+.motion [data-reveal="load"] {
+  animation: reveal-rise 1s var(--ease) both;
+  animation-delay: calc(var(--reveal-index, 0) * 80ms);
+}
+.motion .section-title[data-reveal="load"] {
+  animation: none;
+}
+.motion .section-title[data-reveal="load"] .section-rule {
+  animation: rule-draw 1.3s var(--ease) both;
+}
+.motion .section-title[data-reveal="load"]::before {
+  animation: dot-pop 0.45s var(--ease) both;
+}
+.motion .section-title[data-reveal="load"]::after {
+  animation: dot-pop 0.45s var(--ease) 1s both;
+}
+.motion .section-title[data-reveal="load"] > .display {
+  animation: reveal-rise 1s var(--ease) 0.15s both;
+}
+.motion .section-title[data-reveal="load"] > .section-detail {
+  animation: reveal-fade 1s var(--ease) 0.15s both;
+}
+/* Start at 1% rather than 0 opacity: it looks the same, but Chrome then counts the text as painted
+   on the first frame (fully transparent paints are ignored for Largest Contentful Paint). */
+@keyframes reveal-rise {
+  from {
+    opacity: 0.01;
+    transform: translateY(24px);
+  }
+}
+@keyframes reveal-fade {
+  from {
+    opacity: 0.01;
+  }
+}
+@keyframes rule-draw {
+  from {
+    transform: scaleX(0);
+  }
+}
+@keyframes dot-pop {
+  from {
+    transform: scale(0);
+  }
+}
+
 /* Intro loader, shown once per session on the homepage. */
 .page-loader {
   display: none;
@@ -1850,15 +1897,21 @@ html.menu-closing,
   font-size: 13px;
 }
 .page-loader-count {
+  display: block;
+  width: 100%;
+  height: 0.74em;
+  overflow: visible;
   font-family: "Big Shoulders Display", Impact, sans-serif;
   font-weight: 800;
-  font-size: clamp(140px, 22vw, 320px);
-  line-height: 0.82;
+  font-size: clamp(88px, 22vw, 320px);
   letter-spacing: -0.03em;
+}
+.page-loader-count text {
+  fill: currentColor;
 }
 .page-loader.is-lifting {
   transform: translateY(-101%);
-  transition: transform 1s cubic-bezier(0.76, 0, 0.24, 1);
+  transition: transform 0.75s cubic-bezier(0.76, 0, 0.24, 1);
 }
 
 /* "View" cursor over project cards. */

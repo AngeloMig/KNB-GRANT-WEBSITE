@@ -5,13 +5,12 @@ import type { Project } from '../data/projects';
 import { withBase } from '../utils/paths';
 interface Props { project: Project; index: number; featured?: boolean; }
 const { project, index, featured = false } = Astro.props;
-const eager = index < 2;
 ---
 <article class:list={['project-card', { featured }]} data-platform={project.platform} data-reveal style={`--reveal-index:${index % 2}`}>
   <a href={withBase(`/work/${project.slug}/`)} class="project-link">
-    <div class="project-heading"><h3>{project.name}</h3><span>{String(index + 1).padStart(2, '0')}</span><Arrow diagonal /></div>
+    <div class="project-heading"><h2>{project.name}</h2><span>{String(index + 1).padStart(2, '0')}</span><Arrow diagonal /></div>
     <div class:list={['project-canvas', 'project-devices', project.canvas]}>
-      <DeviceFrames project={project} sizes="(max-width: 640px) 70vw, (max-width: 1720px) 30vw, 520px" eager={eager} priority={index === 0} />
+      <DeviceFrames project={project} sizes="(max-width: 640px) 62vw, (max-width: 1720px) 29vw, 500px" phoneSizes="(max-width: 640px) 19vw, (max-width: 1720px) 9vw, 155px" />
       <span class="project-view">Explore project <Arrow diagonal /></span>
     </div>
     <div class="project-caption"><span>{project.category}</span><span>{project.platform}</span></div>

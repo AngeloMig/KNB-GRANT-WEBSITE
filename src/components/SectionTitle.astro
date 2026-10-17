@@ -1,8 +1,10 @@
 ---
 interface Props { title: string; detail?: string; id?: string; as?: 'h1' | 'h2'; }
 const { title, detail, id, as: Tag = 'h2' } = Astro.props;
+// Titles at the top of a page animate in on load with CSS, so they are painted immediately (good for LCP).
+const onLoad = Astro.props.as === 'h1' || id === 'top-title';
 ---
-<div class="section-title" id={id} data-reveal>
+<div class:list={['section-title', { 'is-in': onLoad }]} id={id} data-reveal={onLoad ? 'load' : ''}>
   <span class="section-rule" aria-hidden="true"></span>
   <Tag class="display">{title}</Tag>
   {detail && <span class="section-detail">{detail}</span>}

@@ -59,7 +59,7 @@ const person = { '@context': 'https://schema.org', '@type': 'Person', name: prof
   </head>
   <body>
     <div class="page-shell"><Header /><main id="main"><slot /></main><Footer /></div>
-    {loader && <div class="page-loader" aria-hidden="true"><div class="page-loader-top"><span>Grant Payad</span><span>Shopify · Webflow · WordPress</span></div><div class="page-loader-count">0</div></div>}
+    {loader && <div class="page-loader" aria-hidden="true"><div class="page-loader-top"><span>Grant Payad</span><span>Shopify · Webflow · WordPress</span></div><svg class="page-loader-count" role="presentation"><text x="0" y="100%">0</text></svg></div>}
     <div class="view-cursor" aria-hidden="true">View <Arrow diagonal /></div>
   </body>
 </html>
@@ -77,31 +77,31 @@ const person = { '@context': 'https://schema.org', '@type': 'Person', name: prof
         observer.unobserve(entry.target);
       });
     }, { threshold: 0.12, rootMargin: '0px 0px -6% 0px' });
-    document.querySelectorAll('[data-reveal]').forEach((el) => observer.observe(el));
+    document.querySelectorAll('[data-reveal]:not([data-reveal="load"])').forEach((el) => observer.observe(el));
   };
 
-  // Intro loader: count to 100, lift the curtain, then start the reveals underneath it.
+  startReveals();
+
+  // Intro loader: count to 100, then lift the curtain. The page underneath is already in place.
   const loader = document.querySelector<HTMLElement>('.page-loader');
   if (loader && root.classList.contains('is-loading')) {
-    const count = loader.querySelector('.page-loader-count');
+    // SVG text, so the changing number is not treated as the page's main content (LCP).
+    const count = loader.querySelector('.page-loader-count text');
     const start = performance.now();
     const tick = (now: number) => {
-      const p = Math.min(1, (now - start) / 1300);
+      const p = Math.min(1, (now - start) / 750);
       const eased = p < 0.5 ? 2 * p * p : 1 - (-2 * p + 2) ** 2 / 2;
       if (count) count.textContent = String(Math.round(eased * 100));
       if (p < 1) { requestAnimationFrame(tick); return; }
       setTimeout(() => {
         loader.classList.add('is-lifting');
-        setTimeout(startReveals, 350);
         setTimeout(() => {
           root.classList.remove('is-loading');
           try { sessionStorage.setItem('gp-intro', '1'); } catch {}
-        }, 1000);
-      }, 180);
+        }, 750);
+      }, 120);
     };
     requestAnimationFrame(tick);
-  } else {
-    startReveals();
   }
 
   // "View" cursor that follows the pointer over project cards (mouse and trackpad only).
