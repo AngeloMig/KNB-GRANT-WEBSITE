@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "docs-preview",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["-m", "http.server", "4322", "--bind", "127.0.0.1", "--directory", "/private/tmp/claude-501/-Users-angelomiguel-GitHub-KNB-GRANT-WEBSITE/cc572a38-0a82-4433-bc9d-1b365033a276/scratchpad/site"],
+      "port": 4322
+    },
+    {
+      "name": "astro-dev",
+      "runtimeExecutable": "/Users/angelomiguel/.nvm/versions/node/v22.23.3/bin/node",
+      "runtimeArgs": ["node_modules/astro/bin/astro.mjs", "dev", "--host", "127.0.0.1", "--port", "4321"],
+      "port": 4321
+    }
+  ]
+}

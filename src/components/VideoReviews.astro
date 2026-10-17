@@ -1,0 +1,76 @@
+---
+import { videoReviews } from '../data/videoReviews';
+import { withBase } from '../utils/paths';
+// Placeholders and their generated clips only exist in dev; production builds drop both.
+const reviews = videoReviews.filter((review) => !review.placeholder || import.meta.env.DEV);
+let devClips: string[] = [];
+if (import.meta.env.DEV) {
+  devClips = [
+    (await import('../assets/dev/talking-1.webm?url')).default,
+    (await import('../assets/dev/talking-2.webm?url')).default,
+    (await import('../assets/dev/talking-3.webm?url')).default,
+  ];
+}
+const initials = (name: string) => name.split(/\s+/).map((part) => part[0]).join('').slice(0, 2).toUpperCase();
+---
+{reviews.length > 0 && (
+  <section class="video-section" aria-labelledby="video-heading">
+    <div class="video-intro" data-reveal>
+      <h2 id="video-heading">Hear it from<br />clients.</h2>
+      <p>Short videos from brands and agencies Grant has worked with.</p>
+    </div>
+    <div class="video-grid">
+      {reviews.map((review, index) => {
+        const src = review.placeholder ? devClips[index % devClips.length] : review.src && withBase(review.src);
+        return (
+          <figure class="video-review" data-reveal style={`--reveal-index:${index}`}>
+            <div class:list={['video-frame', `canvas-${review.canvas}`]}>
+              {/* The #t=1 fragment shows a frame from one second in as the preview image. */}
+              <video src={src ? `${src}#t=1` : undefined} preload="metadata" playsinline>
+                {review.captions && <track kind="captions" src={withBase(review.captions)} srclang="en" label="English" default />}
+              </video>
+              <button class="video-play" type="button" aria-label={`Play video review from ${review.name}`}><span aria-hidden="true">▶</span></button>
+              <span class="video-length">{review.duration}</span>
+              {review.placeholder && <span class="video-badge">Placeholder · dev only</span>}
+            </div>
+            <figcaption><span class="review-avatar" aria-hidden="true">{initials(review.name)}</span><span><strong>{review.name}</strong><span>{review.role}</span></span></figcaption>
+          </figure>
+        );
+      })}
+    </div>
+  </section>
+)}
+<script>
+  // Videos play one by one: starting one pauses the others, and when one ends the next begins.
+  const frames = [...document.querySelectorAll<HTMLElement>('.video-frame')];
+  const start = (index: number) => {
+    frames.forEach((frame, other) => {
+      const video = frame.querySelector('video');
+      if (!video) return;
+      if (other === index) return;
+      video.pause();
+      video.controls = false;
+      frame.classList.remove('is-playing');
+    });
+    const frame = frames[index];
+    const video = frame?.querySelector('video');
+    if (!frame || !video) return;
+    video.controls = true;
+    frame.classList.add('is-playing');
+    video.play().catch(() => {});
+  };
+  frames.forEach((frame, index) => {
+    const video = frame.querySelector('video');
+    const button = frame.querySelector<HTMLButtonElement>('.video-play');
+    if (!video || !button) return;
+    button.addEventListener('click', () => { start(index); video.focus(); });
+    video.addEventListener('ended', () => {
+      video.controls = false;
+      frame.classList.remove('is-playing');
+      if (index + 1 < frames.length) {
+        video.currentTime = 1;
+        start(index + 1);
+      }
+    });
+  });
+</script>

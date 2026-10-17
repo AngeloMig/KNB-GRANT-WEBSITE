@@ -8,7 +8,25 @@ import { profile } from '../data/profile';
 <BaseLayout title="Contact Grant Payad — Let’s Build Your Website" description="Contact Grant Payad about Shopify, Webflow, WordPress, website migrations, and development collaboration. Get in touch by email or connect on LinkedIn.">
   <div class="wrap">
     <SectionTitle title="LET’S TALK" detail="Every good website starts with a conversation" as="h1" />
-    <section class="intro-split contact-intro"><div class="intro-aside"><span class="tiny-heading">GET IN TOUCH</span><p>Based in the Philippines.<br />Working across time zones.</p></div><div><p class="lead">A new website?<br />A better online store?<br />Let’s make it happen.</p><p class="intro-support">Tell me a little about your project, the platform you’re using, and what you have in mind.</p></div></section>
+    <section class="intro-split contact-intro"><div class="intro-aside"><span class="tiny-heading">GET IN TOUCH</span><p>Based in the Philippines.<br />Working across time zones.</p><button type="button" class="text-link copy-email" data-email={profile.email} hidden>Copy email address</button><span class="sr-only" id="copy-status" aria-live="polite"></span></div><div><p class="lead">A new website?<br />A better online store?<br />Let’s make it happen.</p><p class="intro-support">Tell me a little about your project, the platform you’re using, and what you have in mind.</p></div></section>
     <div class="contact-options"><a href={`mailto:${profile.email}?subject=Website%20project%20inquiry`}><span>Email</span><strong>{profile.email}</strong><Arrow diagonal /></a><a href={profile.linkedin} target="_blank" rel="noopener noreferrer"><span>Connect</span><strong>Find me on LinkedIn</strong><Arrow diagonal /></a><a href={withBase('/resume/grant-payad-resume.pdf')} download><span>Background</span><strong>Download my résumé</strong><Arrow diagonal /></a></div>
   </div>
 </BaseLayout>
+<script>
+  const copyButton = document.querySelector<HTMLButtonElement>('.copy-email');
+  const copyStatus = document.querySelector('#copy-status');
+  if (copyButton && navigator.clipboard) {
+    copyButton.hidden = false;
+    copyButton.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(copyButton.dataset.email || '');
+        copyButton.textContent = 'Email copied';
+        if (copyStatus) copyStatus.textContent = 'Email address copied to clipboard.';
+        setTimeout(() => { copyButton.textContent = 'Copy email address'; }, 2000);
+      } catch {
+        copyButton.textContent = 'Couldn’t copy — use the address below';
+        if (copyStatus) copyStatus.textContent = 'Copy failed. Please select the email address instead.';
+      }
+    });
+  }
+</script>

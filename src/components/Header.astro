@@ -6,19 +6,19 @@ const path = Astro.url.pathname;
 ---
 <a class="skip-link" href="#main">Skip to content</a>
 <header class="site-header wrap">
-  <a class="wordmark" href={withBase('/')} aria-label="Grant Payad home">Grant<br />Payad<span class="wordmark-dot">.</span></a>
+  <a class="wordmark" href={withBase('/')} aria-label="Grant Payad home"><span class="wordmark-line">Grant</span><span class="wordmark-line">Payad<span class="wordmark-dot">.</span></span></a>
   <div class="header-right">
-    <a class="header-contact" href={`mailto:${profile.email}`}>Let’s talk <Arrow diagonal /></a>
+    <a class="header-contact" href={withBase('/contact/')}>Let’s talk <Arrow diagonal /></a>
     <button class="menu-toggle" type="button" aria-label="Open navigation" aria-haspopup="dialog" aria-controls="site-menu"><span></span><span></span></button>
   </div>
 </header>
 <dialog id="site-menu" class="menu-dialog" aria-label="Main navigation">
-  <div class="menu-top"><a class="wordmark" href={withBase('/')}>Grant<br />Payad.</a><button type="button" class="menu-close" aria-label="Close navigation">×</button></div>
+  <div class="menu-top"><button type="button" class="menu-close" aria-label="Close navigation">×</button></div>
   <nav class="menu-links" aria-label="Main">
-    <a href={withBase('/')} aria-current={path === withBase('/') ? 'page' : undefined}>Selected work <Arrow /></a>
-    <a href={withBase('/about/')} aria-current={path === withBase('/about/') ? 'page' : undefined}>About Grant <Arrow /></a>
-    <a href={withBase('/#services')}>Services <Arrow /></a>
-    <a href={withBase('/contact/')} aria-current={path === withBase('/contact/') ? 'page' : undefined}>Get in touch <Arrow /></a>
+    <a style="--i:0" href={withBase('/')} aria-current={path === withBase('/') ? 'page' : undefined}>Selected work <Arrow /></a>
+    <a style="--i:1" href={withBase('/about/')} aria-current={path === withBase('/about/') ? 'page' : undefined}>About Grant <Arrow /></a>
+    <a style="--i:2" href={withBase('/#services')}>Services <Arrow /></a>
+    <a style="--i:3" href={withBase('/contact/')} aria-current={path === withBase('/contact/') ? 'page' : undefined}>Get in touch <Arrow /></a>
   </nav>
   <div class="menu-bottom"><a href={`mailto:${profile.email}`}>{profile.email}</a><a href={profile.linkedin} target="_blank" rel="noopener noreferrer">LinkedIn ↗</a></div>
 </dialog>
@@ -27,11 +27,39 @@ const path = Astro.url.pathname;
   const toggle = document.querySelector<HTMLButtonElement>('.menu-toggle');
   const closeButton = document.querySelector<HTMLButtonElement>('.menu-close');
   if (dialog && toggle && closeButton) {
-    toggle.addEventListener('click', () => { dialog.showModal(); document.documentElement.classList.add('menu-open'); });
+    const root = document.documentElement;
+    const shell = document.querySelector<HTMLElement>('.page-shell');
+    let closingTimer = 0;
+    toggle.addEventListener('click', () => {
+      // Push-and-scale: shrink the visible part of the page around the viewport centre.
+      if (shell) {
+        const top = window.scrollY;
+        const bottom = Math.max(0, shell.offsetHeight - top - window.innerHeight);
+        shell.style.transformOrigin = `50% ${top + window.innerHeight / 2}px`;
+        shell.style.clipPath = `inset(${top}px 0 ${bottom}px 0 round 24px)`;
+      }
+      clearTimeout(closingTimer);
+      root.classList.remove('menu-closing');
+      dialog.showModal();
+      root.classList.add('menu-open');
+    });
     const close = () => dialog.close();
     closeButton.addEventListener('click', close);
     dialog.addEventListener('click', (event) => { if (event.target === dialog) close(); });
     dialog.querySelectorAll('a').forEach((link) => link.addEventListener('click', close));
-    dialog.addEventListener('close', () => { document.documentElement.classList.remove('menu-open'); toggle.focus(); });
+    dialog.addEventListener('close', () => {
+      root.classList.remove('menu-open');
+      root.classList.add('menu-closing');
+      toggle.focus({ preventScroll: true });
+      closingTimer = window.setTimeout(() => {
+        root.classList.remove('menu-closing');
+        if (shell) shell.style.clipPath = '';
+      }, 800);
+    });
+    // Keep the menu reachable once the header scrolls out of view.
+    const header = document.querySelector('.site-header');
+    if (header && 'IntersectionObserver' in window) {
+      new IntersectionObserver(([entry]) => toggle.classList.toggle('is-floating', !entry.isIntersecting)).observe(header);
+    }
   }
 </script>

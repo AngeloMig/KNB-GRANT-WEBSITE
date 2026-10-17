@@ -8,6 +8,8 @@ export interface Project {
   description: string;
   overview: string;
   canvas: string;
+  /** Phone status-bar colours, matched to the top of each mobile screenshot. */
+  mobileBar: { bg: string; fg: string };
   agency?: string;
 }
 
@@ -20,6 +22,7 @@ export const projects: Project[] = [
     engagement: "Company project",
     url: "https://trademutt.com/",
     canvas: "olive",
+    mobileBar: { bg: "#151515", fg: "#fff" },
     description:
       "Conversation-starting workwear. An ecommerce experience for a brand with a social purpose.",
     overview:
@@ -33,6 +36,7 @@ export const projects: Project[] = [
     engagement: "Freelance project",
     url: "https://www.maestrolabs.com/",
     canvas: "lilac",
+    mobileBar: { bg: "#fff", fg: "#000" },
     description:
       "A digital home for AI productivity tools, bringing email and meeting assistants into focus.",
     overview:
@@ -46,6 +50,7 @@ export const projects: Project[] = [
     engagement: "Freelance project",
     url: "https://www.valiantfinance.com/",
     canvas: "violet",
+    mobileBar: { bg: "#4c5cf6", fg: "#fff" },
     description:
       "Business finance, made approachable. A website connecting businesses with lending options.",
     overview:
@@ -59,6 +64,7 @@ export const projects: Project[] = [
     engagement: "Freelance project",
     url: "https://case-mate.com/",
     canvas: "rose",
+    mobileBar: { bg: "#151515", fg: "#fff" },
     description:
       "Everyday essentials with personality. A product-led storefront for accessories and more.",
     overview:
@@ -73,6 +79,7 @@ export const projects: Project[] = [
     agency: "Rivyl",
     url: "https://www.aeromech.com.au/",
     canvas: "blue",
+    mobileBar: { bg: "#1c1c1c", fg: "#fff" },
     description:
       "Big sky thinking. A bold web presence for an aerospace and engineering business.",
     overview:
@@ -86,6 +93,7 @@ export const projects: Project[] = [
     engagement: "Freelance project",
     url: "https://www.polybush.co.uk/",
     canvas: "clay",
+    mobileBar: { bg: "#0b2a6e", fg: "#fff" },
     description:
       "A specialist product catalog bringing automotive suspension components to a broad audience.",
     overview:

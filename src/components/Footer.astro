@@ -1,9 +1,58 @@
 ---
 import Arrow from './Arrow.astro';
 import { profile } from '../data/profile';
+const footerLetters = [...'GRANT PAYAD'];
 ---
 <footer class="site-footer wrap">
   <div class="footer-invitation"><p>Have something in mind?</p><a href={`mailto:${profile.email}`}>Let’s build it together. <Arrow diagonal /></a></div>
-  <a class="footer-name" href={`mailto:${profile.email}`} aria-label="Email Grant Payad">GRANT PAYAD<span>↗</span></a>
+  <a class="footer-name" href={`mailto:${profile.email}`} aria-label="Email Grant Payad"><span class="footer-letters">{footerLetters.map((letter) => letter === ' ' ? <span class="footer-space">&nbsp;</span> : <span class="footer-letter">{letter}</span>)}</span><span class="footer-arrow">↗</span></a>
   <div class="footer-meta"><span>© {new Date().getFullYear()} Grant Payad</span><span>Built with care. Based in the Philippines.</span><a href={profile.linkedin} target="_blank" rel="noopener noreferrer">LinkedIn ↗</a><a href="#top">Back to top ↑</a></div>
 </footer>
+<script>
+  const footerName = document.querySelector<HTMLElement>('.footer-name');
+  const letterWrap = footerName?.querySelector<HTMLElement>('.footer-letters');
+  const canAnimate = matchMedia('(hover: hover) and (pointer: fine)').matches && !matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (footerName && letterWrap && canAnimate) {
+    // Magnetic letters: each letter is pushed away from the pointer, then eases back into place.
+    const letters = [...letterWrap.querySelectorAll<HTMLElement>('.footer-letter')].map((el) => ({ el, x: 0, y: 0, r: 0 }));
+    const pointer = { x: 0, y: 0, active: false };
+    let frame = 0;
+    const step = () => {
+      const size = letterWrap.offsetHeight;
+      const radius = size * 1.7;
+      let moving = pointer.active;
+      for (const letter of letters) {
+        let tx = 0, ty = 0, tr = 0;
+        if (pointer.active) {
+          const dx = letter.el.offsetLeft + letter.el.offsetWidth / 2 - pointer.x;
+          const dy = letter.el.offsetTop + letter.el.offsetHeight / 2 - pointer.y;
+          const distance = Math.hypot(dx, dy) || 1;
+          const force = Math.max(0, 1 - distance / radius);
+          const push = force * force * size * 0.55;
+          tx = (dx / distance) * push;
+          ty = (dy / distance) * push;
+          tr = (dx / distance) * force * 16;
+        }
+        letter.x += (tx - letter.x) * 0.14;
+        letter.y += (ty - letter.y) * 0.14;
+        letter.r += (tr - letter.r) * 0.14;
+        if (Math.abs(letter.x) + Math.abs(letter.y) + Math.abs(letter.r) > 0.05) moving = true;
+        letter.el.style.transform = `translate(${letter.x.toFixed(2)}px, ${letter.y.toFixed(2)}px) rotate(${letter.r.toFixed(2)}deg)`;
+      }
+      if (moving) {
+        frame = requestAnimationFrame(step);
+      } else {
+        frame = 0;
+        letters.forEach((letter) => { letter.x = letter.y = letter.r = 0; letter.el.style.transform = ''; });
+      }
+    };
+    footerName.addEventListener('pointermove', (event) => {
+      const rect = letterWrap.getBoundingClientRect();
+      pointer.x = event.clientX - rect.left;
+      pointer.y = event.clientY - rect.top;
+      pointer.active = true;
+      if (!frame) frame = requestAnimationFrame(step);
+    });
+    footerName.addEventListener('pointerleave', () => { pointer.active = false; });
+  }
+</script>
