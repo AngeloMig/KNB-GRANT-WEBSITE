@@ -9,9 +9,12 @@ export interface VideoReview {
   captions?: string;
   duration: string;
   canvas: string;
-  /** Placeholder entries render in `npm run dev` only, with a generated "talking" clip. */
+  /** Placeholder entries use a generated, clearly labelled "talking" clip instead of a real video. */
   placeholder?: boolean;
 }
+
+/** Show placeholder entries on the published site. Set to false to hide them live while keeping them in `npm run dev`. */
+export const showPlaceholdersLive = true;
 
 // Add real client videos only, recorded and shared with the client's permission.
 // Once a real entry is added, delete the placeholders below.

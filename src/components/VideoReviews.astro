@@ -1,16 +1,19 @@
 ---
-import { videoReviews } from '../data/videoReviews';
+import { videoReviews, showPlaceholdersLive } from '../data/videoReviews';
+import talking1 from '../assets/placeholder/talking-1.webm?url';
+import talking1Poster from '../assets/placeholder/talking-1.jpg?url';
+import talking2 from '../assets/placeholder/talking-2.webm?url';
+import talking2Poster from '../assets/placeholder/talking-2.jpg?url';
+import talking3 from '../assets/placeholder/talking-3.webm?url';
+import talking3Poster from '../assets/placeholder/talking-3.jpg?url';
 import { withBase } from '../utils/paths';
-// Placeholders and their generated clips only exist in dev; production builds drop both.
-const reviews = videoReviews.filter((review) => !review.placeholder || import.meta.env.DEV);
-let devClips: { src: string; poster: string }[] = [];
-if (import.meta.env.DEV) {
-  devClips = [
-    { src: (await import('../assets/dev/talking-1.webm?url')).default, poster: (await import('../assets/dev/talking-1.jpg?url')).default },
-    { src: (await import('../assets/dev/talking-2.webm?url')).default, poster: (await import('../assets/dev/talking-2.jpg?url')).default },
-    { src: (await import('../assets/dev/talking-3.webm?url')).default, poster: (await import('../assets/dev/talking-3.jpg?url')).default },
-  ];
-}
+// Placeholders always show in dev; on the published site only while showPlaceholdersLive is on.
+const reviews = videoReviews.filter((review) => !review.placeholder || import.meta.env.DEV || showPlaceholdersLive);
+const devClips = [
+  { src: talking1, poster: talking1Poster },
+  { src: talking2, poster: talking2Poster },
+  { src: talking3, poster: talking3Poster },
+];
 const initials = (name: string) => name.split(/\s+/).map((part) => part[0]).join('').slice(0, 2).toUpperCase();
 ---
 {reviews.length > 0 && (
@@ -33,7 +36,7 @@ const initials = (name: string) => name.split(/\s+/).map((part) => part[0]).join
               <button class="video-play" type="button" aria-label={`Play video review from ${review.name}`}><span aria-hidden="true">▶</span></button>
               <span class="video-length">{review.duration}</span>
             </div>
-            <figcaption><span class="review-avatar" aria-hidden="true">{initials(review.name)}</span><span><strong>{review.name}</strong><span>{review.role}</span></span>{review.placeholder && <span class="video-badge">Placeholder · dev only</span>}</figcaption>
+            <figcaption><span class="review-avatar" aria-hidden="true">{initials(review.name)}</span><span><strong>{review.name}</strong><span>{review.role}</span></span>{review.placeholder && <span class="video-badge">Placeholder</span>}</figcaption>
           </figure>
         );
       })}
