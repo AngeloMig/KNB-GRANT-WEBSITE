@@ -26,7 +26,7 @@ const path = Astro.url.pathname;
     <a style="--i:2" href={withBase('/#services')}>Services <Arrow /></a>
     <a style="--i:3" href={withBase('/contact/')} aria-current={path === withBase('/contact/') ? 'page' : undefined}>Get in touch <Arrow /></a>
   </nav>
-  <div class="menu-bottom"><a href={`mailto:${profile.email}`}>{profile.email}</a><a href={profile.linkedin} target="_blank" rel="noopener noreferrer">LinkedIn ↗</a></div>
+  <div class="menu-bottom"><a href={`mailto:${profile.email}`}>{profile.email}</a><a href={profile.linkedin} target="_blank" rel="noopener noreferrer">LinkedIn ↗︎</a></div>
 </dialog>
 <script>
   const dialog = document.querySelector<HTMLDialogElement>('#site-menu');
@@ -36,23 +36,40 @@ const path = Astro.url.pathname;
     const root = document.documentElement;
     const shell = document.querySelector<HTMLElement>('.page-shell');
     let closingTimer = 0;
+    // Push-and-scale: freeze the page at screen size (keeping its scroll position inside it) so the
+    // animation only moves one screen of content instead of the whole, very tall page.
+    let frozenAt = -1;
+    const freeze = () => {
+      if (!shell || frozenAt >= 0) return;
+      frozenAt = window.scrollY;
+      shell.classList.add('is-frozen');
+      shell.scrollTop = frozenAt;
+    };
+    const unfreeze = () => {
+      if (!shell || frozenAt < 0) return;
+      const top = frozenAt;
+      frozenAt = -1;
+      shell.classList.remove('is-frozen');
+      window.scrollTo({ top, behavior: 'instant' });
+    };
     toggle.addEventListener('click', () => {
-      // Push-and-scale: shrink the visible part of the page around the viewport centre.
-      if (shell) {
-        const top = window.scrollY;
-        const bottom = Math.max(0, shell.offsetHeight - top - window.innerHeight);
-        shell.style.transformOrigin = `50% ${top + window.innerHeight / 2}px`;
-        shell.style.clipPath = `inset(${top}px 0 ${bottom}px 0 round 24px)`;
-      }
       clearTimeout(closingTimer);
       root.classList.remove('menu-closing');
+      freeze();
       dialog.showModal();
       root.classList.add('menu-open');
     });
     const close = () => dialog.close();
     closeButton.addEventListener('click', close);
     dialog.addEventListener('click', (event) => { if (event.target === dialog) close(); });
-    dialog.querySelectorAll('a').forEach((link) => link.addEventListener('click', close));
+    // Following a link: put the page back instantly, so the browser jumps to the right place (e.g. #services).
+    dialog.querySelectorAll('a').forEach((link) => link.addEventListener('click', () => {
+      if (shell) shell.style.transition = 'none';
+      root.classList.remove('menu-open');
+      unfreeze();
+      close();
+      requestAnimationFrame(() => { if (shell) shell.style.transition = ''; });
+    }));
     // Link previews: hovering or focusing a menu link shows a collage for that page over the shrunk page.
     const sets = [...dialog.querySelectorAll<HTMLElement>('.menu-preview-set')];
     const showPreview = (index: number) => sets.forEach((set, i) => set.classList.toggle('is-active', i === index));
@@ -68,7 +85,7 @@ const path = Astro.url.pathname;
       toggle.focus({ preventScroll: true });
       closingTimer = window.setTimeout(() => {
         root.classList.remove('menu-closing');
-        if (shell) shell.style.clipPath = '';
+        unfreeze();
       }, 800);
     });
     // Keep the menu reachable once the header scrolls out of view.

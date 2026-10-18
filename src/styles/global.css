@@ -37,6 +37,8 @@ body {
   font-size: 15px;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
+  /* Draw arrow characters like ↗ as text, never as colour emoji (iOS). */
+  font-variant-emoji: text;
 }
 body:has(dialog[open]) {
   overflow: hidden;
@@ -57,6 +59,8 @@ button {
 button,
 a {
   -webkit-tap-highlight-color: transparent;
+  /* Act on the first tap; no double-tap-to-zoom wait. */
+  touch-action: manipulation;
 }
 button {
   border: 0;
@@ -234,11 +238,13 @@ a:hover .arrow-icon.diagonal {
     transform: translateY(-12px);
   }
 }
-.menu-toggle:hover span:first-child {
-  width: 16px;
-}
-.menu-toggle:hover span:last-child {
-  width: 28px;
+@media (hover: hover) {
+  .menu-toggle:hover span:first-child {
+    width: 16px;
+  }
+  .menu-toggle:hover span:last-child {
+    width: 28px;
+  }
 }
 /* Two drawn lines crossed at the exact centre (a text "×" sits off-centre in its line box). */
 .menu-close {
@@ -261,7 +267,13 @@ a:hover .arrow-icon.diagonal {
 .page-shell {
   position: relative;
   background: var(--bg);
-  transition: transform 0.8s var(--ease);
+  transition: transform 0.8s var(--ease), border-radius 0.8s var(--ease);
+}
+.page-shell.is-frozen {
+  position: fixed;
+  inset: 0;
+  height: 100dvh;
+  overflow: hidden;
 }
 html.menu-open,
 html.menu-closing,
@@ -271,6 +283,7 @@ html.menu-closing,
 }
 .menu-open .page-shell {
   transform: translateX(-46%) scale(0.84);
+  border-radius: 24px;
 }
 .menu-dialog {
   position: fixed;
@@ -674,9 +687,9 @@ html.menu-closing,
 }
 .device-laptop {
   position: absolute;
-  left: 7%;
-  top: 14%;
-  width: 76%;
+  left: 8%;
+  top: 15%;
+  width: 72%;
   container-type: inline-size;
   transition: transform 0.7s var(--ease);
 }
@@ -769,8 +782,8 @@ html.menu-closing,
 }
 .device-phone {
   position: absolute;
-  right: 8%;
-  bottom: -10%;
+  right: 10%;
+  bottom: 6%;
   width: 19%;
   aspect-ratio: 440 / 956;
   container-type: inline-size;
@@ -869,7 +882,7 @@ html.menu-closing,
 }
 .project-link:hover .device-phone,
 .project-link:focus-visible .device-phone {
-  transform: translateY(-14%);
+  transform: translateY(-5%);
 }
 
 .project-link:hover .project-view,
@@ -1134,6 +1147,13 @@ main {
   border-radius: 0 0 var(--curtain-radius) var(--curtain-radius);
   box-shadow: 0 26px 50px -26px oklch(0.16 0 0 / 0.28);
 }
+/* Everything above the footer must be opaque, or the waiting footer shows through on short screens.
+   The header sits one layer above the page content so its floating menu button stays on top. */
+.footer-reveal .site-header {
+  position: relative;
+  z-index: 2;
+  background: var(--bg);
+}
 /* The footer tucks under the page's rounded corners, so grey (not white) shows through them. */
 .footer-reveal .site-footer {
   position: sticky;
@@ -1286,26 +1306,129 @@ main {
 .skills-section {
   padding-block: 70px;
 }
-.skill-groups {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 40px;
-  margin-top: 38px;
+/* Tools wall: one tile per tool, colour-coded by group. Hovering a legend group highlights its tools. */
+.tools-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 18px 30px;
 }
-.skill-groups > div {
-  border-top: 1px solid var(--line);
-  padding-top: 22px;
-}
-.skill-groups h3 {
-  font-size: 17px;
-  font-weight: 500;
-}
-.skill-groups p {
-  font-size: 14px;
+.tools-count {
+  font-size: 0.45em;
   color: var(--muted);
-  margin-top: 15px;
-  line-height: 1.7;
-  max-width: 320px;
+  vertical-align: super;
+  letter-spacing: 0;
+}
+.tools-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 12px;
+}
+.tools-legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 14px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  cursor: default;
+  transition: border-color 0.3s;
+}
+.tools-legend li:hover {
+  border-color: var(--ink);
+}
+.tools-legend li > span:last-child {
+  color: var(--muted);
+}
+.tools-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+}
+.tools-dot.canvas-olive,
+.tool-tile.canvas-olive { --tile: oklch(0.79 0.025 105); }
+.tools-dot.canvas-lilac,
+.tool-tile.canvas-lilac { --tile: oklch(0.91 0.017 295); }
+.tools-dot.canvas-clay,
+.tool-tile.canvas-clay { --tile: oklch(0.87 0.02 60); }
+.tools-dot {
+  background: var(--tile);
+}
+.tools-wall {
+  margin-top: 34px;
+  border-top: 1px solid var(--line);
+  border-left: 1px solid var(--line);
+}
+/* Groups and lists don't create boxes, so every tile sits directly in the wall's grid. */
+.tools-group,
+.tools-group > ul {
+  display: contents;
+}
+.tools-group > ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.tools-wall {
+  display: grid;
+  /* 20 tools: 5 columns on desktop, 4 on tablets, 2 on phones, so every row is full. */
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+@media (max-width: 1000px) {
+  .tools-wall {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+.tool-tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 108px;
+  padding: 14px 16px;
+  border-right: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  transition: background 0.35s, opacity 0.35s;
+}
+.tool-tile::before {
+  content: "";
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--tile);
+}
+.tool-group {
+  font-size: 10px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.tool-name {
+  font-size: 19px;
+  font-weight: 500;
+  letter-spacing: -0.025em;
+}
+.tool-tile:hover {
+  background: var(--tile);
+}
+/* Legend hover: highlight one group, dim the rest. */
+.skills-section:has(.tools-legend [data-group="dev"]:hover) .tools-group:not([data-group="dev"]) .tool-tile,
+.skills-section:has(.tools-legend [data-group="platforms"]:hover) .tools-group:not([data-group="platforms"]) .tool-tile,
+.skills-section:has(.tools-legend [data-group="design"]:hover) .tools-group:not([data-group="design"]) .tool-tile {
+  opacity: 0.25;
+}
+.skills-section:has(.tools-legend [data-group="dev"]:hover) [data-group="dev"] .tool-tile,
+.skills-section:has(.tools-legend [data-group="platforms"]:hover) [data-group="platforms"] .tool-tile,
+.skills-section:has(.tools-legend [data-group="design"]:hover) [data-group="design"] .tool-tile {
+  background: var(--tile);
 }
 .education-row {
   display: grid;
@@ -1407,14 +1530,14 @@ main {
   padding: 0;
 }
 .detail-canvas .device-laptop {
-  left: 13%;
+  left: 12%;
   top: 11%;
-  width: 66%;
+  width: 64%;
 }
 .detail-canvas .device-phone {
-  right: 12%;
-  bottom: -7%;
-  width: 15%;
+  right: 14%;
+  bottom: 5%;
+  width: 16%;
 }
 .detail-canvas .browser-bar {
   height: 28px;
@@ -1626,6 +1749,17 @@ main {
     aspect-ratio: 1.28;
     padding-inline: 7%;
   }
+  /* Phones: a larger iPhone tucked into the MacBook's corner. */
+  .project-devices .device-laptop {
+    left: 4%;
+    top: 17%;
+    width: 72%;
+  }
+  .project-devices .device-phone {
+    right: 7%;
+    bottom: 7%;
+    width: 26%;
+  }
   .project-view {
     opacity: 1;
     transform: none;
@@ -1779,18 +1913,18 @@ main {
   .career-row > span {
     font-size: 10px;
   }
+  .tools-wall {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .tool-tile {
+    min-height: 92px;
+    padding: 12px 14px;
+  }
+  .tool-name {
+    font-size: 16px;
+  }
   .skills-section {
     padding-block: 45px;
-  }
-  .skill-groups {
-    grid-template-columns: 1fr;
-    gap: 25px;
-    margin-top: 26px;
-  }
-  .skill-groups p {
-    max-width: 100%;
-    font-size: 13px;
-    margin-top: 10px;
   }
   .education-row {
     grid-template-columns: 1fr;
@@ -1847,14 +1981,14 @@ main {
     padding: 0;
   }
   .detail-canvas .device-laptop {
-    left: 5%;
-    top: 16%;
-    width: 78%;
+    left: 4%;
+    top: 14%;
+    width: 74%;
   }
   .detail-canvas .device-phone {
-    right: 6%;
-    bottom: -8%;
-    width: 21%;
+    right: 5%;
+    bottom: 6%;
+    width: 27%;
   }
   .detail-canvas .browser-bar {
     height: 20px;
@@ -1904,7 +2038,7 @@ main {
     padding-top: 24px;
   }
   .menu-open .page-shell {
-    transform: translateX(-64%) scale(0.8);
+    transform: translateX(-70%) scale(0.78);
   }
   .menu-links,
   .menu-bottom {
@@ -1959,6 +2093,50 @@ main {
 }
 .motion .section-title:not(.is-in) > .section-detail {
   opacity: 0;
+}
+
+/* Page transitions between pages (browser-native; Firefox and older browsers just load normally).
+   A project card's canvas shares its name with the project page canvas, so it morphs between them. */
+@view-transition {
+  navigation: auto;
+}
+/* The menu button sits in the same corner on every page, so it stays still instead of fading. */
+.menu-toggle {
+  view-transition-name: menu-toggle;
+}
+/* Morphing elements (project canvases, the menu button): slow, soft ease, no stretching. */
+::view-transition-group(*) {
+  animation-duration: 0.75s;
+  animation-timing-function: cubic-bezier(0.65, 0, 0.35, 1);
+}
+::view-transition-old(*),
+::view-transition-new(*) {
+  height: 100%;
+  object-fit: cover;
+  object-position: top;
+}
+/* The rest of the page: the old page fades out while the new one fades in on top, overlapping. */
+::view-transition-old(root) {
+  animation: page-out 0.45s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+::view-transition-new(root) {
+  animation: page-in 0.7s cubic-bezier(0.22, 1, 0.36, 1) 0.1s both;
+}
+@keyframes page-out {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes page-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  @view-transition {
+    navigation: none;
+  }
 }
 
 /* Top-of-page elements enter with CSS keyframes from the first frame instead of waiting for scroll. */

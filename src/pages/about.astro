@@ -4,13 +4,29 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import SectionTitle from '../components/SectionTitle.astro';
 import Arrow from '../components/Arrow.astro';
 import { experience, profile } from '../data/profile';
+const toolGroups = [
+  { id: 'dev', label: 'Development', canvas: 'olive', tools: ['HTML', 'CSS', 'JavaScript', 'jQuery', 'PHP', 'Liquid', 'SASS', 'MySQL'] },
+  { id: 'platforms', label: 'Platforms', canvas: 'lilac', tools: ['Shopify', 'Shopify Plus', 'Webflow', 'WordPress', 'WooCommerce', 'BigCommerce'] },
+  { id: 'design', label: 'Design & integrations', canvas: 'clay', tools: ['Figma', 'GSAP', 'Adobe Photoshop', 'HubSpot', 'ActiveCampaign', 'Klaviyo'] },
+];
+const toolCount = toolGroups.reduce((total, group) => total + group.tools.length, 0);
 ---
 <BaseLayout title="About Grant Payad — Website Developer & Team Lead" description="Meet Grant Payad, a Shopify, Webflow, and WordPress developer with experience in ecommerce, custom development, migrations, and development team leadership.">
   <div class="wrap">
     <SectionTitle title="ABOUT GRANT" detail="The person behind the build" as="h1" />
     <section class="intro-split about-intro"><div class="intro-aside"><span class="tiny-heading">HELLO, I’M GRANT.</span><p>{profile.fullName}<br />Philippines</p><a class="text-link" href={withBase('/resume/grant-payad-resume.pdf')} download>Download résumé <Arrow diagonal /></a></div><div><p class="lead">A developer with an eye for detail. And a mindset for making things work.</p><div class="prose"><p>I build websites across Shopify, Webflow, and WordPress, working with brands and agencies to turn designs into responsive, usable web experiences.</p><p>My experience spans ecommerce development, custom themes, platform migrations, third-party integrations, and technical SEO. Alongside hands-on development, I’ve led development teams and coordinated projects from planning through delivery.</p><p>I care about the details you see, and the foundations you don’t: clear structure, maintainable code, and a site that feels good to use.</p></div></div></section>
     <section class="about-experience" aria-labelledby="career-heading"><h2 class="medium-heading" id="career-heading">Experience</h2>{experience.map((item) => <article class="career-row"><span>{item.dates}</span><div><h3>{item.company}</h3><h4>{item.role}</h4><p>{item.summary}</p></div></article>)}</section>
-    <section class="skills-section"><h2 class="medium-heading">Tools of the trade</h2><div class="skill-groups"><div><h3>Development</h3><p>HTML, CSS, JavaScript, jQuery, PHP, Liquid, SASS, MySQL</p></div><div><h3>Platforms</h3><p>Shopify, Shopify Plus, Webflow, WordPress, WooCommerce, BigCommerce</p></div><div><h3>Design & integrations</h3><p>Figma, GSAP, Adobe Photoshop, HubSpot, ActiveCampaign, Klaviyo</p></div></div></section>
+    <section class="skills-section" aria-labelledby="tools-heading">
+      <div class="tools-head"><h2 class="medium-heading" id="tools-heading">Tools of the trade <span class="tools-count">({toolCount})</span></h2>
+        <ul class="tools-legend" aria-label="Tool groups">{toolGroups.map((group) => <li data-group={group.id}><span class:list={['tools-dot', `canvas-${group.canvas}`]} aria-hidden="true"></span>{group.label} <span>{group.tools.length}</span></li>)}</ul>
+      </div>
+      <div class="tools-wall">{toolGroups.map((group) => (
+        <div class="tools-group" data-group={group.id}>
+          <h3 class="sr-only">{group.label}</h3>
+          <ul>{group.tools.map((tool, index) => <li class:list={['tool-tile', `canvas-${group.canvas}`]} data-reveal style={`--reveal-index:${index % 4}`}><span class="tool-group" aria-hidden="true">{group.label}</span><span class="tool-name">{tool}</span></li>)}</ul>
+        </div>
+      ))}</div>
+    </section>
     <section class="education-row"><h2>Education</h2><div><h3>BS Information Technology</h3><p>Major in Web Development<br />Bulacan State University · 2019</p></div></section>
   </div>
 </BaseLayout>
