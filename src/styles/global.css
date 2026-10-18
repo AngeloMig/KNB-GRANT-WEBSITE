@@ -575,10 +575,6 @@ html.menu-closing,
   letter-spacing: -0.025em;
   flex: 1;
 }
-.project-heading > span {
-  font-size: 11px;
-  color: var(--muted);
-}
 .project-heading > .arrow-icon {
   width: 19px;
   height: 19px;
