@@ -1,14 +1,43 @@
 ---
-import Arrow from './Arrow.astro';
 import { profile } from '../data/profile';
+import { withBase } from '../utils/paths';
 const footerLetters = [...'GRANT PAYAD'];
+const pages = [['Selected work', '/'], ['About Grant', '/about/'], ['Services', '/#services'], ['Get in touch', '/contact/']];
 ---
-<footer class="site-footer wrap">
-  <div class="footer-invitation"><p>Have something in mind?</p><a href={`mailto:${profile.email}`}>Let’s build it together. <Arrow diagonal /></a></div>
-  <a class="footer-name" href={`mailto:${profile.email}`} aria-label="Email Grant Payad"><span class="footer-letters">{footerLetters.map((letter) => letter === ' ' ? <span class="footer-space">&nbsp;</span> : <span class="footer-letter">{letter}</span>)}</span><span class="footer-arrow">↗</span></a>
-  <div class="footer-meta"><span>© {new Date().getFullYear()} Grant Payad</span><span>Built with care. Based in the Philippines.</span><a href={profile.linkedin} target="_blank" rel="noopener noreferrer">LinkedIn ↗</a><a href="#top">Back to top ↑</a></div>
+<footer class="site-footer">
+  <div class="wrap">
+    <div class="footer-top">
+      <div class="footer-talk"><p class="footer-heading">Let’s talk.</p><a class="footer-mail" href={`mailto:${profile.email}`}>{profile.email}</a></div>
+      <div class="footer-columns">
+        <div><h2>Pages</h2><ul>{pages.map(([label, href]) => <li><a href={withBase(href)}>{label}</a></li>)}</ul></div>
+        <div><h2>Connect</h2><ul><li><a href={profile.linkedin} target="_blank" rel="noopener noreferrer">LinkedIn ↗</a></li><li><a href={withBase('/resume/grant-payad-resume.pdf')} download>Download résumé</a></li><li><a href={`mailto:${profile.email}`}>Email Grant</a></li></ul></div>
+        <div><h2>Local time</h2><ul><li class="footer-clock">Manila, Philippines</li><li>Working across time zones</li></ul></div>
+      </div>
+    </div>
+    <a class="footer-name" href={`mailto:${profile.email}`} aria-label="Email Grant Payad"><span class="footer-letters">{footerLetters.map((letter) => letter === ' ' ? <span class="footer-space">&nbsp;</span> : <span class="footer-letter">{letter}</span>)}</span><span class="footer-arrow">↗</span></a>
+    <div class="footer-meta"><span>© {new Date().getFullYear()} Grant Payad</span><span>Built with care. Based in the Philippines.</span><a href={profile.linkedin} target="_blank" rel="noopener noreferrer">LinkedIn ↗</a><a href="#top">Back to top ↑</a></div>
+  </div>
 </footer>
 <script>
+  // Curtain reveal: the page slides up to uncover the footer. Only when the whole footer fits on screen,
+  // otherwise its top would stay hidden behind the page.
+  const siteFooter = document.querySelector<HTMLElement>('.site-footer');
+  const updateReveal = () => {
+    if (siteFooter) document.documentElement.classList.toggle('footer-reveal', siteFooter.offsetHeight <= window.innerHeight - 40);
+  };
+  updateReveal();
+  window.addEventListener('resize', updateReveal);
+  document.fonts?.ready.then(updateReveal);
+
+  // Live Manila time.
+  const clock = document.querySelector('.footer-clock');
+  if (clock) {
+    const format = new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Manila' });
+    const tick = () => { clock.textContent = `${format.format(new Date())} in Manila`; };
+    tick();
+    setInterval(tick, 30000);
+  }
+
   const footerName = document.querySelector<HTMLElement>('.footer-name');
   const letterWrap = footerName?.querySelector<HTMLElement>('.footer-letters');
   const canAnimate = matchMedia('(hover: hover) and (pointer: fine)').matches && !matchMedia('(prefers-reduced-motion: reduce)').matches;

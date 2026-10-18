@@ -240,10 +240,22 @@ a:hover .arrow-icon.diagonal {
 .menu-toggle:hover span:last-child {
   width: 28px;
 }
+/* Two drawn lines crossed at the exact centre (a text "×" sits off-centre in its line box). */
 .menu-close {
-  font-size: 36px;
-  font-weight: 300;
-  line-height: 1;
+  position: relative;
+}
+.menu-close span {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 20px;
+  height: 1.5px;
+  margin: -0.75px 0 0 -10px;
+  background: currentColor;
+  transform: rotate(45deg);
+}
+.menu-close span:last-child {
+  transform: rotate(-45deg);
 }
 /* Push-and-scale menu: the page shrinks and slides left, revealing the menu behind it. */
 .page-shell {
@@ -297,6 +309,70 @@ html.menu-closing,
 .menu-bottom {
   width: min(600px, 46vw);
   margin-left: auto;
+}
+/* Link previews float over the shrunk page card on the left. */
+.menu-preview {
+  position: absolute;
+  left: var(--gutter);
+  top: 50%;
+  width: min(36vw, 520px);
+  aspect-ratio: 4 / 3;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+.menu-preview-set {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transform: scale(0.96);
+  transition: opacity 0.35s, transform 0.6s var(--ease);
+}
+.menu-preview-set.is-active {
+  opacity: 1;
+  transform: none;
+}
+.menu-preview-set img {
+  position: absolute;
+  width: 60%;
+  height: auto;
+  border-radius: 4px;
+  box-shadow: 0 18px 40px oklch(0 0 0 / 0.45);
+}
+.menu-preview-set img:nth-child(1) {
+  left: 0;
+  top: 4%;
+  transform: rotate(-4deg);
+}
+.menu-preview-set img:nth-child(2) {
+  right: 0;
+  top: 22%;
+  transform: rotate(3deg);
+}
+.menu-preview-set img:nth-child(3) {
+  left: 18%;
+  bottom: 2%;
+  transform: rotate(-1deg);
+}
+.menu-preview-text {
+  position: absolute;
+  inset: 8% 4%;
+  display: grid;
+  place-items: center;
+  border-radius: 18px;
+  background: var(--ink);
+  color: var(--bg);
+  font-family: "Big Shoulders Display", Impact, sans-serif;
+  font-weight: 800;
+  font-size: clamp(48px, 5.4vw, 92px);
+  line-height: 0.95;
+  text-align: center;
+  text-transform: uppercase;
+  box-shadow: 0 18px 40px oklch(0 0 0 / 0.45);
+}
+@media (max-width: 900px), (hover: none) {
+  .menu-preview {
+    display: none;
+  }
 }
 .menu-links {
   display: flex;
@@ -1036,30 +1112,84 @@ html.menu-closing,
   color: var(--muted);
   padding-top: 3px;
 }
+main {
+  padding-bottom: 90px;
+}
 .site-footer {
-  padding-top: 48px;
+  background: var(--surface);
+}
+.site-footer > .wrap {
+  padding-top: 56px;
   padding-bottom: 26px;
-  margin-top: 65px;
 }
-.footer-invitation {
-  border-top: 1px solid var(--ink);
-  padding-top: 36px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 20px;
+/* Curtain reveal: the page sits above the footer and lifts away to uncover it. */
+.footer-reveal {
+  --curtain-radius: 28px;
 }
-.footer-invitation > p {
-  font-size: 12px;
+.footer-reveal main {
+  position: relative;
+  z-index: 1;
+  margin-bottom: calc(var(--curtain-radius) * -1);
+  background: var(--bg);
+  border-radius: 0 0 var(--curtain-radius) var(--curtain-radius);
+  box-shadow: 0 26px 50px -26px oklch(0.16 0 0 / 0.28);
+}
+/* The footer tucks under the page's rounded corners, so grey (not white) shows through them. */
+.footer-reveal .site-footer {
+  position: sticky;
+  bottom: 0;
+  z-index: 0;
+  padding-top: var(--curtain-radius);
+}
+.footer-top {
+  display: grid;
+  grid-template-columns: 1.1fr 2fr;
+  gap: 40px;
+  padding-bottom: 48px;
+}
+.footer-heading {
+  font-size: clamp(40px, 5vw, 76px);
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: -0.045em;
+}
+.footer-mail {
+  display: inline-block;
+  margin-top: 18px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--ink);
+  font-size: clamp(16px, 1.6vw, 22px);
+  letter-spacing: -0.02em;
+  transition: color 0.3s;
+}
+.footer-mail:hover {
   color: var(--muted);
 }
-.footer-invitation > a {
-  display: flex;
-  align-items: center;
-  gap: 35px;
-  font-size: clamp(17px, 2vw, 25px);
-  font-weight: 500;
-  letter-spacing: -0.03em;
+.footer-columns {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 24px;
+  font-size: 13px;
+}
+.footer-columns h2 {
+  margin-bottom: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.footer-columns ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.footer-columns li + li {
+  margin-top: 6px;
+}
+.footer-columns a:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 .footer-name {
   display: flex;
@@ -1070,7 +1200,8 @@ html.menu-closing,
   font-size: clamp(72px, 13.45vw, 214px);
   line-height: 1;
   letter-spacing: -0.035em;
-  padding-block: 45px 35px;
+  padding-block: 30px 28px;
+  border-top: 1px solid var(--line);
   white-space: nowrap;
 }
 .footer-name > .footer-arrow {
@@ -1574,27 +1705,32 @@ html.menu-closing,
     font-size: 10px;
     max-width: 210px;
   }
-  .site-footer {
-    margin-top: 40px;
-    padding-top: 25px;
+  main {
+    padding-bottom: 60px;
+  }
+  .site-footer > .wrap {
+    padding-top: 36px;
     padding-bottom: 24px;
   }
-  .footer-invitation {
-    padding-top: 25px;
-    align-items: flex-start;
-    flex-direction: column;
-    gap: 10px;
+  .footer-reveal {
+    --curtain-radius: 20px;
   }
-  .footer-invitation > p {
-    font-size: 10px;
+  .footer-top {
+    grid-template-columns: 1fr;
+    gap: 30px;
+    padding-bottom: 32px;
   }
-  .footer-invitation > a {
-    font-size: 21px;
-    gap: 20px;
+  .footer-columns {
+    grid-template-columns: 1fr 1fr;
+    row-gap: 22px;
+    font-size: 12px;
+  }
+  .footer-columns > div:last-child {
+    grid-column: 1 / -1;
   }
   .footer-name {
     font-size: clamp(61px, 14.1vw, 90px);
-    padding-block: 35px 25px;
+    padding-block: 24px 20px;
   }
   .footer-name > .footer-arrow {
     font-size: 0.5em;
@@ -1920,25 +2056,26 @@ html.menu-closing,
   z-index: 30;
   left: 0;
   top: 0;
-  width: 96px;
-  height: 96px;
-  margin: -48px 0 0 -48px;
+  width: 58px;
+  height: 58px;
+  margin: -29px 0 0 -29px;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 3px;
   border-radius: 50%;
   background: var(--ink);
   color: var(--bg);
-  font-size: 13px;
+  font-size: 10px;
+  letter-spacing: 0.01em;
   pointer-events: none;
   scale: 0;
   will-change: transform;
   transition: scale 0.3s var(--ease);
 }
 .view-cursor .arrow-icon {
-  width: 15px;
-  height: 15px;
+  width: 10px;
+  height: 10px;
 }
 .view-cursor.is-active {
   scale: 1;
