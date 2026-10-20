@@ -24,19 +24,20 @@ const services = [
     </section>
     <div class="marquee" aria-hidden="true"><div class="marquee-track">{[0, 1].map(() => <div class="marquee-group">{marqueeItems.map((item) => <><span>{item}</span><i class="marquee-dot"></i></>)}</div>)}</div></div>
     <section aria-label="Selected projects" id="work" class="work-section">
-      <div class="work-toolbar" data-reveal><p>Selected work <span>(06)</span></p><div class="project-filters" aria-label="Filter projects" hidden><button class="active" data-filter="All" aria-pressed="true">All</button><button data-filter="Shopify" aria-pressed="false">Shopify</button><button data-filter="Webflow" aria-pressed="false">Webflow</button><button data-filter="WordPress" aria-pressed="false">WordPress</button></div></div>
+      <div class="work-toolbar" data-reveal><p>Selected work <span>({String(projects.length).padStart(2, '0')})</span></p><div class="project-filters" aria-label="Filter projects" hidden><button class="active" data-filter="All" aria-pressed="true">All</button><button data-filter="Shopify" aria-pressed="false">Shopify</button><button data-filter="Webflow" aria-pressed="false">Webflow</button><button data-filter="WordPress" aria-pressed="false">WordPress</button></div></div>
       <p class="sr-only" id="filter-status" aria-live="polite"></p>
       <div class="project-grid">{projects.map((project, index) => <ProjectCard project={project} index={index} />)}</div>
     </section>
     <VideoReviews />
     <section id="services" class="services-section">
       <SectionTitle title="SERVICES" detail="From the first build to what comes next" />
-      <div class="intro-split section-intro" data-reveal><div class="intro-aside"><span class="tiny-heading">WHAT I DO</span></div><p class="lead">Your vision. <br />The right development.</p></div>
+      <div class="intro-split section-intro" data-reveal><div class="intro-aside"><span class="tiny-heading">What I do</span><p>Build, migrate, improve<br />and support websites</p></div><p class="lead">Your vision. <br />The right development.</p></div>
       <div class="services-list">{services.map((service, index) => <a class="service-row" data-reveal style={`--reveal-index:${index}`} href={withBase('/contact/')}><h3>{service.name}</h3><div><p>{service.text}</p><span>{service.tags}</span></div><Arrow diagonal /></a>)}</div>
     </section>
     <section class="experience-section" aria-labelledby="experience-heading">
       <div class="experience-intro" data-reveal><h2 id="experience-heading">Good work comes<br />from experience.</h2><a href={withBase('/about/')} class="text-link">The full story <Arrow diagonal /></a></div>
       <div class="experience-list">{experience.map((item, index) => <div class="experience-item" data-reveal style={`--reveal-index:${index}`}><div><h3>{item.company}</h3><p>{item.role}</p></div><span>{item.dates}</span></div>)}</div>
+      <a class="text-link services-estimate" href={withBase('/estimate/')} data-reveal>Not sure what you need? Estimate your project <Arrow diagonal /></a>
     </section>
   </div>
 </BaseLayout>

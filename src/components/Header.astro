@@ -15,16 +15,18 @@ const path = Astro.url.pathname;
 <dialog id="site-menu" class="menu-dialog" aria-label="Main navigation">
   <div class="menu-top"><button type="button" class="menu-close" aria-label="Close navigation"><span></span><span></span></button></div>
   <div class="menu-preview" aria-hidden="true">
-    <div class="menu-preview-set">{['trademutt', 'maestro-labs', 'valiant-finance'].map((slug) => <img src={withBase(`/images/projects/${slug}-480.webp`)} alt="" width="480" height="270" loading="lazy" decoding="async" />)}</div>
+    <div class="menu-preview-set">{['road-armor', 'feedbird', 'omenz'].map((slug) => <img src={withBase(`/images/projects/${slug}-480.webp`)} alt="" width="480" height="270" loading="lazy" decoding="async" />)}</div>
     <div class="menu-preview-set"><p class="menu-preview-text">Hello,<br />I’m Grant.</p></div>
-    <div class="menu-preview-set">{['case-mate', 'aeromech', 'polybush'].map((slug) => <img src={withBase(`/images/projects/${slug}-480.webp`)} alt="" width="480" height="270" loading="lazy" decoding="async" />)}</div>
+    <div class="menu-preview-set">{['coptrz', 'skinistry', 'light-my-bricks'].map((slug) => <img src={withBase(`/images/projects/${slug}-480.webp`)} alt="" width="480" height="270" loading="lazy" decoding="async" />)}</div>
+    <div class="menu-preview-set"><p class="menu-preview-text">Plan<br />it.</p></div>
     <div class="menu-preview-set"><p class="menu-preview-text">Let’s<br />talk.</p></div>
   </div>
   <nav class="menu-links" aria-label="Main">
     <a style="--i:0" href={withBase('/')} aria-current={path === withBase('/') ? 'page' : undefined}>Selected work <Arrow /></a>
     <a style="--i:1" href={withBase('/about/')} aria-current={path === withBase('/about/') ? 'page' : undefined}>About Grant <Arrow /></a>
     <a style="--i:2" href={withBase('/#services')}>Services <Arrow /></a>
-    <a style="--i:3" href={withBase('/contact/')} aria-current={path === withBase('/contact/') ? 'page' : undefined}>Get in touch <Arrow /></a>
+    <a style="--i:3" href={withBase('/estimate/')} aria-current={path === withBase('/estimate/') ? 'page' : undefined}>Estimate a project <Arrow /></a>
+    <a style="--i:4" href={withBase('/contact/')} aria-current={path === withBase('/contact/') ? 'page' : undefined}>Get in touch <Arrow /></a>
   </nav>
   <div class="menu-bottom"><a href={`mailto:${profile.email}`}>{profile.email}</a><a href={profile.linkedin} target="_blank" rel="noopener noreferrer">LinkedIn ↗︎</a></div>
 </dialog>

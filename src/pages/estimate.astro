@@ -1,0 +1,417 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import SectionTitle from '../components/SectionTitle.astro';
+import Arrow from '../components/Arrow.astro';
+import { profile } from '../data/profile';
+import { steps } from '../data/estimator';
+---
+<BaseLayout title="Project Estimator — Plan Your Website | Grant Payad" description="Plan a Shopify, Webflow or WordPress project in about a minute. Answer a few questions to get a realistic timeline, what drives it, and a ready-to-send brief.">
+  <div class="wrap estimate-page">
+    <SectionTitle title="ESTIMATE" detail="Plan your project in about a minute" as="h1" />
+    <section class="intro-split estimate-intro">
+      <div class="intro-aside is-in" data-reveal="load" style="--reveal-index:0"><span class="tiny-heading">Project estimator</span><p>A realistic guide, not a quote.<br />Grant confirms after a quick chat.</p></div>
+      <div><p class="lead is-in" data-reveal="load" style="--reveal-index:1">What are you building?</p><p class="intro-support is-in" data-reveal="load" style="--reveal-index:2">Answer a few quick questions. The timeline updates as you go, shows what’s driving it, and turns into a brief you can send in one click.</p></div>
+    </section>
+
+    <noscript><p class="wiz-noscript">The estimator needs JavaScript. You can still <a href={`mailto:${profile.email}`}>email Grant about your project</a>.</p></noscript>
+
+    <div class="wizard" data-wizard>
+      <div class="wiz-main">
+        <div class="wiz-progress">
+          <p class="wiz-count"><span class="wiz-current">01</span><span class="wiz-of">/ <span class="wiz-total">01</span></span></p>
+          <div class="wiz-track" role="progressbar" aria-label="Estimator progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span class="wiz-fill"></span></div>
+          <ol class="wiz-dots" aria-label="Steps"></ol>
+        </div>
+
+        <form class="wiz-form" novalidate>
+          {steps.map((step, stepIndex) => (
+            <fieldset class="wiz-step" data-step={step.id} data-kind={step.kind} hidden={stepIndex > 0}>
+              <legend class="wiz-eyebrow">{step.label}{step.optional && <span> · optional</span>}</legend>
+              <h2 class="wiz-question" tabindex="-1">{step.question}</h2>
+              {step.help && <p class="wiz-help">{step.help}</p>}
+              {(step.kind === 'single' || step.kind === 'multi') && (
+                <div class:list={['wiz-options', { 'is-multi': step.kind === 'multi' }]}>
+                  {step.options?.map((option, index) => (
+                    <label class="wiz-option" data-option={option.id}>
+                      <input type={step.kind === 'single' ? 'radio' : 'checkbox'} name={step.id} value={option.id} data-label={option.label} />
+                      <span class="wiz-key" aria-hidden="true">{index + 1}</span>
+                      <span class="wiz-option-text"><strong>{option.label}</strong>{option.hint && <small>{option.hint}</small>}</span>
+                      <span class="wiz-check" aria-hidden="true"></span>
+                    </label>
+                  ))}
+                </div>
+              )}
+              {step.kind === 'range' && step.range && (
+                <div class="wiz-range">
+                  <p class="wiz-range-readout"><output class="wiz-range-value" for={`range-${step.id}`}>{step.range.initial}</output><span>{step.range.unit}</span></p>
+                  <input id={`range-${step.id}`} type="range" name={step.id} min={step.range.min} max={step.range.max} step={step.range.step} value={step.range.initial} aria-label={step.question} />
+                  <div class="wiz-marks" aria-hidden="true">{step.range.marks.map((mark) => <span>{mark}{mark === step.range!.max ? '+' : ''}</span>)}</div>
+                </div>
+              )}
+              {step.kind === 'text' && <textarea name={step.id} rows="5" placeholder="e.g. Current site: example.com. Launch before our spring sale, budget around…" aria-label={step.question}></textarea>}
+            </fieldset>
+          ))}
+          <section class="wiz-step wiz-review" data-step="review" hidden>
+            <p class="wiz-eyebrow">Your brief</p>
+            <h2 class="wiz-question" tabindex="-1">Here’s your project at a glance.</h2>
+            <p class="wiz-help">Check it over, change anything, then send it to Grant.</p>
+            <dl class="wiz-review-list"></dl>
+          </section>
+        </form>
+
+        <div class="wiz-nav">
+          <button class="wiz-back" type="button">← Back</button>
+          <p class="wiz-hint" aria-hidden="true">Tip: press <kbd>1</kbd>–<kbd>9</kbd> to choose, <kbd>Enter</kbd> to continue</p>
+          <button class="wiz-next" type="button">Continue <Arrow /></button>
+        </div>
+      </div>
+
+      <aside class="wiz-summary" id="estimate-summary" aria-labelledby="estimate-heading">
+        <p class="wiz-warning" role="note"><svg class="wiz-warning-icon" viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path d="M12 3 22 20.5H2L12 3Z" fill="currentColor" /><path d="M12 9.5v5" stroke="#fff" stroke-width="2.4" stroke-linecap="round" /><circle cx="12" cy="17.4" r="1.3" fill="#fff" /></svg><span><strong>Not a quotation</strong> · a rough timeline guide, with no price or commitment</span></p>
+        <h2 class="tiny-heading" id="estimate-heading">Your rough estimate</h2>
+        <p class="wiz-result" aria-live="polite"><span class="wiz-num">—</span><span class="wiz-unit"></span></p>
+        <p class="wiz-months" aria-live="polite"></p>
+        <p class="wiz-caption">Answer a few questions to see a realistic timeline.</p>
+        <div class="wiz-phases" hidden>
+          <div class="wiz-bar"></div>
+          <ul class="wiz-legend"></ul>
+        </div>
+        <div class="wiz-drivers" hidden>
+          <h3>What’s driving the time</h3>
+          <ul></ul>
+        </div>
+        <ul class="wiz-notes"></ul>
+        <div class="wiz-actions">
+          <a class="wiz-send" href={`mailto:${profile.email}`} data-email={profile.email}>Email this brief to Grant <Arrow diagonal /></a>
+          <button class="wiz-pdf" type="button" disabled>Download summary (PDF)</button>
+          <button class="wiz-copy" type="button">Copy brief</button>
+        </div>
+        <p class="wiz-disclaimer">Calendar time for one developer, assuming feedback within a couple of days.</p>
+      </aside>
+    </div>
+  </div>
+  <a class="estimate-bar" href="#estimate-summary" aria-hidden="true" tabindex="-1"><span>Estimate</span><strong class="bar-value">—</strong><span>View ↓︎</span></a>
+</BaseLayout>
+<script>
+  import { steps, estimate, type Answers, type Estimate } from '../data/estimator';
+
+  const wizard = document.querySelector<HTMLElement>('[data-wizard]');
+  if (wizard) {
+    const form = wizard.querySelector<HTMLFormElement>('.wiz-form')!;
+    const back = wizard.querySelector<HTMLButtonElement>('.wiz-back')!;
+    const next = wizard.querySelector<HTMLButtonElement>('.wiz-next')!;
+    const fill = wizard.querySelector<HTMLElement>('.wiz-fill')!;
+    const track = wizard.querySelector<HTMLElement>('.wiz-track')!;
+    const dots = wizard.querySelector<HTMLOListElement>('.wiz-dots')!;
+    const current = wizard.querySelector('.wiz-current')!;
+    const total = wizard.querySelector('.wiz-total')!;
+    const reviewList = wizard.querySelector('.wiz-review-list')!;
+    const summary = wizard.querySelector<HTMLElement>('.wiz-summary')!;
+    const num = summary.querySelector<HTMLElement>('.wiz-num')!;
+    const unit = summary.querySelector('.wiz-unit')!;
+    const caption = summary.querySelector('.wiz-caption')!;
+    const phasesBox = summary.querySelector<HTMLElement>('.wiz-phases')!;
+    const bar = summary.querySelector<HTMLElement>('.wiz-bar')!;
+    const legend = summary.querySelector('.wiz-legend')!;
+    const driversBox = summary.querySelector<HTMLElement>('.wiz-drivers')!;
+    const notesList = summary.querySelector('.wiz-notes')!;
+    const send = summary.querySelector<HTMLAnchorElement>('.wiz-send')!;
+    const copy = summary.querySelector<HTMLButtonElement>('.wiz-copy')!;
+    const pdfButton = summary.querySelector<HTMLButtonElement>('.wiz-pdf')!;
+    const monthsLine = summary.querySelector('.wiz-months')!;
+    const barValue = document.querySelector('.bar-value');
+    const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    const answers: Answers = {};
+    let at = 'type';
+    let brief = '';
+    let shown = { low: 0, high: 0 };
+    let lastResult: Estimate | null = null;
+    // The first step is server-rendered visible, so it doesn't animate in or shift the layout on load.
+    let lastShownStep = steps[0].id;
+
+    // "About 1½–2 months" under the weeks (4.345 weeks in a month).
+    const half = (m: number) => (m % 1 ? `${Math.floor(m) || ''}½` : `${m}`);
+    const monthsText = (low: number, high: number) => {
+      if (high <= 4) return 'Under a month';
+      const ml = Math.max(0.5, Math.round((low / 4.345) * 2) / 2);
+      const mh = Math.max(ml, Math.round((high / 4.345) * 2) / 2);
+      return ml === mh ? `About ${half(mh)} month${mh > 1 ? 's' : ''}` : `About ${half(ml)}–${half(mh)} months`;
+    };
+
+    const visibleSteps = () => steps.filter((step) => !step.when || step.when(answers));
+    const order = () => [...visibleSteps().map((step) => step.id), 'review'];
+    const section = (id: string) => form.querySelector<HTMLElement>(`[data-step="${id}"]`)!;
+    const stepById = (id: string) => steps.find((step) => step.id === id);
+
+    // Only answers from steps that still apply count (e.g. store features drop out if you switch to Webflow).
+    const effective = (): Answers => {
+      const live: Answers = {};
+      for (const step of visibleSteps()) if (answers[step.id] !== undefined) live[step.id] = answers[step.id];
+      return live;
+    };
+
+    const read = (id: string) => {
+      const step = stepById(id);
+      if (!step) return;
+      const el = section(id);
+      if (step.kind === 'single') answers[id] = el.querySelector<HTMLInputElement>('input:checked')?.value;
+      if (step.kind === 'multi') answers[id] = [...el.querySelectorAll<HTMLInputElement>('input:checked')].map((input) => input.value);
+      if (step.kind === 'range') answers[id] = Number(el.querySelector<HTMLInputElement>('input')!.value);
+      if (step.kind === 'text') answers[id] = el.querySelector('textarea')!.value.trim();
+    };
+
+    // Hide options that don't apply (e.g. checkout customisation unless Shopify Plus).
+    const syncOptions = () => {
+      for (const step of steps) {
+        if (!step.options) continue;
+        for (const option of step.options) {
+          const label = section(step.id).querySelector<HTMLElement>(`[data-option="${option.id}"]`)!;
+          const ok = !option.when || option.when(answers);
+          label.hidden = !ok;
+          if (!ok) label.querySelector('input')!.checked = false;
+        }
+        read(step.id);
+        // Number the visible options 1, 2, 3… for keyboard shortcuts.
+        let n = 0;
+        section(step.id).querySelectorAll<HTMLElement>('.wiz-option').forEach((label) => { if (!label.hidden) label.querySelector('.wiz-key')!.textContent = String(++n); });
+      }
+    };
+
+    const answered = (id: string) => {
+      const step = stepById(id);
+      if (!step || step.optional || step.kind === 'range' || step.kind === 'text') return true;
+      const value = answers[id];
+      return Array.isArray(value) ? value.length > 0 : Boolean(value);
+    };
+
+    const answerText = (id: string) => {
+      const step = stepById(id)!;
+      const value = answers[id];
+      if (step.kind === 'range') return `${value} ${step.range?.unit}`;
+      if (step.kind === 'text') return String(value || '');
+      const ids = Array.isArray(value) ? value : value ? [value] : [];
+      return ids.map((v) => step.options?.find((o) => o.id === v)?.label ?? v).join(', ');
+    };
+
+    const animateNumbers = (low: number, high: number) => {
+      const from = { ...shown };
+      shown = { low, high };
+      if (reduce || (!from.low && !from.high)) { num.textContent = `${low}–${high}`; return; }
+      const start = performance.now();
+      const tick = (now: number) => {
+        const p = Math.min(1, (now - start) / 450);
+        const e = 1 - (1 - p) ** 3;
+        num.textContent = `${Math.round(from.low + (low - from.low) * e)}–${Math.round(from.high + (high - from.high) * e)}`;
+        if (p < 1) requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
+    };
+
+    const renderSummary = () => {
+      const live = effective();
+      const result: Estimate = estimate(live);
+      lastResult = result;
+      monthsLine.textContent = result.mode === 'weeks' ? monthsText(result.low, result.high) : '';
+      pdfButton.disabled = result.mode === 'none';
+      if (result.mode === 'none') {
+        num.textContent = '—'; unit.textContent = ''; shown = { low: 0, high: 0 };
+        caption.textContent = 'Answer a few questions to see a realistic timeline.';
+      } else if (result.mode === 'monthly') {
+        num.textContent = `${result.hours}`; unit.textContent = 'hrs / month'; shown = { low: 0, high: 0 };
+        caption.textContent = 'A monthly retainer you can adjust as you go.';
+      } else {
+        animateNumbers(result.low, result.high);
+        unit.textContent = 'weeks';
+        caption.textContent = result.tight ? 'Tighter than your deadline: see the tip below.' : 'Typical calendar time from kick-off to launch.';
+      }
+      summary.classList.toggle('is-tight', result.tight);
+      if (barValue) barValue.textContent = result.mode === 'weeks' ? `${result.low}–${result.high} weeks` : result.mode === 'monthly' ? `${result.hours} hrs / month` : '—';
+
+      phasesBox.hidden = result.phases.length === 0;
+      const sum = result.phases.reduce((s, p) => s + p.weeks, 0) || 1;
+      bar.innerHTML = result.phases.map((p) => `<span class="phase-${p.id}" style="flex-grow:${p.weeks}" title="${p.label}: ~${p.display}"></span>`).join('');
+      legend.innerHTML = result.phases.map((p) => `<li><i class="phase-${p.id}"></i>${p.label}<span>~${p.display}</span></li>`).join('');
+      bar.style.setProperty('--sum', String(sum));
+
+      driversBox.hidden = result.drivers.length === 0;
+      driversBox.querySelector('ul')!.innerHTML = result.drivers.map((d) => `<li>${d.label}<span>+${Math.round(d.weeks * 10) / 10} wk</span></li>`).join('');
+      notesList.innerHTML = result.notes.map((n) => `<li>${n}</li>`).join('');
+
+      // Brief text for email / copy.
+      const lines = visibleSteps().filter((s) => s.kind !== 'text' && answerText(s.id)).map((s) => `${s.label}: ${answerText(s.id)}`);
+      const estimateLine = result.mode === 'weeks' ? `Rough estimate: ${result.low}–${result.high} weeks (${result.phases.map((p) => `${p.label} ~${p.display}`).join(', ')})` : result.mode === 'monthly' ? `Support: about ${result.hours} hours a month` : '';
+      const notes = String(live.notes || '');
+      brief = ['Hi Grant,', '', 'I used the estimator on your site. Here’s my project:', '', ...lines, estimateLine, ...(notes ? ['', `Notes: ${notes}`] : []), '', 'Thanks,'].filter((l, i, all) => !(l === '' && all[i - 1] === '')).join('\n');
+      const subject = `Project brief${answers.platform ? `: ${answerText('platform')}` : ''}${answers.type ? ` – ${answerText('type')}` : ''}`;
+      send.href = `mailto:${send.dataset.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(brief)}`;
+    };
+
+    const renderReview = () => {
+      reviewList.innerHTML = '';
+      for (const step of visibleSteps()) {
+        const text = answerText(step.id);
+        const dt = document.createElement('dt');
+        dt.textContent = step.label;
+        const dd = document.createElement('dd');
+        dd.textContent = text || '—';
+        const edit = document.createElement('button');
+        edit.type = 'button';
+        edit.className = 'wiz-edit';
+        edit.textContent = 'Edit';
+        edit.setAttribute('aria-label', `Edit ${step.label}`);
+        edit.addEventListener('click', () => go(step.id, -1));
+        dd.append(edit);
+        reviewList.append(dt, dd);
+      }
+    };
+
+    const render = (direction = 1) => {
+      syncOptions();
+      const ids = order();
+      if (!ids.includes(at)) at = ids[0];
+      const index = ids.indexOf(at);
+      form.querySelectorAll<HTMLElement>('.wiz-step').forEach((el) => {
+        const active = el.dataset.step === at;
+        el.hidden = !active;
+        el.classList.toggle('is-back', active && direction < 0);
+        if (active && !reduce && at !== lastShownStep) { el.classList.remove('is-entering'); void el.offsetWidth; el.classList.add('is-entering'); }
+      });
+      const isReview = at === 'review';
+      if (isReview) renderReview();
+      current.textContent = String(Math.min(index + 1, ids.length - 1)).padStart(2, '0');
+      total.textContent = String(ids.length - 1).padStart(2, '0');
+      const progress = isReview ? 100 : Math.round((index / (ids.length - 1)) * 100);
+      fill.style.transform = `scaleX(${progress / 100})`;
+      track.setAttribute('aria-valuenow', String(progress));
+      dots.innerHTML = ids.slice(0, -1).map((id, i) => `<li class="${i < index ? 'is-done' : i === index ? 'is-current' : ''}"><button type="button" data-go="${id}" ${i <= index || answered(id) ? '' : 'disabled'} aria-label="${stepById(id)?.label}">${stepById(id)?.label}</button></li>`).join('');
+      back.disabled = index === 0;
+      next.hidden = isReview;
+      const step = stepById(at);
+      next.disabled = !isReview && !answered(at);
+      next.firstChild!.textContent = index === ids.length - 2 ? 'See my brief ' : step?.optional && !answered(at) ? 'Skip ' : 'Continue ';
+      if (step?.optional && step.kind === 'multi') next.firstChild!.textContent = (answers[at] as string[] | undefined)?.length ? 'Continue ' : 'Skip ';
+      wizard.classList.toggle('is-review', isReview);
+      lastShownStep = at;
+      renderSummary();
+    };
+
+    const go = (id: string, direction: number) => {
+      at = id;
+      render(direction);
+      const heading = section(at).querySelector<HTMLElement>('.wiz-question');
+      heading?.focus({ preventScroll: true });
+      const top = heading?.getBoundingClientRect().top ?? 0;
+      if (top < 60 || top > innerHeight * 0.55) wizard.querySelector('.wiz-main')!.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
+    };
+    let switching = false;
+    const step = (delta: number) => {
+      const ids = order();
+      const index = ids.indexOf(at) + delta;
+      if (index < 0 || index >= ids.length || switching) return;
+      if (reduce) { go(ids[index], delta); return; }
+      // The current question fades out first, then the next one slides in.
+      switching = true;
+      const leaving = section(at);
+      leaving.classList.remove('is-entering');
+      leaving.classList.add(delta > 0 ? 'is-leaving' : 'is-leaving-back');
+      window.setTimeout(() => {
+        leaving.classList.remove('is-leaving', 'is-leaving-back');
+        switching = false;
+        go(ids[index], delta);
+      }, 180);
+    };
+
+    let autoTimer = 0;
+    form.addEventListener('change', (event) => {
+      const input = event.target as HTMLInputElement;
+      const id = input.closest<HTMLElement>('.wiz-step')?.dataset.step;
+      if (!id) return;
+      read(id);
+      render(0);
+      // Single choices move on by themselves after a short beat.
+      if (input.type === 'radio') {
+        clearTimeout(autoTimer);
+        autoTimer = window.setTimeout(() => { if (at === id) step(1); }, reduce ? 0 : 280);
+      }
+    });
+    form.addEventListener('input', (event) => {
+      const el = event.target as HTMLInputElement;
+      const id = el.closest<HTMLElement>('.wiz-step')?.dataset.step;
+      if (!id || (el.type !== 'range' && el.tagName !== 'TEXTAREA')) return;
+      if (el.type === 'range') {
+        const output = section(id).querySelector('output')!;
+        output.textContent = `${el.value}${Number(el.value) >= Number(el.max) ? '+' : ''}`;
+        el.style.setProperty('--fill', `${((Number(el.value) - Number(el.min)) / (Number(el.max) - Number(el.min))) * 100}%`);
+      }
+      read(id);
+      renderSummary();
+    });
+    form.addEventListener('submit', (event) => event.preventDefault());
+    next.addEventListener('click', () => step(1));
+    back.addEventListener('click', () => step(-1));
+    dots.addEventListener('click', (event) => {
+      const target = (event.target as HTMLElement).closest<HTMLButtonElement>('[data-go]');
+      if (target && !target.disabled) go(target.dataset.go!, -1);
+    });
+
+    // Keyboard: 1–9 pick an option, Enter continues (not while typing in the notes).
+    document.addEventListener('keydown', (event) => {
+      if (event.metaKey || event.ctrlKey || event.altKey) return;
+      const typing = (event.target as HTMLElement).closest('textarea, input[type="range"]');
+      if (/^[1-9]$/.test(event.key) && !typing) {
+        const options = [...section(at).querySelectorAll<HTMLElement>('.wiz-option')].filter((o) => !o.hidden);
+        const input = options[Number(event.key) - 1]?.querySelector('input');
+        if (input) { input.click(); event.preventDefault(); }
+      }
+      if (event.key === 'Enter' && !typing && !(event.target as HTMLElement).closest('button, a') && !next.disabled && !next.hidden) {
+        event.preventDefault();
+        step(1);
+      }
+    });
+
+    pdfButton.addEventListener('click', async () => {
+      if (!lastResult || lastResult.mode === 'none') return;
+      const label = pdfButton.textContent;
+      pdfButton.textContent = 'Preparing PDF…';
+      pdfButton.disabled = true;
+      try {
+        const { downloadEstimatePdf } = await import('../scripts/estimate-pdf');
+        const rows = visibleSteps().filter((s) => s.kind !== 'text' && answerText(s.id)).map((s) => [s.label, answerText(s.id)] as [string, string]);
+        await downloadEstimatePdf({
+          rows,
+          result: lastResult,
+          months: lastResult.mode === 'weeks' ? monthsText(lastResult.low, lastResult.high) : '',
+          notes: String(effective().notes || ''),
+          email: send.dataset.email || '',
+        });
+        pdfButton.textContent = 'Downloaded';
+      } catch {
+        pdfButton.textContent = 'Couldn’t create the PDF';
+      }
+      window.setTimeout(() => { pdfButton.textContent = label; pdfButton.disabled = false; }, 2200);
+    });
+
+    copy.addEventListener('click', async () => {
+      try { await navigator.clipboard.writeText(brief); copy.textContent = 'Brief copied'; }
+      catch { copy.textContent = 'Couldn’t copy, use the email button'; }
+      window.setTimeout(() => { copy.textContent = 'Copy brief'; }, 2200);
+    });
+
+    // Initial range fill + first render.
+    form.querySelectorAll<HTMLInputElement>('input[type="range"]').forEach((el) => el.style.setProperty('--fill', `${((Number(el.value) - Number(el.min)) / (Number(el.max) - Number(el.min))) * 100}%`));
+    steps.forEach((s) => { if (s.kind === 'range') read(s.id); });
+    render(0);
+
+    // Phones: a slim bar keeps the estimate in view until the summary is on screen.
+    const mobileBar = document.querySelector<HTMLElement>('.estimate-bar');
+    if (mobileBar && 'IntersectionObserver' in window) {
+      let mainVisible = false;
+      let summaryVisible = false;
+      const sync = () => mobileBar.classList.toggle('is-visible', mainVisible && !summaryVisible && shown.high > 0);
+      new IntersectionObserver(([entry]) => { mainVisible = entry.isIntersecting; sync(); }).observe(wizard.querySelector('.wiz-main')!);
+      new IntersectionObserver(([entry]) => { summaryVisible = entry.isIntersecting; sync(); }).observe(summary);
+      form.addEventListener('change', sync);
+    }
+  }
+</script>

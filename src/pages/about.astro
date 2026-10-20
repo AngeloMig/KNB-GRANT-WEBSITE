@@ -10,6 +10,7 @@ const toolGroups = [
   { id: 'design', label: 'Design & integrations', canvas: 'clay', tools: ['Figma', 'GSAP', 'Adobe Photoshop', 'HubSpot', 'ActiveCampaign', 'Klaviyo'] },
 ];
 const toolCount = toolGroups.reduce((total, group) => total + group.tools.length, 0);
+let tileIndex = 0;
 ---
 <BaseLayout title="About Grant Payad — Website Developer & Team Lead" description="Meet Grant Payad, a Shopify, Webflow, and WordPress developer with experience in ecommerce, custom development, migrations, and development team leadership.">
   <div class="wrap">
@@ -20,10 +21,10 @@ const toolCount = toolGroups.reduce((total, group) => total + group.tools.length
       <div class="tools-head"><h2 class="medium-heading" id="tools-heading">Tools of the trade <span class="tools-count">({toolCount})</span></h2>
         <ul class="tools-legend" aria-label="Tool groups">{toolGroups.map((group) => <li data-group={group.id}><span class:list={['tools-dot', `canvas-${group.canvas}`]} aria-hidden="true"></span>{group.label} <span>{group.tools.length}</span></li>)}</ul>
       </div>
-      <div class="tools-wall">{toolGroups.map((group) => (
+      <div class="tools-wall" data-reveal>{toolGroups.map((group) => (
         <div class="tools-group" data-group={group.id}>
           <h3 class="sr-only">{group.label}</h3>
-          <ul>{group.tools.map((tool, index) => <li class:list={['tool-tile', `canvas-${group.canvas}`]} data-reveal style={`--reveal-index:${index % 4}`}><span class="tool-group" aria-hidden="true">{group.label}</span><span class="tool-name">{tool}</span></li>)}</ul>
+          <ul>{group.tools.map((tool) => <li class:list={['tool-tile', `canvas-${group.canvas}`]} style={`--t:${tileIndex++}`}><span class="tool-group" aria-hidden="true">{group.label}</span><span class="tool-name">{tool}</span></li>)}</ul>
         </div>
       ))}</div>
     </section>

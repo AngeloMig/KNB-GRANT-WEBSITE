@@ -15,88 +15,93 @@ export interface Project {
 
 export const projects: Project[] = [
   {
-    slug: "trademutt",
-    name: "TradeMutt",
+    slug: "road-armor",
+    name: "Road Armor",
     platform: "Shopify",
-    category: "Ecommerce",
-    engagement: "Company project",
-    url: "https://trademutt.com/",
-    canvas: "olive",
-    mobileBar: { bg: "#151515", fg: "#fff" },
-    description:
-      "Conversation-starting workwear. An ecommerce experience for a brand with a social purpose.",
-    overview:
-      "TradeMutt brings distinctive workwear, hi-vis clothing, and accessories together in an online store. Its digital presence combines product collections with the story of the brand and its social impact.",
-  },
-  {
-    slug: "maestro-labs",
-    name: "Maestro Labs",
-    platform: "Webflow",
-    category: "Software & technology",
-    engagement: "Freelance project",
-    url: "https://www.maestrolabs.com/",
-    canvas: "lilac",
-    mobileBar: { bg: "#fff", fg: "#000" },
-    description:
-      "A digital home for AI productivity tools, bringing email and meeting assistants into focus.",
-    overview:
-      "Maestro Labs presents AI assistants for email, meetings, and productivity. The website introduces its products, explains their features, and helps visitors explore integrations and ways to get started.",
-  },
-  {
-    slug: "valiant-finance",
-    name: "Valiant Finance",
-    platform: "Webflow",
-    category: "Financial services",
-    engagement: "Freelance project",
-    url: "https://www.valiantfinance.com/",
-    canvas: "violet",
-    mobileBar: { bg: "#4c5cf6", fg: "#fff" },
-    description:
-      "Business finance, made approachable. A website connecting businesses with lending options.",
-    overview:
-      "Valiant Finance introduces business lending options through a website focused on helping visitors understand available finance products and begin a quote. Industry information and product explanations support the customer journey.",
-  },
-  {
-    slug: "case-mate",
-    name: "Case-Mate",
-    platform: "Shopify",
-    category: "Ecommerce",
-    engagement: "Freelance project",
-    url: "https://case-mate.com/",
-    canvas: "rose",
-    mobileBar: { bg: "#151515", fg: "#fff" },
-    description:
-      "Everyday essentials with personality. A product-led storefront for accessories and more.",
-    overview:
-      "Case-Mate showcases phone accessories, totes, and everyday essentials through product photography, collections, and featured products. The storefront brings a wide range of accessories into one shopping experience.",
-  },
-  {
-    slug: "aeromech",
-    name: "Aeromech",
-    platform: "Webflow",
-    category: "Aerospace & engineering",
+    category: "Automotive",
     engagement: "Company project",
     agency: "Rivyl",
-    url: "https://www.aeromech.com.au/",
-    canvas: "blue",
-    mobileBar: { bg: "#1c1c1c", fg: "#fff" },
+    url: "https://roadarmor.com/",
+    canvas: "clay",
+    mobileBar: { bg: "#0c0c0c", fg: "#fff" },
     description:
-      "Big sky thinking. A bold web presence for an aerospace and engineering business.",
+      "Built for the road ahead. A storefront for American-made steel bumpers and off-road accessories.",
     overview:
-      "Aeromech presents its aerospace and engineering business through large aircraft imagery and a distinctive visual identity. The website introduces the company and gives visitors a way to explore its work and services.",
+      "Road Armor manufactures American-made steel bumpers and accessories for trucks, Jeeps, and off-road vehicles. Its online store brings product ranges, vehicle builds, and dealer information together in one place.",
   },
   {
-    slug: "polybush",
-    name: "Polybush",
-    platform: "WordPress",
-    category: "Automotive",
-    engagement: "Freelance project",
-    url: "https://www.polybush.co.uk/",
-    canvas: "clay",
-    mobileBar: { bg: "#0b2a6e", fg: "#fff" },
+    slug: "feedbird",
+    name: "Feedbird",
+    platform: "Webflow",
+    category: "Marketing services",
+    engagement: "Company project",
+    agency: "KNB Web Solution",
+    url: "https://feedbird.com/",
+    canvas: "blue",
+    mobileBar: { bg: "#f3f2f1", fg: "#000" },
     description:
-      "A specialist product catalog bringing automotive suspension components to a broad audience.",
+      "Social media, done for you. A marketing site for a social media management agency.",
     overview:
-      "Polybush helps visitors explore suspension components for cars, vans, and commercial vehicles. Its website combines product browsing, vehicle selection, technical information, and company resources.",
+      "Feedbird is a social media management agency for small businesses. Its website explains its plans and services, shows example posts and videos, and guides visitors towards booking a demo.",
+  },
+  {
+    slug: "omenz",
+    name: "Omenz",
+    platform: "Shopify",
+    category: "Fashion & apparel",
+    engagement: "Company project",
+    agency: "Rivyl",
+    url: "https://omenz.com.au/",
+    canvas: "olive",
+    mobileBar: { bg: "#ffeb6e", fg: "#000" },
+    description:
+      "Heavy ink, bold attitude. An online store for an independent Australian streetwear label.",
+    overview:
+      "Omenz is an independent Australian label designing graphic tees inspired by tattoo, metal, and moto culture. The store showcases new releases, bestsellers, and collections with a bold, gritty visual style.",
+  },
+  {
+    slug: "coptrz",
+    name: "Coptrz",
+    platform: "WordPress",
+    category: "Drones & technology",
+    engagement: "Company project",
+    agency: "KNB Web Solution",
+    url: "https://coptrz.com/",
+    canvas: "violet",
+    mobileBar: { bg: "#fff", fg: "#000" },
+    description:
+      "The drone experts. A web presence for a commercial drone retailer and training provider.",
+    overview:
+      "Coptrz supplies commercial drones and drone technology in the UK, alongside consultancy, repairs, and training. The website brings together products, industry solutions, training courses, and resources.",
+  },
+  {
+    slug: "skinistry",
+    name: "Skinistry",
+    platform: "Shopify",
+    category: "Beauty & skincare",
+    engagement: "Company project",
+    agency: "Rivyl",
+    url: "https://skinistry.co/",
+    canvas: "lilac",
+    mobileBar: { bg: "#0e0124", fg: "#fff" },
+    description:
+      "Sinfully good skin. A bold, character-driven storefront for a skincare brand.",
+    overview:
+      "Skinistry sells skincare products and bundles through a playful, high-contrast storefront. Collections, bundles, and featured favourites help shoppers find the right products for their routine.",
+  },
+  {
+    slug: "light-my-bricks",
+    name: "Light My Bricks",
+    platform: "Shopify",
+    category: "Toys & hobbies",
+    engagement: "Company project",
+    agency: "Rivyl",
+    url: "https://www.lightmybricks.com/",
+    canvas: "rose",
+    mobileBar: { bg: "#fdcf00", fg: "#000" },
+    description:
+      "Lighting for LEGO® builds. A storefront for lighting kits designed by LEGO fans.",
+    overview:
+      "Light My Bricks designs lighting kits engineered for specific LEGO® sets. The store helps fans find kits for their builds, browse new releases, and explore its learning centre and instructions.",
   },
 ];

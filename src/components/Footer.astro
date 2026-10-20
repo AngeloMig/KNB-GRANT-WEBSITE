@@ -2,7 +2,7 @@
 import { profile } from '../data/profile';
 import { withBase } from '../utils/paths';
 const footerLetters = [...'GRANT PAYAD'];
-const pages = [['Selected work', '/'], ['About Grant', '/about/'], ['Services', '/#services'], ['Get in touch', '/contact/']];
+const pages = [['Selected work', '/'], ['About Grant', '/about/'], ['Services', '/#services'], ['Project estimator', '/estimate/'], ['Get in touch', '/contact/']];
 ---
 <footer class="site-footer">
   <div class="wrap">
@@ -14,7 +14,7 @@ const pages = [['Selected work', '/'], ['About Grant', '/about/'], ['Services', 
         <div><h2>Local time</h2><ul><li class="footer-clock">Manila, Philippines</li><li>Working across time zones</li></ul></div>
       </div>
     </div>
-    <a class="footer-name" href={`mailto:${profile.email}`} aria-label="Email Grant Payad"><span class="footer-letters">{footerLetters.map((letter) => letter === ' ' ? <span class="footer-space">&nbsp;</span> : <span class="footer-letter">{letter}</span>)}</span><span class="footer-arrow">↗︎</span></a>
+    <a class="footer-name" href={`mailto:${profile.email}`} aria-label="Email Grant Payad"><span class="footer-letters">{footerLetters.map((letter, index) => letter === ' ' ? <span class="footer-space">&nbsp;</span> : <span class="footer-letter" style={`--i:${index}`}>{letter}</span>)}</span><span class="footer-arrow">↗︎</span></a>
     <div class="footer-meta"><span>© {new Date().getFullYear()} Grant Payad</span><span>Built with care. Based in the Philippines.</span><a href={profile.linkedin} target="_blank" rel="noopener noreferrer">LinkedIn ↗︎</a><a href="#top">Back to top ↑︎</a></div>
   </div>
 </footer>
@@ -28,6 +28,30 @@ const pages = [['Selected work', '/'], ['About Grant', '/about/'], ['Services', 
   updateReveal();
   window.addEventListener('resize', updateReveal);
   document.fonts?.ready.then(updateReveal);
+
+  // Name cascade: GRANT PAYAD rises letter by letter once the curtain has uncovered it.
+  const nameLink = document.querySelector<HTMLElement>('.footer-name');
+  const pageMain = document.querySelector('main');
+  if (nameLink && pageMain && document.documentElement.classList.contains('motion')) {
+    nameLink.classList.add('is-waiting');
+    let ticking = false;
+    const check = () => {
+      const box = nameLink.getBoundingClientRect();
+      const line = box.top + box.height * 0.4;
+      if (line > pageMain.getBoundingClientRect().bottom && line < window.innerHeight) {
+        nameLink.classList.replace('is-waiting', 'is-cascading');
+        window.removeEventListener('scroll', onScroll);
+        window.setTimeout(() => nameLink.classList.remove('is-cascading'), 1800);
+      }
+    };
+    const onScroll = () => {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(() => { ticking = false; check(); });
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    check();
+  }
 
   // Live Manila time.
   const clock = document.querySelector('.footer-clock');
