@@ -1,7 +1,7 @@
 ---
 import { profile } from '../data/profile';
 import { withBase } from '../utils/paths';
-const footerLetters = [...'GRANT PAYAD'];
+const footerLetters = [...'GRANT DEV14'];
 const pages = [['Selected work', '/'], ['About Grant', '/about/'], ['Services', '/#services'], ['Project estimator', '/estimate/'], ['Get in touch', '/contact/']];
 ---
 <footer class="site-footer">
@@ -14,8 +14,8 @@ const pages = [['Selected work', '/'], ['About Grant', '/about/'], ['Services', 
         <div><h2>Local time</h2><ul><li class="footer-clock">Manila, Philippines</li><li>Working across time zones</li></ul></div>
       </div>
     </div>
-    <a class="footer-name" href={`mailto:${profile.email}`} aria-label="Email Grant Payad"><span class="footer-letters">{footerLetters.map((letter, index) => letter === ' ' ? <span class="footer-space">&nbsp;</span> : <span class="footer-letter" style={`--i:${index}`}>{letter}</span>)}</span><span class="footer-arrow">↗︎</span></a>
-    <div class="footer-meta"><span>© {new Date().getFullYear()} Grant Payad</span><span>Built with care. Based in the Philippines.</span><a href={profile.linkedin} target="_blank" rel="noopener noreferrer">LinkedIn ↗︎</a><a href="#top">Back to top ↑︎</a></div>
+    <a class="footer-name" href={`mailto:${profile.email}`} aria-label="Email Grant"><span class="footer-letters">{footerLetters.map((letter, index) => letter === ' ' ? <span class="footer-space">&nbsp;</span> : <span class="footer-letter" style={`--i:${index}`}>{letter}</span>)}</span><span class="footer-arrow">↗︎</span></a>
+    <div class="footer-meta"><span>© {new Date().getFullYear()} Grant Dev14</span><span>Built with care. Based in the Philippines.</span><a href={profile.linkedin} target="_blank" rel="noopener noreferrer">LinkedIn ↗︎</a><a href="#top">Back to top ↑︎</a></div>
   </div>
 </footer>
 <script>
@@ -29,7 +29,7 @@ const pages = [['Selected work', '/'], ['About Grant', '/about/'], ['Services', 
   window.addEventListener('resize', updateReveal);
   document.fonts?.ready.then(updateReveal);
 
-  // Name cascade: GRANT PAYAD rises letter by letter once the curtain has uncovered it.
+  // Name cascade: GRANT DEV14 rises letter by letter once the curtain has uncovered it.
   const nameLink = document.querySelector<HTMLElement>('.footer-name');
   const pageMain = document.querySelector('main');
   if (nameLink && pageMain && document.documentElement.classList.contains('motion')) {

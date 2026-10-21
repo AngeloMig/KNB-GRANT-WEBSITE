@@ -5,7 +5,7 @@ import Arrow from '../components/Arrow.astro';
 import { profile } from '../data/profile';
 import { steps } from '../data/estimator';
 ---
-<BaseLayout title="Project Estimator — Plan Your Website | Grant Payad" description="Plan a Shopify, Webflow or WordPress project in about a minute. Answer a few questions to get a realistic timeline, what drives it, and a ready-to-send brief.">
+<BaseLayout title="Project Estimator — Plan Your Website | Grant Dev14" description="Plan a Shopify, Webflow or WordPress project in about a minute. Answer a few questions to get a realistic timeline, what drives it, and a ready-to-send brief.">
   <div class="wrap estimate-page">
     <SectionTitle title="ESTIMATE" detail="Plan your project in about a minute" as="h1" />
     <section class="intro-split estimate-intro">
@@ -35,12 +35,13 @@ import { steps } from '../data/estimator';
                     <label class="wiz-option" data-option={option.id}>
                       <input type={step.kind === 'single' ? 'radio' : 'checkbox'} name={step.id} value={option.id} data-label={option.label} />
                       <span class="wiz-key" aria-hidden="true">{index + 1}</span>
-                      <span class="wiz-option-text"><strong>{option.label}</strong>{option.hint && <small>{option.hint}</small>}</span>
+                      <span class="wiz-option-text"><strong>{option.label}</strong>{(option.hint || option.hintFor) && <small>{option.hint}</small>}</span>
                       <span class="wiz-check" aria-hidden="true"></span>
                     </label>
                   ))}
                 </div>
               )}
+              {step.noteFor && <div class="wiz-note" aria-live="polite" hidden><strong></strong><p></p></div>}
               {step.kind === 'range' && step.range && (
                 <div class="wiz-range">
                   <p class="wiz-range-readout"><output class="wiz-range-value" for={`range-${step.id}`}>{step.range.initial}</output><span>{step.range.unit}</span></p>
@@ -110,6 +111,7 @@ import { steps } from '../data/estimator';
     const num = summary.querySelector<HTMLElement>('.wiz-num')!;
     const unit = summary.querySelector('.wiz-unit')!;
     const caption = summary.querySelector('.wiz-caption')!;
+    const disclaimer = summary.querySelector('.wiz-disclaimer')!;
     const phasesBox = summary.querySelector<HTMLElement>('.wiz-phases')!;
     const bar = summary.querySelector<HTMLElement>('.wiz-bar')!;
     const legend = summary.querySelector('.wiz-legend')!;
@@ -170,6 +172,8 @@ import { steps } from '../data/estimator';
           const ok = !option.when || option.when(answers);
           label.hidden = !ok;
           if (!ok) label.querySelector('input')!.checked = false;
+          // Live hints, e.g. how realistic each launch date is for this project.
+          if (option.hintFor && ok) { const hint = option.hintFor(answers); label.querySelector('small')!.textContent = hint; label.dataset.fit = hint.startsWith('Not realistic') || hint.startsWith('Very tight') ? 'no' : hint.startsWith('Fits') ? 'yes' : ''; }
         }
         read(step.id);
         // Number the visible options 1, 2, 3… for keyboard shortcuts.
@@ -223,9 +227,12 @@ import { steps } from '../data/estimator';
       } else {
         animateNumbers(result.low, result.high);
         unit.textContent = 'weeks';
-        caption.textContent = result.tight ? 'Tighter than your deadline: see the tip below.' : 'Typical calendar time from kick-off to launch.';
+        const scenario = result.scenario ? `${result.scenario}.${result.baseline && (result.baseline.low !== result.low || result.baseline.high !== result.high) ? ` One developer, full scope: ${result.baseline.low}–${result.baseline.high} weeks.` : ''}` : '';
+        const fit = result.fit === 'close' ? 'A little past your date: see the tip below.' : result.fit === 'far' ? 'Well past your date: see the tip below.' : result.tight ? 'Tighter than your deadline: see the tip below.' : '';
+        caption.textContent = [scenario, fit || (scenario ? '' : 'Typical calendar time from kick-off to launch.')].filter(Boolean).join(' ');
       }
       summary.classList.toggle('is-tight', result.tight);
+      disclaimer.textContent = `Calendar time for ${result.team > 1 ? `a team of ${result.team} developers` : 'one developer'}, assuming feedback within a couple of days.`;
       if (barValue) barValue.textContent = result.mode === 'weeks' ? `${result.low}–${result.high} weeks` : result.mode === 'monthly' ? `${result.hours} hrs / month` : '—';
 
       phasesBox.hidden = result.phases.length === 0;
@@ -240,7 +247,7 @@ import { steps } from '../data/estimator';
 
       // Brief text for email / copy.
       const lines = visibleSteps().filter((s) => s.kind !== 'text' && answerText(s.id)).map((s) => `${s.label}: ${answerText(s.id)}`);
-      const estimateLine = result.mode === 'weeks' ? `Rough estimate: ${result.low}–${result.high} weeks (${result.phases.map((p) => `${p.label} ~${p.display}`).join(', ')})` : result.mode === 'monthly' ? `Support: about ${result.hours} hours a month` : '';
+      const estimateLine = result.mode === 'weeks' ? `Rough estimate: ${result.low}–${result.high} weeks${result.scenario ? `, ${result.scenario.toLowerCase()}` : ''} (${result.phases.map((p) => `${p.label} ~${p.display}`).join(', ')})${result.baseline ? `\nOne developer, full scope: ${result.baseline.low}–${result.baseline.high} weeks` : ''}` : result.mode === 'monthly' ? `Support: about ${result.hours} hours a month` : '';
       const notes = String(live.notes || '');
       brief = ['Hi Grant,', '', 'I used the estimator on your site. Here’s my project:', '', ...lines, estimateLine, ...(notes ? ['', `Notes: ${notes}`] : []), '', 'Thanks,'].filter((l, i, all) => !(l === '' && all[i - 1] === '')).join('\n');
       const subject = `Project brief${answers.platform ? `: ${answerText('platform')}` : ''}${answers.type ? ` – ${answerText('type')}` : ''}`;
@@ -288,6 +295,15 @@ import { steps } from '../data/estimator';
       back.disabled = index === 0;
       next.hidden = isReview;
       const step = stepById(at);
+      // Plain-English verdict under the options (e.g. whether the launch date is realistic).
+      if (step?.noteFor) {
+        const box = section(at).querySelector<HTMLElement>('.wiz-note')!;
+        const note = step.noteFor(answers);
+        box.hidden = !note;
+        if (note) { box.dataset.tone = note.tone; box.querySelector('strong')!.textContent = note.title; box.querySelector('p')!.textContent = note.text; }
+      }
+      // Some help text depends on earlier answers (e.g. the one-developer timeline on the speed-up step).
+      if (step?.helpFor) { const help = section(at).querySelector('.wiz-help'); const text = step.helpFor(answers); if (help && text) help.textContent = text; }
       next.disabled = !isReview && !answered(at);
       next.firstChild!.textContent = index === ids.length - 2 ? 'See my brief ' : step?.optional && !answered(at) ? 'Skip ' : 'Continue ';
       if (step?.optional && step.kind === 'multi') next.firstChild!.textContent = (answers[at] as string[] | undefined)?.length ? 'Continue ' : 'Skip ';
@@ -329,8 +345,8 @@ import { steps } from '../data/estimator';
       if (!id) return;
       read(id);
       render(0);
-      // Single choices move on by themselves after a short beat.
-      if (input.type === 'radio') {
+      // Single choices move on by themselves after a short beat, unless the step shows a note to read.
+      if (input.type === 'radio' && !stepById(id)?.noteFor) {
         clearTimeout(autoTimer);
         autoTimer = window.setTimeout(() => { if (at === id) step(1); }, reduce ? 0 : 280);
       }
@@ -384,6 +400,7 @@ import { steps } from '../data/estimator';
           months: lastResult.mode === 'weeks' ? monthsText(lastResult.low, lastResult.high) : '',
           notes: String(effective().notes || ''),
           email: send.dataset.email || '',
+          answers: effective(),
         });
         pdfButton.textContent = 'Downloaded';
       } catch {

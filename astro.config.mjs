@@ -19,6 +19,6 @@ export default defineConfig({
   outDir: githubPages ? "./dist-github/" : "./dist/",
   build: { assets: githubPages ? "assets" : "_astro", inlineStylesheets: "always" },
   trailingSlash: "always",
-  integrations: [sitemap({ filter: (page) => !page.endsWith("/404/") })],
+  integrations: [sitemap({ filter: (page) => !page.endsWith("/404/") && !page.endsWith("/quote/") })],
   output: "static",
 });

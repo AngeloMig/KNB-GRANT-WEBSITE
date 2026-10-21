@@ -8,10 +8,10 @@ import { withBase } from '../utils/paths';
 import archivoFont from '../assets/fonts/archivo-latin-variable.woff2?url';
 import displayFont from '../assets/fonts/big-shoulders-display-latin-800.woff2?url';
 interface Props { title?: string; description?: string; image?: string; noindex?: boolean; loader?: boolean; }
-const { title = 'Grant Payad — Shopify, Webflow & WordPress Developer', description = 'Explore selected Shopify, Webflow, and WordPress projects by Grant Payad. Custom website development, platform migrations, integrations, and technical SEO.', image = '/social-preview.png', noindex = false, loader = false } = Astro.props;
+const { title = 'Grant Dev14 — Shopify, Webflow & WordPress Developer', description = 'Explore selected Shopify, Webflow, and WordPress projects by Grant Dev14. Custom website development, platform migrations, integrations, and technical SEO.', image = '/social-preview.png', noindex = false, loader = false } = Astro.props;
 const canonical = new URL(Astro.url.pathname, Astro.site);
 const socialImage = new URL(withBase(image), Astro.site);
-const person = { '@context': 'https://schema.org', '@type': 'Person', name: profile.fullName, alternateName: profile.name, jobTitle: profile.title, url: new URL(withBase('/'), Astro.site).href, sameAs: [profile.linkedin], knowsAbout: ['Shopify', 'Webflow', 'WordPress', 'Web Development', 'Technical SEO'] };
+const person = { '@context': 'https://schema.org', '@type': 'Person', name: profile.name, jobTitle: profile.title, url: new URL(withBase('/'), Astro.site).href, sameAs: [profile.linkedin], knowsAbout: ['Shopify', 'Webflow', 'WordPress', 'Web Development', 'Technical SEO'] };
 ---
 <!doctype html>
 <html lang="en" id="top" data-loader={loader ? 'true' : undefined}>
@@ -29,14 +29,14 @@ const person = { '@context': 'https://schema.org', '@type': 'Person', name: prof
     <link rel="preload" href={archivoFont} as="font" type="font/woff2" crossorigin />
     <link rel="preload" href={displayFont} as="font" type="font/woff2" crossorigin />
     <meta property="og:type" content="website" />
-    <meta property="og:site_name" content="Grant Payad" />
+    <meta property="og:site_name" content="Grant Dev14" />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
     {!noindex && <meta property="og:url" content={canonical} />}
     <meta property="og:image" content={socialImage} />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
-    <meta property="og:image:alt" content="Grant Payad — Shopify, Webflow and WordPress Developer" />
+    <meta property="og:image:alt" content="Grant Dev14 — Shopify, Webflow and WordPress Developer" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content={title} />
     <meta name="twitter:description" content={description} />
@@ -59,7 +59,7 @@ const person = { '@context': 'https://schema.org', '@type': 'Person', name: prof
   </head>
   <body>
     <div class="page-shell"><Header /><main id="main"><slot /></main><Footer /></div>
-    {loader && <div class="page-loader" aria-hidden="true"><div class="page-loader-top"><span>Grant Payad</span><span>Shopify · Webflow · WordPress</span></div><svg class="page-loader-count" role="presentation"><text x="0" y="100%">0</text></svg></div>}
+    {loader && <div class="page-loader" aria-hidden="true"><div class="page-loader-top"><span>Grant Dev14</span><span>Shopify · Webflow · WordPress</span></div><svg class="page-loader-count" role="presentation"><text x="0" y="100%">0</text></svg></div>}
     <div class="view-cursor" aria-hidden="true">View <Arrow diagonal /></div>
   </body>
 </html>

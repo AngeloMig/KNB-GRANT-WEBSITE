@@ -9,7 +9,7 @@ export function getStaticPaths() { return projects.map((project, index) => ({ pa
 const { project, index } = Astro.props;
 const next = projects[(index + 1) % projects.length];
 ---
-<BaseLayout title={`${project.name} — ${project.platform} Project | Grant Payad`} description={`${project.name}: a ${project.platform} website in Grant Payad’s selected development portfolio. Explore the project overview and visit the public website.`}>
+<BaseLayout title={`${project.name} — ${project.platform} Project | Grant Dev14`} description={`${project.name}: a ${project.platform} website in Grant Dev14’s selected development portfolio. Explore the project overview and visit the public website.`}>
   <div class="wrap project-page">
     <a class="text-link back-link" href={withBase('/#work')}>← All projects</a>
     <SectionTitle title={project.name.toUpperCase()} detail={project.platform} as="h1" />

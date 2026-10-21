@@ -1,6 +1,7 @@
 // Builds the downloadable estimate summary. Loaded only when someone presses "Download summary (PDF)".
 import { jsPDF } from 'jspdf';
-import type { Estimate } from '../data/estimator';
+import type { Answers, Estimate } from '../data/estimator';
+import { encodePayload } from '../data/payload';
 
 interface PdfInput {
   rows: [string, string][];
@@ -8,6 +9,8 @@ interface PdfInput {
   months: string;
   notes: string;
   email: string;
+  /** The client's raw answers, stored in the PDF so the quote page can import them. */
+  answers: Answers;
 }
 
 const INK: [number, number, number] = [22, 22, 22];
@@ -98,7 +101,7 @@ export async function downloadEstimatePdf(input: PdfInput) {
 
   // Header
   font(22, 'bold'); color(INK);
-  doc.text('GRANT PAYAD', M, y + 7);
+  doc.text('GRANT DEV14', M, y + 7);
   font(8.5); color(MUTED);
   doc.text('Shopify, Webflow & WordPress developer', M, y + 12.5);
   font(10, 'bold'); color(INK);
@@ -161,7 +164,14 @@ export async function downloadEstimatePdf(input: PdfInput) {
   if (r.mode === 'monthly') {
     paragraph('Support runs as a monthly retainer with a set number of hours for updates, fixes and improvements. You can adjust the hours as your needs change. Unused time does not usually roll over, so it is best to start small and adjust.');
   } else {
-    paragraph('Calendar time from kick-off to launch for one developer, assuming feedback from you within about two business days.', 9.5, MUTED);
+    if (r.scenario) {
+      font(10.5, 'bold'); color(INK);
+      ensure(7); doc.text(clean(r.scenario), M, y + 3.5); y += 6.5;
+      if (r.baseline && (r.baseline.low !== r.low || r.baseline.high !== r.high)) { font(9.5); color(MUTED); doc.text(clean(`One developer, ${r.choice === 'theme' ? 'custom design' : 'full scope'}: ${r.baseline.low}–${r.baseline.high} weeks`), M, y + 3); y += 6.5; }
+    }
+    const who = r.team > 1 ? `a team of ${r.team} developers working in parallel` : 'one developer';
+    const what = r.scenario?.startsWith('Phase 1') ? 'Calendar time from kick-off to launching the essentials (phase 1)' : 'Calendar time from kick-off to launch';
+    paragraph(`${what} for ${who}, assuming feedback from you within about two business days.`, 9.5, MUTED);
     // Phase bar
     const total = r.phases.reduce((s, p) => s + p.weeks, 0) || 1;
     ensure(10);
@@ -193,33 +203,49 @@ export async function downloadEstimatePdf(input: PdfInput) {
     }
   }
 
-  // Need it sooner? Team-size options (only for timelines long enough to benefit).
+  // Your launch date: the same verdict shown under the date options on the site.
+  if (r.mode === 'weeks' && r.verdict) {
+    heading('Your launch date');
+    const tone = { yes: { bg: [234, 246, 237], fg: [30, 105, 58] }, maybe: { bg: [253, 244, 224], fg: [132, 86, 10] }, no: { bg: WARN_BG, fg: WARN } }[r.verdict.tone] as { bg: [number, number, number]; fg: [number, number, number] };
+    font(9.5);
+    const lines = doc.splitTextToSize(clean(r.verdict.text), CW - 12) as string[];
+    const h = lines.length * 4 + 12;
+    ensure(h + 2);
+    doc.setFillColor(...tone.bg);
+    doc.roundedRect(M, y, CW, h, 3, 3, 'F');
+    font(10.5, 'bold'); color(tone.fg); doc.text(clean(r.verdict.title), M + 6, y + 7);
+    font(9.5); color(r.verdict.tone === 'no' ? WARN_INK : INK); doc.text(lines, M + 6, y + 12.2);
+    y += h + 3;
+  }
+
+  // Ways to launch sooner: every realistic route, how long it takes and how it lands against the date.
   if (r.mode === 'weeks') {
-    heading('Need it sooner?');
-    const parallel = r.phases.filter((p) => p.id === 'build' || p.id === 'data').reduce((s, p) => s + p.weeks, 0);
-    const fixed = r.phases.filter((p) => p.id !== 'build' && p.id !== 'data').reduce((s, p) => s + p.weeks, 0);
-    const span = (weeks: number) => { const lo = Math.max(1, Math.round(weeks * 0.85)); return `${lo}–${Math.max(lo + 1, Math.round(weeks * 1.2 + 0.25))} weeks`; };
-    if (parallel + fixed < 4) {
+    heading('Ways to launch sooner');
+    if (r.routes.length < 2) {
       paragraph('For a project this size, one developer is usually the fastest and most cost-effective option. Adding people would mostly add coordination time.');
     } else {
-      paragraph('This estimate assumes one developer. If you need to launch sooner, the work can be split across a small team of 2–3 developers working in parallel, for example one on page templates and one on integrations and data. This shortens the build, but it costs more: more people are working at the same time, and extra time goes into coordination, code reviews and testing.');
-      const options: [string, string, string][] = [
-        ['1 developer', `${r.low}–${r.high} weeks`, 'This estimate. Most cost-effective.'],
-        ['2 developers', span(fixed + 0.5 + parallel * 0.6), 'Faster. Noticeably higher cost.'],
-        ['3 developers', span(fixed + 0.75 + parallel * 0.45), 'Fastest. Highest cost.'],
-      ];
-      y += 1;
-      for (const [team, time, note] of options) {
+      paragraph('The standard estimate assumes one developer. To launch sooner, the work can be split across 2–3 developers working in parallel, the first launch can focus on the essentials, or both. Faster routes cost more: more people work at the same time, and extra time goes into coordination, code reviews and testing.');
+      const fitText = { fits: 'Fits your date', close: 'A little past it', far: 'Too long' } as Record<string, string>;
+      const chosen = (id: string) => (id === 'standard' ? r.choice === 'move' || r.choice === 'keep' || r.choice === 'holding' : r.choice === id);
+      const rows = r.routes.map((x) => [x.label, `${x.low}–${x.high} weeks`, x.cost, x.fit ? fitText[x.fit] : '', chosen(x.id)] as [string, string, string, string, boolean]);
+      // Column headers
+      font(8, 'bold'); color(MUTED);
+      ensure(8);
+      doc.text('ROUTE', M, y + 3); doc.text('TIMELINE', M + 62, y + 3); doc.text('COST', M + 92, y + 3); if (r.routes.some((x) => x.fit)) doc.text('VS YOUR DATE', M + 134, y + 3);
+      y += 5.5;
+      for (const [label, time, cost, fit, isChosen] of rows) {
         ensure(8);
-        font(9.5, 'bold'); color(INK); doc.text(team, M, y + 3.3);
-        font(9.5); doc.text(clean(time), M + 40, y + 3.3);
-        color(MUTED); doc.text(clean(note), M + 82, y + 3.3);
+        if (isChosen) { doc.setFillColor(244, 244, 244); doc.rect(M, y - 1, CW, 6.6, 'F'); }
+        font(9.5, 'bold'); color(INK); doc.text(clean(label + (isChosen ? '  (your choice)' : '')), M + (isChosen ? 1.5 : 0), y + 3.3);
+        font(9.5); doc.text(clean(time), M + 62, y + 3.3);
+        color(MUTED); doc.text(clean(cost), M + 92, y + 3.3);
+        if (fit) { const c: [number, number, number] = fit === 'Fits your date' ? [30, 105, 58] : fit === 'Too long' ? WARN : [132, 86, 10]; color(c); doc.text(clean(fit), M + 134, y + 3.3); }
         y += 5.5;
         doc.setDrawColor(...LINE); doc.setLineWidth(0.1); doc.line(M, y, W - M, y);
         y += 2;
       }
       y += 1;
-      paragraph('Some steps don’t get faster with more people: your feedback and approvals, preparing content, and waiting on third parties. Team timings are approximate, and the exact team and cost are set out in the proposal.', 9, MUTED);
+      paragraph('Some steps don’t get faster with more people: your feedback and approvals, preparing content, and waiting on third parties. Timings are approximate, and the exact team, scope and cost are set out in the proposal.', 9, MUTED);
     }
   }
 
@@ -243,7 +269,10 @@ export async function downloadEstimatePdf(input: PdfInput) {
   // 05 Assumptions
   heading('Assumptions behind this estimate');
   bullets([
-    'One developer works on your project, and you can give feedback within about two business days.',
+    `${r.team > 1 ? `A team of ${r.team} developers works` : 'One developer works'} on your project, and you can give feedback within about two business days.`,
+    ...(r.team > 1 ? [`The extra developer${r.team > 2 ? 's are' : ' is'} available from kick-off, working alongside Grant.`] : []),
+    ...(r.scenario?.startsWith('Phase 1') || r.choice === 'priority' ? ['The first phase covers the essentials agreed on the call. The remaining scope follows in a second phase after launch.'] : []),
+    ...(r.choice === 'theme' ? ['A suitable premium theme is chosen together, then customised to match your brand.'] : []),
     'Designs, content and account access are ready when needed, unless you said otherwise above.',
     'Third-party apps, APIs and platforms work as documented.',
     'The scope stays as described here. Changes are welcome, and are discussed first because they can affect the timeline.',
@@ -253,7 +282,8 @@ export async function downloadEstimatePdf(input: PdfInput) {
   // 06 Not included
   heading('Not included in this estimate');
   bullets([
-    'Pricing. Cost is confirmed in a written proposal.',
+    r.team > 1 ? 'Pricing, including the cost of the extra developers. This is confirmed in a written proposal.' : 'Pricing. Cost is confirmed in a written proposal.',
+    ...(r.choice === 'holding' ? ['The launch page itself is a small, separate piece of work, quoted in the proposal.'] : []),
     'Platform plans, app subscriptions, theme licences, domains and hosting fees.',
     'Copywriting, photography and design work, unless a design phase is shown above.',
     'Support after launch. This is available separately as a monthly retainer.',
@@ -288,10 +318,10 @@ export async function downloadEstimatePdf(input: PdfInput) {
     doc.setDrawColor(...LINE); doc.setLineWidth(0.2);
     doc.line(M, H - 14, W - M, H - 14);
     font(7.5); color(MUTED);
-    doc.text(clean(`Grant Payad  ·  ${input.email}  ·  Indicative estimate, not a quotation`), M, H - 9);
+    doc.text(clean(`Grant Dev14  ·  ${input.email}  ·  Indicative estimate, not a quotation`), M, H - 9);
     doc.text(`Page ${i} of ${pages}`, W - M, H - 9, { align: 'right' });
   }
 
-  doc.setProperties({ title: 'Project estimate summary — Grant Payad', subject: 'Indicative project timeline (not a quotation)', author: 'Grant Payad' });
-  doc.save(`grant-payad-project-estimate-${today.toISOString().slice(0, 10)}.pdf`);
+  doc.setProperties({ title: 'Project estimate summary — Grant Dev14', subject: 'Indicative project timeline (not a quotation)', author: 'Grant Dev14', keywords: encodePayload({ v: 1, ref, date: today.toISOString().slice(0, 10), answers: input.answers }) });
+  doc.save(`grant-dev14-project-estimate-${today.toISOString().slice(0, 10)}.pdf`);
 }

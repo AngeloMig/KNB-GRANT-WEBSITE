@@ -9,8 +9,16 @@ export interface Option {
   id: string;
   label: string;
   hint?: string;
+  /** Hint that depends on earlier answers, e.g. how realistic a launch date is (overrides hint). */
+  hintFor?: (a: Answers) => string;
   /** Only offer this option when the condition holds. */
   when?: (a: Answers) => boolean;
+}
+
+export interface StepNote {
+  tone: 'yes' | 'maybe' | 'no';
+  title: string;
+  text: string;
 }
 
 export interface Step {
@@ -20,6 +28,10 @@ export interface Step {
   label: string;
   question: string;
   help?: string;
+  /** Help text that depends on earlier answers (overrides help). */
+  helpFor?: (a: Answers) => string;
+  /** A note shown under the options for the current choice. Steps with one don't auto-advance. */
+  noteFor?: (a: Answers) => StepNote | null;
   options?: Option[];
   range?: { min: number; max: number; step: number; initial: number; unit: string; marks: number[] };
   /** Only ask this step when the condition holds. */
@@ -210,11 +222,38 @@ export const steps: Step[] = [
     id: 'deadline', kind: 'single', label: 'Deadline',
     question: 'When would you like to launch?',
     when: (a) => type(a) !== 'support',
+    help: 'Pick the closest. Each date shows how realistic it is for this project.',
+    noteFor: deadlineNote,
+    // Option ids are the deadline in weeks.
     options: [
       { id: 'asap', label: 'As soon as possible' },
-      { id: '4', label: 'Within a month' },
-      { id: '10', label: 'In 2–3 months' },
-      { id: 'flexible', label: 'Flexible' },
+      { id: '2', label: 'Within 2 weeks', hintFor: (a) => deadlineHint(a, 2) },
+      { id: '4', label: 'Within a month', hintFor: (a) => deadlineHint(a, 4) },
+      { id: '8', label: 'In 1–2 months', hintFor: (a) => deadlineHint(a, 8) },
+      { id: '13', label: 'In 2–3 months', hintFor: (a) => deadlineHint(a, 13) },
+      { id: '26', label: 'In 3–6 months', hintFor: (a) => deadlineHint(a, 26) },
+      { id: 'flexible', label: 'Flexible', hint: 'Usually the most cost-effective' },
+    ],
+  },
+  {
+    id: 'speedup', kind: 'single', label: 'Hitting your date',
+    question: 'How should we hit your date?',
+    help: 'Your date is shorter than the estimate for one developer.',
+    helpFor: speedHelp,
+    when: (a) => Boolean(model(a)?.tight),
+    // Options only appear when they get reasonably close to the date (within 2x), so nobody is
+    // promised that more developers can turn a 9-month build into 2 weeks.
+    options: [
+      { id: 'team2', label: 'Add a second developer', when: (a) => shortlist(a).includes('team2'), hintFor: (a) => choiceHint(a, 'team2') },
+      { id: 'team3', label: 'A team of 3 developers', when: (a) => shortlist(a).includes('team3'), hintFor: (a) => choiceHint(a, 'team3') },
+      { id: 'phase', label: 'Launch the essentials first', when: (a) => shortlist(a).includes('phase'), hintFor: (a) => choiceHint(a, 'phase') },
+      { id: 'priority', label: 'Do the highest-impact fixes first', when: (a) => shortlist(a).includes('priority'), hintFor: (a) => choiceHint(a, 'priority') },
+      { id: 'both', label: 'Bigger team and the essentials first', when: (a) => shortlist(a).includes('both'), hintFor: (a) => choiceHint(a, 'both') },
+      { id: 'theme', label: 'Start from a premium theme', when: (a) => shortlist(a).includes('theme'), hintFor: (a) => choiceHint(a, 'theme') },
+      { id: 'holding', label: 'A launch page now, full site later', when: (a) => type(a) === 'new' && outOfReach(a), hint: 'Live in about a week' },
+      { id: 'keep', label: 'Keep your current site live until it’s ready', when: (a) => ['redesign', 'migration'].includes(type(a)) && outOfReach(a), hint: 'No downtime · switch over in one go' },
+      { id: 'move', label: 'Move the launch date', hintFor: (a) => { const m = model(a); return m ? `Realistic: ${m.low}–${m.high} weeks · most cost-effective` : 'Most cost-effective'; } },
+      { id: 'advise', label: 'Not sure, advise me' },
     ],
   },
   {
@@ -259,6 +298,8 @@ export const LABELS: Record<string, string> = {
   speed: 'Speed work', seo: 'Technical SEO', a11y: 'Accessibility pass', apps: 'App clean-up', fixes: 'Fixes',
 };
 
+export interface Route { id: string; label: string; low: number; high: number; cost: string; fit?: 'fits' | 'close' | 'far' }
+
 export interface Phase { id: string; label: string; weeks: number; display: string }
 
 /** Human-friendly length: days for short phases, half weeks for mid, whole weeks for long ones. */
@@ -274,22 +315,353 @@ export interface Estimate {
   hours?: number;
   phases: Phase[];
   drivers: { label: string; weeks: number }[];
+  /** Every driver, not just the top four (used for pricing). */
+  allDrivers: { label: string; weeks: number }[];
   notes: string[];
+  /** The launch date is still earlier than the estimate. */
   tight: boolean;
+  /** Developers working in parallel (1 unless the client chose a bigger team). */
+  team: number;
+  /** One-developer, full-scope range, when the result shows a team or a first phase instead. */
+  baseline?: { low: number; high: number };
+  /** One-developer phases, for comparing team sizes. */
+  basePhases: Phase[];
+  /** Short line describing the scenario, e.g. "With 2 developers · higher cost". */
+  scenario?: string;
+  /** How the chosen speed-up option lands against the date. */
+  fit?: 'fits' | 'close' | 'far';
+  /** Plain-English verdict on the launch date (same as the note under the date options). */
+  verdict?: StepNote;
+  /** The speed-up route the client picked, if their date needed one. */
+  choice?: string;
+  /** Every realistic way to launch sooner, with how each lands against the date. */
+  routes: Route[];
+  /** Full-scope range for each team size that makes sense for this project. */
+  teams: { n: number; low: number; high: number }[];
 }
 
 const round = (n: number) => Math.round(n * 2) / 2;
 
+/** Rough range around a calendar-week figure: a bit under to a fair bit over. */
+export const spread = (weeks: number, unsure = false) => {
+  const low = Math.max(1, Math.round(weeks * 0.85));
+  return { low, high: Math.max(low + 1, Math.round(weeks * (unsure ? 1.35 : 1.2) + 0.25)) };
+};
+
+// More developers split the build and data work; discovery, design, content and QA don't speed up.
+// Each extra person also adds coordination and code-review time.
+const TEAM: Record<number, { factor: number; overhead: number }> = { 1: { factor: 1, overhead: 0 }, 2: { factor: 0.6, overhead: 0.5 }, 3: { factor: 0.45, overhead: 0.75 } };
+const PARALLEL = ['build', 'data'];
+/** Calendar weeks for a team of n developers, from one-developer phases. */
+export const teamWeeks = (phases: { id: string; weeks: number }[], n: number) => {
+  const { factor, overhead } = TEAM[n] ?? TEAM[1];
+  return phases.reduce((sum, p) => sum + (PARALLEL.includes(p.id) ? p.weeks * factor : p.weeks), 0) + overhead;
+};
+
+// The one-developer, full-scope model, before any speed-up choice. Cached per answer set,
+// because step conditions call it several times per render.
+type Raw = { id: string; label: string; weeks: number }[];
+type Range = { low: number; high: number };
+interface Model extends Range {
+  total: number; parallel: number; unsure: boolean; raw: Raw;
+  teams: ({ n: number } & Range)[];
+  /** Essentials first, one developer. */
+  phase: Range & { raw: Raw };
+  /** Essentials first, with the largest team that helps. */
+  both: Range & { n: number; raw: Raw };
+  /** Same project built on a premium theme, when that saves at least two weeks. */
+  theme?: Range & { raw: Raw; drivers: { label: string; weeks: number }[]; allDrivers: { label: string; weeks: number }[] };
+  drivers: { label: string; weeks: number }[]; allDrivers: { label: string; weeks: number }[]; notes: string[]; tight: boolean; deadlineWeeks: number;
+}
+let cacheKey = '';
+let cacheValue: Model | null = null;
+function model(a: Answers): Model | null {
+  const key = JSON.stringify(a, (k, v) => (k === 'speedup' || k === 'notes' ? undefined : v));
+  if (key !== cacheKey) { cacheKey = key; cacheValue = buildModel(a); }
+  return cacheValue;
+}
+/** Phase 1 keeps core pages and must-have features; the rest follows after launch. */
+const essentials = (raw: Raw): Raw => raw.map((p) => ({ ...p, weeks: p.id === 'build' ? p.weeks * 0.55 : p.id === 'content' ? p.weeks * 0.7 : p.id === 'qa' ? Math.max(0.5, p.weeks * 0.8) : p.weeks }));
+const teamPhases = (raw: Raw, n: number): Raw => { const { factor, overhead } = TEAM[n]; return raw.map((p) => (PARALLEL.includes(p.id) ? { ...p, weeks: p.weeks * factor + (p.id === 'build' ? overhead : 0) } : p)); };
+const sum = (raw: Raw) => raw.reduce((total, p) => total + p.weeks, 0);
+
+/* ---------- How realistic is the launch date? ---------- */
+
+type Tier = 'fits' | 'team' | 'phase' | 'teamOrPhase' | 'theme' | 'both' | 'close' | 'far';
+/** The quickest realistic launch of any option. */
+const fastest = (m: Model) => Math.min(m.both.low, m.theme?.low ?? Infinity);
+/** Where a date lands against what each option can deliver. */
+function reach(m: Model, date: number) {
+  const teamFit = m.teams.some((t) => t.n > 1 && t.low <= date);
+  const phaseFit = m.phase.low <= date;
+  const themeFit = (m.theme?.low ?? Infinity) <= date;
+  const bothFit = m.both.low <= date;
+  const tier: Tier = m.low <= date ? 'fits'
+    : teamFit && phaseFit ? 'teamOrPhase'
+    : teamFit ? 'team'
+    : phaseFit ? 'phase'
+    : themeFit ? 'theme'
+    : bothFit ? 'both'
+    : fastest(m) <= date * 1.5 ? 'close'
+    : 'far';
+  return { tier, teamFit, phaseFit, themeFit, bothFit };
+}
+/** Improvement jobs prioritise fixes rather than launching "the essentials". */
+const firstPart = (a: Answers) => (type(a) === 'improvements' ? { short: 'prioritising fixes', long: 'doing the highest-impact fixes first' } : { short: 'smaller first launch', long: 'launching the essentials first' });
+function deadlineHint(a: Answers, date: number) {
+  const m = model(a);
+  if (!m) return '';
+  const first = firstPart(a).short;
+  return {
+    fits: 'Fits the estimate',
+    team: 'Possible with a bigger team',
+    phase: `Possible with a ${first}`.replace('a prioritising', 'by prioritising'),
+    teamOrPhase: `Possible with a bigger team or ${first}`,
+    theme: 'Possible on a premium theme',
+    both: `Only with a bigger team and ${first}`,
+    close: 'Very tight for this scope',
+    far: 'Not realistic for this scope',
+  }[reach(m, date).tier];
+}
+const DATE_LABEL: Record<string, string> = { 2: '2 weeks', 4: 'a month', 8: '1–2 months', 13: '2–3 months', 26: '3–6 months' };
+/** Plain-English verdict on the chosen launch date, shown under the deadline options. */
+function deadlineNote(a: Answers): StepNote | null {
+  const m = model(a);
+  const choice = pick(a, 'deadline');
+  if (!m || !choice) return null;
+  const weeks = (x: Range) => `${x.low}–${x.high} weeks`;
+  const one = `One developer needs about ${weeks(m)}`;
+  if (choice === 'asap') return { tone: 'yes', title: 'As soon as possible', text: `${one}. Grant will confirm the earliest start date. If you have a firm date, pick it instead to see your options.` };
+  if (choice === 'flexible') return { tone: 'yes', title: 'The most cost-effective choice', text: `With room on timing, one developer can take this on at a steady pace: about ${weeks(m)}.` };
+  const date = Number(choice);
+  const label = DATE_LABEL[choice] ?? `${date} weeks`;
+  const { tier } = reach(m, date);
+  const fitTeam = m.teams.find((t) => t.n > 1 && t.low <= date);
+  const teamText = fitTeam?.n === 2 ? 'a second developer' : 'a team of 3 developers';
+  const first = type(a) === 'improvements' ? 'Doing the highest-impact fixes first' : 'Launching the essentials first';
+  switch (tier) {
+    case 'fits':
+      return { tone: 'yes', title: 'This works', text: `One developer can launch this in about ${weeks(m)}, the most cost-effective option.${m.high > date ? ' It’s close to the upper end, so keeping changes small will help.' : ''}` };
+    case 'team':
+      return { tone: 'maybe', title: fitTeam?.n === 2 ? 'Possible with an extra developer' : 'Possible with extra developers', text: `${one}. To launch within ${label}, ${teamText} would work in parallel (about ${weeks(fitTeam!)}). This adds to the cost.` };
+    case 'phase':
+      return { tone: 'maybe', title: type(a) === 'improvements' ? 'Possible by prioritising' : 'Possible with a smaller first launch', text: `${one} for everything. ${first} takes about ${weeks(m.phase)}, and the rest follows after.` };
+    case 'teamOrPhase':
+      return { tone: 'maybe', title: 'Possible, with a trade-off', text: `${one}. To launch within ${label}, add ${fitTeam?.n === 2 ? 'a second developer' : '2 more developers'} (about ${weeks(fitTeam!)}, higher cost), or try ${first.toLowerCase()} (about ${weeks(m.phase)}).` };
+    case 'theme':
+      return { tone: 'maybe', title: 'Possible on a premium theme', text: `A custom design takes about ${weeks(m)}. Starting from a premium theme takes about ${weeks(m.theme!)}, and usually costs less.` };
+    case 'both':
+      return { tone: 'maybe', title: 'Only with extra developers and a smaller launch', text: `${one}. Launching within ${label} takes ${m.both.n} developers building the essentials first (about ${weeks(m.both)}). This is the highest-cost option.` };
+    case 'close':
+      return { tone: 'no', title: 'Very tight for this project', text: `${one}. Even with extra developers and a smaller first launch, the quickest realistic launch is about ${fastest(m)} weeks. The next question shows your options.` };
+    default:
+      return { tone: 'no', title: `This project can’t be built within ${label}`, text: `${one}. Even with more developers and a smaller first launch, the quickest realistic launch is about ${fastest(m)} weeks. The next question shows what can work${type(a) === 'new' ? ', like a launch page first' : ''}.` };
+  }
+}
+/** The same verdict for the PDF, without wording that only makes sense inside the wizard. */
+function forDocument(note: StepNote | null): StepNote | undefined {
+  if (!note) return undefined;
+  return { ...note, text: note.text.replace(/ The next question shows[^.]*\./, '').replace(/ If you have a firm date, pick it instead to see your options\./, '') };
+}
+/** Is this option's earliest launch within 2x the date? Anything further isn't worth offering. */
+const within = (a: Answers, low: number | undefined) => { const m = model(a); return Boolean(m && low !== undefined && low <= m.deadlineWeeks * 2); };
+const offerTeam = (a: Answers, n: number) => within(a, model(a)?.teams.find((t) => t.n === n)?.low);
+/** The combined option only when neither a team nor a smaller launch is enough on its own. */
+const offerBoth = (a: Answers) => {
+  const m = model(a);
+  if (!m || !isBuild(a) || m.both.n < 2) return false;
+  const r = reach(m, m.deadlineWeeks);
+  return !r.teamFit && !r.phaseFit && within(a, m.both.low);
+};
+/** Relative cost of each speed-up route (lower is cheaper). */
+const COST_RANK: Record<string, number> = { theme: 0, phase: 1, priority: 1, team2: 2, team3: 3, both: 4 };
+/**
+ * Which speed-up routes to offer: every route that fits the date (cheapest first, max four);
+ * if none fit, the three fastest that get within 2x of the date.
+ */
+function shortlist(a: Answers): string[] {
+  const m = model(a);
+  if (!m) return [];
+  const candidates = [
+    offerTeam(a, 2) && 'team2', offerTeam(a, 3) && 'team3',
+    isBuild(a) && within(a, m.phase.low) && 'phase', type(a) === 'improvements' && 'priority',
+    offerBoth(a) && 'both', within(a, m.theme?.low) && 'theme',
+  ].filter(Boolean) as string[];
+  const low = (id: string) => choiceRange(m, id)?.low ?? Infinity;
+  const fitting = candidates.filter((id) => low(id) <= m.deadlineWeeks).sort((x, y) => COST_RANK[x] - COST_RANK[y]);
+  if (fitting.length) return fitting.slice(0, 4);
+  return candidates.sort((x, y) => low(x) - low(y) || COST_RANK[x] - COST_RANK[y]).slice(0, 3);
+}
+const outOfReach = (a: Answers) => { const m = model(a); return Boolean(m && ['close', 'far'].includes(reach(m, m.deadlineWeeks).tier)); };
+
+/** The range each speed-up choice delivers. */
+function choiceRange(m: Model, choice: string): (Range & { raw: Raw; team: number }) | null {
+  const team = (n: number) => { const t = m.teams.find((x) => x.n === n); return t ? { low: t.low, high: t.high, raw: teamPhases(m.raw, n), team: n } : null; };
+  if (choice === 'team2') return team(2);
+  if (choice === 'team3') return team(3);
+  if (choice === 'phase' || choice === 'priority') return { ...m.phase, team: 1 };
+  if (choice === 'both') return { ...m.both, team: m.both.n };
+  if (choice === 'theme') return m.theme ? { ...m.theme, team: 1 } : null;
+  return null;
+}
+const COST: Record<string, string> = { team2: 'higher cost', team3: 'highest cost', both: 'highest cost', phase: 'the rest follows later', priority: 'the rest follows later', theme: 'often lower cost' };
+function choiceHint(a: Answers, choice: string) {
+  const m = model(a);
+  const r = m && choiceRange(m, choice);
+  if (!m || !r) return '';
+  return `${r.low <= m.deadlineWeeks ? 'Fits your date' : `About ${r.low}–${r.high} weeks`} · ${COST[choice]}`;
+}
+function speedHelp(a: Answers) {
+  const m = model(a);
+  if (!m) return '';
+  const base = `With one developer this takes about ${m.low}–${m.high} weeks.`;
+  const { tier } = reach(m, m.deadlineWeeks);
+  if (tier === 'team' || tier === 'phase' || tier === 'teamOrPhase' || tier === 'theme') return `${base} These options can get you to your date:`;
+  if (tier === 'both') return `${base} Only a bigger team and a smaller first launch together can get there:`;
+  if (tier === 'close') return `${base} Even the fastest option needs about ${fastest(m)} weeks, so your date is very tight. Here’s what would work:`;
+  return `${base} Even the fastest option needs about ${fastest(m)} weeks, so your date isn’t realistic for this scope. Here’s what would work instead:`;
+}
+
 export function estimate(a: Answers): Estimate {
   const t = type(a);
-  const platform = pick(a, 'platform') || 'unsure';
-  const empty: Estimate = { mode: 'none', low: 0, high: 0, phases: [], drivers: [], notes: [], tight: false };
+  const empty: Estimate = { mode: 'none', low: 0, high: 0, phases: [], drivers: [], allDrivers: [], notes: [], tight: false, team: 1, basePhases: [], teams: [], routes: [] };
   if (!t) return empty;
 
   if (t === 'support') {
     const hours = Number(pick(a, 'hours') || 10);
     return { ...empty, mode: 'monthly', hours, notes: ['Support is usually a monthly retainer with a set number of hours. Unused time doesn’t usually roll over, so start small and adjust.'] };
   }
+
+  const m = model(a)!;
+  const notes = [...m.notes];
+  const show = (raw: Raw): Phase[] => raw.filter((p) => p.weeks > 0).map((p) => ({ ...p, display: formatWeeks(p.weeks) }));
+  const basePhases = show(m.raw);
+  const date = m.deadlineWeeks;
+  const hasDate = Number.isFinite(date) && date > 0;
+  const gradeOf = (low: number) => (!hasDate ? undefined : low <= date ? 'fits' : low <= date * 1.5 ? 'close' : 'far') as Route['fit'];
+  const ROUTE: Record<string, [string, string]> = {
+    team2: ['2 developers', 'Higher cost'], team3: ['3 developers', 'Highest team cost'],
+    phase: ['Essentials first', 'Rest follows later'], priority: ['Highest-impact fixes first', 'Rest follows later'],
+    theme: ['Premium theme', 'Usually lower cost'], both: [`Essentials first, ${m.both.n} developers`, 'Highest cost'],
+  };
+  const routeIds = ['team2', 'team3', t === 'improvements' ? 'priority' : 'phase', 'theme', ...(m.both.n > 1 && isBuild(a) ? ['both'] : [])];
+  const routes: Route[] = [{ id: 'standard', label: '1 developer (standard)', low: m.low, high: m.high, cost: 'Most cost-effective', fit: gradeOf(m.low) }, ...routeIds.flatMap((id) => {
+    const x = choiceRange(m, id);
+    return x ? [{ id, label: ROUTE[id][0], low: x.low, high: x.high, cost: ROUTE[id][1], fit: gradeOf(x.low) }] : [];
+  })];
+  const result: Estimate = { mode: 'weeks', low: m.low, high: m.high, phases: basePhases, drivers: m.drivers, allDrivers: m.allDrivers, notes, tight: m.tight, team: 1, basePhases, teams: m.teams, routes, verdict: forDocument(deadlineNote(a)), choice: m.tight ? pick(a, 'speedup') || undefined : undefined };
+  const baseline = { low: m.low, high: m.high };
+
+  // Comfortable or borderline dates (no speed-up needed).
+  if (hasDate && !m.tight) {
+    if (m.high > date) notes.unshift('Your date sits inside the estimate range, so keeping scope changes small will help you hit it.');
+    else if (date >= m.high * 1.5) notes.push('Your date leaves comfortable room for feedback rounds, content and testing.');
+  }
+  if (!m.tight) return result;
+
+  const r = reach(m, date);
+  const choice = pick(a, 'speedup');
+  const range = choiceRange(m, choice);
+  const grade = (low: number) => (low <= date ? 'fits' : low <= date * 1.5 ? 'close' : 'far');
+  const span = (x: Range) => `${x.low}–${x.high} weeks`;
+
+  if (range) {
+    const g = grade(range.low);
+    const scenario: Record<string, string> = {
+      team2: 'With 2 developers · higher cost', team3: 'With 3 developers · highest cost', phase: 'Phase 1 · the essentials',
+      priority: 'Highest-impact fixes first', both: `Phase 1 with ${range.team} developers · highest cost`, theme: 'Premium theme · one developer',
+    };
+    Object.assign(result, { low: range.low, high: range.high, phases: show(range.raw), team: range.team, baseline, tight: g !== 'fits', fit: g, scenario: scenario[choice] });
+    if (choice === 'theme' && m.theme) {
+      result.drivers = m.theme.drivers;
+      result.allDrivers = m.theme.allDrivers;
+      const designer = notes.findIndex((n) => n.includes('trusted designer partner'));
+      if (designer >= 0) notes.splice(designer, 1);
+    }
+    const later = spread(sum(m.raw) - sum(essentials(m.raw)) + 0.5);
+    const what: Record<string, Record<string, string>> = {
+      team2: {
+        fits: 'With 2 developers working in parallel, this fits your date. Expect a noticeably higher cost than one developer: more people, plus time for coordination and code reviews.',
+        close: `With 2 developers it’s about ${span(range)}, a little past your date. ${r.bothFit ? 'Launching the essentials first as well would close the gap.' : 'A slightly later date would fit.'}`,
+        far: `Even with 2 developers it’s about ${span(range)}, well past your date. A later date or a much smaller first launch would be needed.`,
+      },
+      team3: {
+        fits: 'With 3 developers working in parallel, this fits your date. It’s the highest-cost team option: more people, plus time for coordination and code reviews.',
+        close: `With 3 developers it’s about ${span(range)}, a little past your date. ${r.bothFit ? 'Launching the essentials first as well would close the gap.' : 'A slightly later date would fit.'}`,
+        far: `Even with 3 developers it’s about ${span(range)}, well past your date. Adding more people beyond this mostly adds coordination time.`,
+      },
+      phase: {
+        fits: `Phase 1 launches the essentials: key pages, must-have features and a working checkout or contact flow. The rest follows in a second phase of about ${span(later)}.`,
+        close: `A smaller first launch needs about ${span(range)}, a little past your date. ${m.teams.length > 1 ? 'Adding a second developer as well would close the gap.' : 'Moving the date by a couple of weeks would fit.'}`,
+        far: `Even a smaller first launch needs about ${span(range)}, well past your date. A later date is the realistic option.`,
+      },
+      priority: {
+        fits: 'The fixes with the biggest impact go first, so you see results by your date. The rest follows straight after.',
+        close: `The highest-impact fixes take about ${span(range)}, a little past your date.`,
+        far: `Even the highest-impact fixes take about ${span(range)}. A later date would be more realistic.`,
+      },
+      both: {
+        fits: `${range.team} developers building the essentials first is the quickest route, and it fits your date. It’s also the highest-cost option. The rest follows after launch.`,
+        close: `Even ${range.team} developers building only the essentials need about ${span(range)}, a little past your date. A slightly later date would fit.`,
+        far: `About ${range.low} weeks is the quickest realistic launch, even with ${range.team} developers building only the essentials. A later date would keep costs down and lower the risk.`,
+      },
+      theme: {
+        fits: 'Starting from a quality premium theme fits your date and usually lowers the cost, while still matching your brand.',
+        close: `On a premium theme it’s about ${span(range)}, a little past your date. A slightly later date would fit, and it’s still the lower-cost route.`,
+        far: `Even on a premium theme it’s about ${span(range)}, well past your date.`,
+      },
+    };
+    notes.unshift(what[choice][g]);
+  } else if (choice === 'holding') {
+    Object.assign(result, { tight: false, baseline, scenario: 'Launch page first · full site after' });
+    notes.unshift(`A simple launch page (logo, story and an email sign-up) can be live in about a week, collecting interest while the full site is built over about ${span(m)}.`);
+  } else if (choice === 'keep') {
+    Object.assign(result, { tight: false, scenario: 'Current site stays live' });
+    notes.unshift(`Your current site stays live and keeps working while the new one is built over about ${span(m)}. Then it switches over in one go, with no downtime.`);
+  } else if (choice === 'move') {
+    Object.assign(result, { tight: false, scenario: 'One developer · new launch date' });
+    notes.unshift(`Keeping one developer is the most cost-effective option. A launch about ${span(m)} after kick-off fits this scope.`);
+  } else if (choice === 'advise') {
+    notes.unshift(r.tier === 'far'
+      ? 'Grant will suggest a realistic launch date, and what could go live first, on the call.'
+      : 'Grant will suggest the best mix of team size and launch scope on the call, based on your date and budget.');
+  } else {
+    // Not answered yet: say honestly what can and can't hit the date.
+    const fitTeam = m.teams.find((x) => x.n > 1 && x.low <= date);
+    const teamText = fitTeam ? (fitTeam.n === 2 ? 'a second developer' : 'a team of 3 developers') : '';
+    const first = firstPart(a).long;
+    notes.unshift({
+      team: `That’s tighter than the estimate. ${teamText[0]?.toUpperCase() + teamText.slice(1)} (faster, but higher cost) can hit your date.`,
+      phase: `That’s tighter than the estimate. ${first[0].toUpperCase() + first.slice(1)} can hit your date.`,
+      teamOrPhase: `That’s tighter than the estimate. You can hit your date with ${teamText} (faster, but higher cost) or by ${first}.`,
+      theme: `That’s tighter than the estimate. Starting from a premium theme can hit your date, and usually costs less.`,
+      both: 'That’s much tighter than the estimate. Only a bigger team and a smaller first launch together can hit it, at the highest cost.',
+      close: `That’s much tighter than the estimate. Even the fastest option needs about ${fastest(m)} weeks.`,
+      far: `That date isn’t realistic for this scope: even the fastest option would take about ${fastest(m)} weeks.${t === 'new' ? ' A launch page first, or a later date, would work.' : ' A later date would work.'}`,
+      fits: '',
+    }[r.tier]);
+  }
+
+  // Context tips for tight dates, most useful first (max three).
+  const tips: string[] = [];
+  const designChoice = pick(a, 'design');
+  const layouts = Number(a.layouts ?? 6);
+  if (date <= 2 && isBuild(a) && t !== 'theme') tips.push('Two weeks usually only suits a theme setup, small updates or a launch page.');
+  if (m.theme && choice !== 'theme' && designChoice === 'none') tips.push(`Design can’t be sped up much by adding developers. Starting from a premium theme would bring it to about ${span(m.theme)}.`);
+  if (layouts > 15) tips.push(`Reusing templates for similar pages, instead of ${layouts} unique layouts, would shorten the build.`);
+  if (picks(a, 'integrations').some((id) => id === 'erp' || id === 'api')) tips.push('The ERP or custom API connection can go live in a second phase, after launch.');
+  const heavy = picks(a, 'storeFeatures').filter((id) => ['b2b', 'configurator', 'subscriptions', 'markets'].includes(id));
+  if (heavy.length) tips.push(`${heavy.map((id) => LABELS[id]).join(', ')} could follow in a second phase.`);
+  if (t === 'migration') tips.push('Rushing a migration risks lost data and search rankings. Plan the switch-over for a quiet sales period.');
+  if (t === 'migration' && pick(a, 'catalog') === 'l') tips.push('Moving 5,000+ products takes time to check properly, whatever the team size.');
+  if (choice !== 'move' && choice !== 'holding' && choice !== 'keep') notes.splice(1, 0, ...tips.slice(0, 3));
+  return result;
+}
+
+function buildModel(a: Answers): Model | null {
+  const t = type(a);
+  const platform = pick(a, 'platform') || 'unsure';
+  if (!t || t === 'support') return null;
 
   const drivers: { label: string; weeks: number }[] = [];
   const notes: string[] = [];
@@ -359,17 +731,31 @@ export function estimate(a: Answers): Estimate {
   ].filter((phase) => phase.weeks > 0);
   // The total uses exact figures; phases are rounded only for display (min. a quarter week).
   const total = raw.reduce((sum, phase) => sum + phase.weeks, 0);
-  const phases: Phase[] = raw.map((phase) => ({ ...phase, display: formatWeeks(phase.weeks) }));
+  const parallel = raw.filter((phase) => PARALLEL.includes(phase.id)).reduce((sum, phase) => sum + phase.weeks, 0);
   const unsure = platform === 'unsure' || pick(a, 'from') === 'custom' || picks(a, 'integrations').some((id) => id === 'erp' || id === 'api');
-  const low = Math.max(1, Math.round(total * 0.85));
-  const high = Math.max(low + 1, Math.round(total * (unsure ? 1.35 : 1.2) + 0.25));
+  const { low, high } = spread(total, unsure);
+  // Team sizes that actually shorten the schedule (small builds gain little from more people).
+  const teams = [{ n: 1, low, high }];
+  for (const n of [2, 3]) {
+    const range = spread(teamWeeks(raw, n), unsure);
+    if (parallel >= (n === 2 ? 2 : 4) && range.low < teams[teams.length - 1].low) teams.push({ n, ...range });
+  }
 
   const deadline = pick(a, 'deadline');
   const deadlineWeeks = Number(deadline);
   const tight = Number.isFinite(deadlineWeeks) && deadlineWeeks > 0 && low > deadlineWeeks;
-  if (tight) notes.unshift(`That’s tighter than the estimate. Two ways to hit your date: a smaller first launch with the essentials, then a second phase; or a team of 2–3 developers working in parallel, which is faster but costs more.`);
   if (deadline === 'asap') notes.push('For an ASAP start, Grant will confirm the earliest available start date.');
 
   drivers.sort((x, y) => y.weeks - x.weeks);
-  return { mode: 'weeks', low, high, phases, drivers: drivers.slice(0, 4), notes, tight };
+  const phaseRaw = essentials(raw);
+  const phase = { ...spread(sum(phaseRaw), unsure), raw: phaseRaw };
+  const bestTeam = teams[teams.length - 1].n;
+  const both = { ...spread(teamWeeks(phaseRaw, bestTeam), unsure), n: bestTeam, raw: teamPhases(phaseRaw, bestTeam) };
+  // Would a premium theme help? Only for custom builds where it saves at least two weeks.
+  let theme: Model['theme'];
+  if (['new', 'redesign'].includes(t) && ['none', 'partial'].includes(pick(a, 'design'))) {
+    const alt = buildModel({ ...a, design: 'theme', deadline: undefined });
+    if (alt && alt.low <= low - 2) theme = { low: alt.low, high: alt.high, raw: alt.raw, drivers: alt.drivers, allDrivers: alt.allDrivers };
+  }
+  return { low, high, total, parallel, unsure, raw, teams, phase, both, theme, drivers: drivers.slice(0, 4), allDrivers: drivers, notes, tight, deadlineWeeks };
 }

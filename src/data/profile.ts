@@ -1,6 +1,5 @@
 export const profile = {
-  name: "Grant Payad",
-  fullName: "Laurence Grant L. Payad",
+  name: "Grant Dev14",
   email: "grant.dev14@gmail.com",
   linkedin: "https://www.linkedin.com/in/grant-dev14/",
   title: "Shopify, Webflow & WordPress Developer",

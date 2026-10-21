@@ -1,0 +1,470 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import SectionTitle from '../components/SectionTitle.astro';
+import { CURRENCIES } from '../data/pricing';
+---
+<BaseLayout title="Quotation Builder | Grant Dev14" description="Private tool for preparing project quotations." noindex>
+  <div class="wrap quote-page">
+    <SectionTitle title="QUOTE" detail="Private: turn an estimate into a final quotation" as="h1" />
+
+    <div class="q-layout">
+      <div class="q-main">
+        <section class="q-card" aria-labelledby="q-h-import">
+          <header class="q-head"><span class="q-step">01</span><h2 id="q-h-import">Start from the client’s estimate</h2></header>
+          <p class="q-help">Upload the estimate PDF the client downloaded, or paste the brief they emailed. Nothing is uploaded anywhere: it’s all read in this browser.</p>
+          <label class="q-drop" id="q-drop">
+            <input type="file" accept="application/pdf,.pdf" id="q-file" />
+            <strong>Upload estimate PDF</strong>
+            <span>Click to choose, or drop the file here</span>
+          </label>
+          <details class="q-paste">
+            <summary>Paste the emailed brief instead</summary>
+            <textarea id="q-brief" rows="8" placeholder="Project: A new website or store&#10;Platform: Shopify Plus&#10;Page layouts: 12 layouts&#10;…"></textarea>
+            <button type="button" class="q-btn" id="q-read">Read brief</button>
+          </details>
+          <p class="q-status" id="q-status" role="status"></p>
+        </section>
+
+        <section class="q-card" aria-labelledby="q-h-client">
+          <header class="q-head"><span class="q-step">02</span><h2 id="q-h-client">Client & quote details</h2></header>
+          <div class="q-grid">
+            <label>Client name<input data-bind="client.name" autocomplete="off" /></label>
+            <label>Company<input data-bind="client.company" autocomplete="off" /></label>
+            <label>Email<input type="email" data-bind="client.email" autocomplete="off" /></label>
+            <label>Website<input data-bind="client.website" autocomplete="off" /></label>
+            <label>Quote number<input data-bind="meta.number" /></label>
+            <label>Date<input type="date" data-bind="meta.date" /></label>
+            <label>Valid for (days)<input type="number" min="1" data-bind="meta.validDays" /></label>
+            <label>Estimate ref<input data-bind="meta.ref" placeholder="EST-…" /></label>
+            <label class="q-wide">Project title<input data-bind="project.title" /></label>
+            <label class="q-wide">Project summary<textarea rows="3" data-bind="project.summary"></textarea></label>
+          </div>
+        </section>
+
+        <section class="q-card" aria-labelledby="q-h-scope">
+          <header class="q-head"><span class="q-step">03</span><h2 id="q-h-scope">Scope</h2></header>
+          <p class="q-help">Adjust anything agreed on the call. Prices only change when you press <strong>Recalculate pricing</strong>, so manual edits are safe.</p>
+          <div id="q-scope" class="q-scope"></div>
+          <div class="q-timeline">
+            <p id="q-estimate"></p>
+            <label>Timeline shown on the quote<input data-bind="project.timeline" /></label>
+          </div>
+          <div class="q-recalc"><button type="button" class="q-btn" id="q-recalc">Recalculate pricing from scope</button><span id="q-dirty" class="q-dirty" hidden>Scope changed since the last calculation</span></div>
+        </section>
+
+        <section class="q-card" aria-labelledby="q-h-pricing">
+          <header class="q-head"><span class="q-step">04</span><h2 id="q-h-pricing">Pricing</h2></header>
+          <div class="q-grid q-grid-4">
+            <label>Currency<select data-bind="settings.currency">{CURRENCIES.map((c) => <option value={c}>{c}</option>)}</select></label>
+            <label>Hourly rate<input type="number" min="0" step="1" data-bind="settings.rate" /></label>
+            <label>Billable hours / week<input type="number" min="1" data-bind="settings.hoursPerWeek" /></label>
+            <label>Project management %<input type="number" min="0" data-bind="settings.pmPercent" /></label>
+          </div>
+          <p class="q-help">A new hourly rate updates every line. Hours per week and project management apply when you recalculate. Your rate is remembered in this browser.</p>
+          <div class="q-lines" id="q-lines"></div>
+          <button type="button" class="q-btn q-ghost" id="q-add">+ Add line</button>
+          <div class="q-grid q-grid-4 q-adjust">
+            <label>Discount<input type="number" min="0" step="any" data-bind="pricing.discount" /></label>
+            <label>Discount type<select data-bind="pricing.discountType"><option value="percent">Percent (%)</option><option value="amount">Fixed amount</option></select></label>
+            <label>Tax label<input data-bind="pricing.taxLabel" /></label>
+            <label>Tax %<input type="number" min="0" step="any" data-bind="pricing.tax" /></label>
+          </div>
+          <dl class="q-totals" id="q-totals"></dl>
+        </section>
+
+        <section class="q-card" aria-labelledby="q-h-pay">
+          <header class="q-head"><span class="q-step">05</span><h2 id="q-h-pay">Payment schedule</h2></header>
+          <div class="q-schedule" id="q-schedule"></div>
+          <button type="button" class="q-btn q-ghost" id="q-add-milestone">+ Add milestone</button>
+          <p class="q-status" id="q-schedule-status" role="status"></p>
+        </section>
+
+        <section class="q-card" aria-labelledby="q-h-terms">
+          <header class="q-head"><span class="q-step">06</span><h2 id="q-h-terms">Included, not included & terms</h2></header>
+          <p class="q-help">One item per line. <code>{'{validDays}'}</code> is replaced with the validity period.</p>
+          <div class="q-stack">
+            <label>What’s included<textarea rows="6" data-bind="text.included"></textarea></label>
+            <label>Not included<textarea rows="5" data-bind="text.excluded"></textarea></label>
+            <label>Terms<textarea rows="8" data-bind="text.terms"></textarea></label>
+            <label>Note to the client (optional)<textarea rows="3" data-bind="text.note" placeholder="e.g. Thanks for the call on Tuesday. Here’s the quote we discussed…"></textarea></label>
+          </div>
+        </section>
+      </div>
+
+      <aside class="q-summary" aria-label="Quotation summary">
+        <p class="tiny-heading">Quotation total</p>
+        <p class="q-total" id="q-total">—</p>
+        <p class="q-sub" id="q-sub"></p>
+        <dl class="q-facts" id="q-facts"></dl>
+        <button class="q-download" id="q-download" type="button">Download quotation (PDF)</button>
+        <button class="q-btn q-ghost q-reset" id="q-reset" type="button">Start a new quote</button>
+        <p class="q-saved">Drafts save automatically in this browser only.</p>
+      </aside>
+    </div>
+  </div>
+</BaseLayout>
+
+<script>
+  import { steps, estimate, type Answers } from '../data/estimator';
+  import { readPayload } from '../data/payload';
+  import { quoteLines, parseBrief, formatMoney, projectTitle, DEFAULT_SETTINGS, DEFAULT_INCLUDED, DEFAULT_EXCLUDED, DEFAULT_TERMS, type QuoteLine, type PricingSettings } from '../data/pricing';
+
+  interface Milestone { label: string; percent: number }
+  interface QuoteState {
+    meta: { number: string; date: string; validDays: number; ref: string };
+    client: { name: string; company: string; email: string; website: string };
+    project: { title: string; summary: string; timeline: string };
+    answers: Answers;
+    settings: PricingSettings;
+    pricing: { discount: number; discountType: 'percent' | 'amount'; tax: number; taxLabel: string };
+    lines: QuoteLine[];
+    schedule: Milestone[];
+    text: { included: string; excluded: string; terms: string; note: string };
+    monthly: boolean;
+  }
+
+  const DRAFT_KEY = 'quote-draft-v1';
+  const SETTINGS_KEY = 'quote-settings-v1';
+  const $ = <T extends HTMLElement>(sel: string) => document.querySelector<T>(sel)!;
+  const today = () => new Date().toISOString().slice(0, 10);
+  const newNumber = () => `Q-${today().replace(/-/g, '')}-${Math.random().toString(36).slice(2, 5).toUpperCase()}`;
+  const store = {
+    get<T>(key: string): T | null { try { const raw = localStorage.getItem(key); return raw ? (JSON.parse(raw) as T) : null; } catch { return null; } },
+    set(key: string, value: unknown) { try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* storage unavailable */ } },
+    remove(key: string) { try { localStorage.removeItem(key); } catch { /* storage unavailable */ } },
+  };
+
+  const DEFAULT_SCHEDULE: Milestone[] = [
+    { label: 'Deposit to start', percent: 50 },
+    { label: 'Designs or staging site approved', percent: 25 },
+    { label: 'Launch', percent: 25 },
+  ];
+
+  const fresh = (): QuoteState => ({
+    meta: { number: newNumber(), date: today(), validDays: 30, ref: '' },
+    client: { name: '', company: '', email: '', website: '' },
+    project: { title: '', summary: '', timeline: '' },
+    answers: {},
+    settings: { ...DEFAULT_SETTINGS, ...(store.get<PricingSettings>(SETTINGS_KEY) ?? {}) },
+    pricing: { discount: 0, discountType: 'percent', tax: 0, taxLabel: 'Tax' },
+    lines: [],
+    schedule: DEFAULT_SCHEDULE.map((m) => ({ ...m })),
+    text: { included: DEFAULT_INCLUDED.join('\n'), excluded: DEFAULT_EXCLUDED.join('\n'), terms: DEFAULT_TERMS.join('\n'), note: '' },
+    monthly: false,
+  });
+
+  let state: QuoteState = { ...fresh(), ...(store.get<QuoteState>(DRAFT_KEY) ?? {}) };
+
+  /* ---------- Saving ---------- */
+  let saveTimer = 0;
+  const save = () => {
+    clearTimeout(saveTimer);
+    saveTimer = window.setTimeout(() => { store.set(DRAFT_KEY, state); store.set(SETTINGS_KEY, state.settings); }, 250);
+  };
+
+  /* ---------- Simple field binding (data-bind="section.key") ---------- */
+  const getPath = (path: string) => path.split('.').reduce<any>((obj, key) => obj?.[key], state);
+  const setPath = (path: string, value: unknown) => {
+    const keys = path.split('.');
+    const last = keys.pop()!;
+    const target = keys.reduce<any>((obj, key) => obj[key], state);
+    target[last] = value;
+  };
+  const bound = () => document.querySelectorAll<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>('[data-bind]');
+  const fillBound = () => bound().forEach((el) => { const v = getPath(el.dataset.bind!); el.value = v === undefined || v === null ? '' : String(v); });
+  bound().forEach((el) => {
+    el.addEventListener('input', () => {
+      const path = el.dataset.bind!;
+      const numeric = el instanceof HTMLInputElement && el.type === 'number';
+      setPath(path, numeric ? Number(el.value) || 0 : el.value);
+      // A new hourly rate applies to every line straight away.
+      if (path === 'settings.rate') { state.lines.forEach((l) => { l.rate = state.settings.rate; }); renderLines(); }
+      renderTotals();
+      save();
+    });
+  });
+
+  /* ---------- Scope editor (the estimator's own questions) ---------- */
+  const scopeBox = $('#q-scope');
+  const renderScope = () => {
+    scopeBox.innerHTML = '';
+    for (const step of steps) {
+      if (step.when && !step.when(state.answers)) continue;
+      const row = document.createElement('div');
+      row.className = 'q-scope-row';
+      const name = document.createElement('span');
+      name.className = 'q-scope-label';
+      name.textContent = step.label;
+      row.append(name);
+      const options = (step.options ?? []).filter((o) => !o.when || o.when(state.answers));
+      if (step.kind === 'single') {
+        const select = document.createElement('select');
+        select.setAttribute('aria-label', step.label);
+        select.append(new Option('—', ''));
+        options.forEach((o) => select.append(new Option(o.label, o.id)));
+        select.value = String(state.answers[step.id] ?? '');
+        select.addEventListener('change', () => { state.answers[step.id] = select.value || undefined; scopeChanged(); });
+        row.append(select);
+      } else if (step.kind === 'multi') {
+        const wrap = document.createElement('div');
+        wrap.className = 'q-chips';
+        const chosen = new Set((state.answers[step.id] as string[] | undefined) ?? []);
+        for (const o of options) {
+          const chip = document.createElement('label');
+          chip.className = 'q-chip';
+          const box = document.createElement('input');
+          box.type = 'checkbox';
+          box.checked = chosen.has(o.id);
+          box.addEventListener('change', () => {
+            box.checked ? chosen.add(o.id) : chosen.delete(o.id);
+            state.answers[step.id] = [...chosen];
+            scopeChanged();
+          });
+          chip.append(box, document.createTextNode(o.label));
+          wrap.append(chip);
+        }
+        row.append(wrap);
+      } else if (step.kind === 'range') {
+        const input = document.createElement('input');
+        input.type = 'number';
+        input.min = String(step.range?.min ?? 1);
+        input.max = String(step.range?.max ?? 99);
+        input.value = String(state.answers[step.id] ?? step.range?.initial ?? '');
+        input.setAttribute('aria-label', step.label);
+        input.addEventListener('change', () => { state.answers[step.id] = Number(input.value) || step.range?.initial; scopeChanged(); });
+        row.append(input);
+      } else {
+        const area = document.createElement('textarea');
+        area.rows = 2;
+        area.value = String(state.answers[step.id] ?? '');
+        area.setAttribute('aria-label', step.label);
+        area.addEventListener('input', () => { state.answers[step.id] = area.value; save(); });
+        row.append(area);
+      }
+      scopeBox.append(row);
+    }
+    renderEstimate();
+  };
+  const timelineText = () => {
+    const r = estimate(state.answers);
+    if (r.mode === 'weeks') return `${r.low}–${r.high} weeks from kick-off${r.scenario ? ` (${r.scenario.replace(/ · .*$/, '').toLowerCase()})` : ''}`;
+    if (r.mode === 'monthly') return 'Ongoing, billed monthly';
+    return '';
+  };
+  const renderEstimate = () => {
+    const r = estimate(state.answers);
+    $('#q-estimate').textContent = r.mode === 'weeks'
+      ? `Estimator timeline: ${r.low}–${r.high} weeks${r.scenario ? ` · ${r.scenario}` : ''}${r.team > 1 ? ` · ${r.team} developers` : ''}`
+      : r.mode === 'monthly' ? `Support retainer: ${r.hours} hours a month` : 'Answer the scope questions, or import an estimate, to calculate pricing.';
+  };
+  const scopeChanged = () => {
+    $('#q-dirty').hidden = false;
+    renderScope();
+    save();
+  };
+
+  /* ---------- Pricing ---------- */
+  const recalc = () => {
+    const { lines, result } = quoteLines(state.answers, state.settings);
+    state.lines = lines;
+    state.monthly = result.mode === 'monthly';
+    if (state.monthly && state.schedule.length === DEFAULT_SCHEDULE.length) state.schedule = [{ label: 'Billed monthly in advance', percent: 100 }];
+    state.project.timeline = timelineText();
+    if (!state.project.title) state.project.title = projectTitle(state.answers);
+    $('#q-dirty').hidden = true;
+    fillBound();
+    renderLines();
+    renderTotals();
+    save();
+  };
+
+  const linesBox = $('#q-lines');
+  const money = (n: number) => formatMoney(n, state.settings.currency);
+  const renderLines = () => {
+    linesBox.innerHTML = '';
+    if (!state.lines.length) {
+      const empty = document.createElement('p');
+      empty.className = 'q-empty';
+      empty.textContent = 'No line items yet. Import an estimate, recalculate from the scope, or add a line.';
+      linesBox.append(empty);
+      return;
+    }
+    state.lines.forEach((line, index) => {
+      const row = document.createElement('div');
+      row.className = 'q-line';
+      const field = (cls: string, label: string, el: HTMLInputElement | HTMLTextAreaElement) => { const wrap = document.createElement('label'); wrap.className = cls; const span = document.createElement('span'); span.textContent = label; wrap.append(span, el); return wrap; };
+      const title = Object.assign(document.createElement('input'), { value: line.title });
+      const detail = Object.assign(document.createElement('textarea'), { value: line.detail, rows: 2 });
+      const hours = Object.assign(document.createElement('input'), { type: 'number', min: '0', step: 'any', value: String(line.hours) });
+      const rate = Object.assign(document.createElement('input'), { type: 'number', min: '0', step: 'any', value: String(line.rate) });
+      const amount = document.createElement('output');
+      amount.className = 'q-amount';
+      const update = () => { amount.textContent = money(line.hours * line.rate); renderTotals(); save(); };
+      title.addEventListener('input', () => { line.title = title.value; save(); });
+      detail.addEventListener('input', () => { line.detail = detail.value; save(); });
+      hours.addEventListener('input', () => { line.hours = Number(hours.value) || 0; update(); });
+      rate.addEventListener('input', () => { line.rate = Number(rate.value) || 0; update(); });
+      const remove = document.createElement('button');
+      remove.type = 'button';
+      remove.className = 'q-remove';
+      remove.setAttribute('aria-label', `Remove ${line.title || 'line'}`);
+      remove.textContent = '×';
+      remove.addEventListener('click', () => { state.lines.splice(index, 1); renderLines(); renderTotals(); save(); });
+      const text = document.createElement('div');
+      text.className = 'q-line-text';
+      text.append(field('q-f-title', 'Item', title), field('q-f-detail', 'Details', detail));
+      const nums = document.createElement('div');
+      nums.className = 'q-line-nums';
+      nums.append(field('q-f-num', state.monthly ? 'Hours / month' : 'Hours', hours), field('q-f-num', 'Rate', rate));
+      const amountWrap = document.createElement('div');
+      amountWrap.className = 'q-f-amount';
+      const amountLabel = document.createElement('span');
+      amountLabel.textContent = 'Amount';
+      amountWrap.append(amountLabel, amount);
+      nums.append(amountWrap, remove);
+      row.append(text, nums);
+      linesBox.append(row);
+      amount.textContent = money(line.hours * line.rate);
+    });
+  };
+
+  const totals = () => {
+    const subtotal = state.lines.reduce((sum, l) => sum + l.hours * l.rate, 0);
+    const d = state.pricing.discount || 0;
+    const discount = Math.min(subtotal, state.pricing.discountType === 'percent' ? (subtotal * d) / 100 : d);
+    const taxable = subtotal - discount;
+    const tax = (taxable * (state.pricing.tax || 0)) / 100;
+    const hours = state.lines.reduce((sum, l) => sum + l.hours, 0);
+    return { subtotal, discount, tax, total: taxable + tax, hours };
+  };
+
+  const renderTotals = () => {
+    const t = totals();
+    const per = state.monthly ? ' / month' : '';
+    const rows: [string, string][] = [['Subtotal', money(t.subtotal)]];
+    if (t.discount) rows.push([`Discount${state.pricing.discountType === 'percent' ? ` (${state.pricing.discount}%)` : ''}`, `−${money(t.discount)}`]);
+    if (t.tax) rows.push([`${state.pricing.taxLabel || 'Tax'} (${state.pricing.tax}%)`, money(t.tax)]);
+    rows.push([`Total${per}`, money(t.total)]);
+    $('#q-totals').innerHTML = '';
+    for (const [k, v] of rows) { const dt = document.createElement('dt'); dt.textContent = k; const dd = document.createElement('dd'); dd.textContent = v; $('#q-totals').append(dt, dd); }
+
+    $('#q-total').textContent = state.lines.length ? money(t.total) : '—';
+    $('#q-sub').textContent = state.lines.length ? `${state.monthly ? 'Per month' : 'Fixed price'}${t.tax ? `, including ${state.pricing.taxLabel || 'tax'}` : ''}` : '';
+    const valid = new Date(`${state.meta.date || today()}T00:00:00`);
+    valid.setDate(valid.getDate() + (Number(state.meta.validDays) || 30));
+    const facts: [string, string][] = [
+      ['Hours', `${Math.round(t.hours * 10) / 10}`],
+      ['Effective rate', t.hours ? `${money(t.total / t.hours)} / hr` : '—'],
+      ['Timeline', state.project.timeline || '—'],
+      [state.schedule[0]?.label || 'Deposit', money((t.total * (state.schedule[0]?.percent ?? 0)) / 100)],
+      ['Valid until', valid.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })],
+    ];
+    $('#q-facts').innerHTML = '';
+    for (const [k, v] of facts) { const dt = document.createElement('dt'); dt.textContent = k; const dd = document.createElement('dd'); dd.textContent = v; $('#q-facts').append(dt, dd); }
+    renderSchedule(false);
+    ($('#q-download') as HTMLButtonElement).disabled = !state.lines.length;
+  };
+
+  /* ---------- Payment schedule ---------- */
+  const scheduleBox = $('#q-schedule');
+  const renderSchedule = (rebuild = true) => {
+    const t = totals();
+    if (rebuild) {
+      scheduleBox.innerHTML = '';
+      state.schedule.forEach((m, index) => {
+        const row = document.createElement('div');
+        row.className = 'q-milestone';
+        const label = Object.assign(document.createElement('input'), { value: m.label });
+        label.setAttribute('aria-label', 'Milestone');
+        const pct = Object.assign(document.createElement('input'), { type: 'number', min: '0', max: '100', value: String(m.percent) });
+        pct.setAttribute('aria-label', 'Percent');
+        const amount = document.createElement('output');
+        amount.className = 'q-amount';
+        amount.dataset.index = String(index);
+        const remove = document.createElement('button');
+        remove.type = 'button';
+        remove.className = 'q-remove';
+        remove.textContent = '×';
+        remove.setAttribute('aria-label', `Remove ${m.label}`);
+        label.addEventListener('input', () => { m.label = label.value; renderTotals(); save(); });
+        pct.addEventListener('input', () => { m.percent = Number(pct.value) || 0; renderTotals(); save(); });
+        remove.addEventListener('click', () => { state.schedule.splice(index, 1); renderSchedule(); renderTotals(); save(); });
+        const pctWrap = document.createElement('span');
+        pctWrap.className = 'q-pct';
+        pctWrap.append(pct, document.createTextNode('%'));
+        row.append(label, pctWrap, amount, remove);
+        scheduleBox.append(row);
+      });
+    }
+    scheduleBox.querySelectorAll<HTMLOutputElement>('output[data-index]').forEach((out) => { const m = state.schedule[Number(out.dataset.index)]; if (m) out.textContent = money((t.total * m.percent) / 100); });
+    const sum = state.schedule.reduce((s, m) => s + m.percent, 0);
+    const status = $('#q-schedule-status');
+    status.textContent = sum === 100 ? '' : `Milestones add up to ${sum}%. They should total 100%.`;
+    status.classList.toggle('is-error', sum !== 100);
+  };
+
+  /* ---------- Import ---------- */
+  const status = (text: string, error = false) => { const el = $('#q-status'); el.textContent = text; el.classList.toggle('is-error', error); };
+  const applyAnswers = (answers: Answers, ref = '') => {
+    state.answers = answers;
+    if (ref) state.meta.ref = ref;
+    if (typeof answers.notes === 'string' && answers.notes && !state.project.summary) state.project.summary = answers.notes;
+    state.project.title = '';
+    renderScope();
+    recalc();
+  };
+  const importFile = async (file: File) => {
+    if (!/\.pdf$/i.test(file.name) && file.type !== 'application/pdf') { status('That isn’t a PDF. Upload the estimate PDF from the estimator.', true); return; }
+    const payload = readPayload(await file.arrayBuffer());
+    if (!payload) { status('This PDF has no estimator data (it may be older than this tool). Paste the brief from the client’s email instead.', true); return; }
+    applyAnswers(payload.answers, payload.ref);
+    const count = Object.values(payload.answers).filter((v) => v !== undefined && v !== '' && !(Array.isArray(v) && !v.length)).length;
+    status(`Imported ${payload.ref} from ${new Date(`${payload.date}T00:00:00`).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}: ${count} answers.`);
+  };
+  $<HTMLInputElement>('#q-file').addEventListener('change', (e) => { const file = (e.target as HTMLInputElement).files?.[0]; if (file) importFile(file); });
+  const drop = $('#q-drop');
+  drop.addEventListener('dragover', (e) => { e.preventDefault(); drop.classList.add('is-over'); });
+  drop.addEventListener('dragleave', () => drop.classList.remove('is-over'));
+  drop.addEventListener('drop', (e) => { e.preventDefault(); drop.classList.remove('is-over'); const file = e.dataTransfer?.files[0]; if (file) importFile(file); });
+  $('#q-read').addEventListener('click', () => {
+    const answers = parseBrief($<HTMLTextAreaElement>('#q-brief').value);
+    const ref = $<HTMLTextAreaElement>('#q-brief').value.match(/EST-\d{8}-[A-Z0-9]+/)?.[0] ?? '';
+    if (!answers.type) { status('Couldn’t find the project details. Paste the lines that look like “Platform: Shopify”.', true); return; }
+    applyAnswers(answers, ref);
+    status(`Read the brief: ${Object.keys(answers).length} answers.`);
+  });
+
+  /* ---------- Buttons ---------- */
+  $('#q-recalc').addEventListener('click', recalc);
+  $('#q-add').addEventListener('click', () => { state.lines.push({ id: `custom-${Date.now()}`, title: 'New item', detail: '', hours: 1, rate: state.settings.rate }); renderLines(); renderTotals(); save(); });
+  $('#q-add-milestone').addEventListener('click', () => { state.schedule.push({ label: 'Milestone', percent: 0 }); renderSchedule(); renderTotals(); save(); });
+  $('#q-reset').addEventListener('click', () => {
+    if (!window.confirm('Start a new quote? This clears the current draft (your rate and currency are kept).')) return;
+    store.remove(DRAFT_KEY);
+    state = fresh();
+    fillBound(); renderScope(); renderLines(); renderSchedule(); renderTotals();
+    status('');
+  });
+  $('#q-download').addEventListener('click', async () => {
+    const button = $<HTMLButtonElement>('#q-download');
+    const label = button.textContent;
+    button.textContent = 'Preparing PDF…';
+    button.disabled = true;
+    try {
+      const { downloadQuotePdf } = await import('../scripts/quote-pdf');
+      await downloadQuotePdf({ ...state, totals: totals(), estimate: estimate(state.answers) });
+      button.textContent = 'Downloaded';
+    } catch (error) {
+      console.error(error);
+      button.textContent = 'Couldn’t create the PDF';
+    }
+    window.setTimeout(() => { button.textContent = label; button.disabled = !state.lines.length; }, 2200);
+  });
+
+  /* ---------- First paint ---------- */
+  fillBound();
+  renderScope();
+  renderLines();
+  renderSchedule();
+  renderTotals();
+</script>
