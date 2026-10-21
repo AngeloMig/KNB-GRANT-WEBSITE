@@ -54,7 +54,8 @@ export async function downloadEstimatePdf(input: PdfInput) {
   let y = M;
   const today = new Date();
   const date = today.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
-  const ref = `EST-${today.toISOString().slice(0, 10).replace(/-/g, '')}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+  const localDate = today.toLocaleDateString('en-CA');
+  const ref = `EST-${localDate.replace(/-/g, '')}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
 
   const color = (c: [number, number, number]) => doc.setTextColor(c[0], c[1], c[2]);
   const font = (size: number, style: 'normal' | 'bold' = 'normal') => { doc.setFont('helvetica', style); doc.setFontSize(size); };
@@ -322,6 +323,6 @@ export async function downloadEstimatePdf(input: PdfInput) {
     doc.text(`Page ${i} of ${pages}`, W - M, H - 9, { align: 'right' });
   }
 
-  doc.setProperties({ title: 'Project estimate summary — Grant Dev14', subject: 'Indicative project timeline (not a quotation)', author: 'Grant Dev14', keywords: encodePayload({ v: 1, ref, date: today.toISOString().slice(0, 10), answers: input.answers }) });
-  doc.save(`grant-dev14-project-estimate-${today.toISOString().slice(0, 10)}.pdf`);
+  doc.setProperties({ title: 'Project estimate summary — Grant Dev14', subject: 'Indicative project timeline (not a quotation)', author: 'Grant Dev14', keywords: encodePayload({ v: 1, ref, date: localDate, answers: input.answers }) });
+  doc.save(`grant-dev14-project-estimate-${localDate}.pdf`);
 }

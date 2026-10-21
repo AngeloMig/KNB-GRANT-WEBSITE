@@ -338,6 +338,8 @@ export interface Estimate {
   routes: Route[];
   /** Full-scope range for each team size that makes sense for this project. */
   teams: { n: number; low: number; high: number }[];
+  /** Wider range: unknown platform, custom source or third-party integrations. */
+  unsure: boolean;
 }
 
 const round = (n: number) => Math.round(n * 2) / 2;
@@ -350,12 +352,27 @@ export const spread = (weeks: number, unsure = false) => {
 
 // More developers split the build and data work; discovery, design, content and QA don't speed up.
 // Each extra person also adds coordination and code-review time.
-const TEAM: Record<number, { factor: number; overhead: number }> = { 1: { factor: 1, overhead: 0 }, 2: { factor: 0.6, overhead: 0.5 }, 3: { factor: 0.45, overhead: 0.75 } };
+// factor: share of the build/data time with n developers; qa: share of QA time (testing splits, but less well);
+// overhead: extra calendar weeks for coordination and code reviews.
+const TEAM: Record<number, { factor: number; qa: number; overhead: number }> = { 1: { factor: 1, qa: 1, overhead: 0 }, 2: { factor: 0.55, qa: 0.8, overhead: 0.25 }, 3: { factor: 0.42, qa: 0.7, overhead: 0.4 } };
 const PARALLEL = ['build', 'data'];
+/** One-developer phases re-timed for a team of n developers (for the quote page). */
+export function phasesForTeam(r: Estimate, n: number): Phase[] {
+  return planFor(r, n).phases;
+}
+
+/** Timeline for any team size, optionally launching the essentials first (quote page options). */
+export function planFor(r: Estimate, n: number, essentialsFirst = false): { low: number; high: number; phases: Phase[] } {
+  const source = r.choice === 'theme' ? r.phases : r.basePhases;
+  const base = essentialsFirst ? essentials(source) : source;
+  const raw = n > 1 ? teamPhases(base, n) : base;
+  return { ...spread(teamWeeks(base, n), r.unsure), phases: raw.filter((p) => p.weeks > 0).map((p) => ({ ...p, display: formatWeeks(p.weeks) })) };
+}
+
 /** Calendar weeks for a team of n developers, from one-developer phases. */
 export const teamWeeks = (phases: { id: string; weeks: number }[], n: number) => {
-  const { factor, overhead } = TEAM[n] ?? TEAM[1];
-  return phases.reduce((sum, p) => sum + (PARALLEL.includes(p.id) ? p.weeks * factor : p.weeks), 0) + overhead;
+  const { factor, qa, overhead } = TEAM[n] ?? TEAM[1];
+  return phases.reduce((sum, p) => sum + (PARALLEL.includes(p.id) ? p.weeks * factor : p.id === 'qa' ? p.weeks * qa : p.weeks), 0) + overhead;
 };
 
 // The one-developer, full-scope model, before any speed-up choice. Cached per answer set,
@@ -382,7 +399,10 @@ function model(a: Answers): Model | null {
 }
 /** Phase 1 keeps core pages and must-have features; the rest follows after launch. */
 const essentials = (raw: Raw): Raw => raw.map((p) => ({ ...p, weeks: p.id === 'build' ? p.weeks * 0.55 : p.id === 'content' ? p.weeks * 0.7 : p.id === 'qa' ? Math.max(0.5, p.weeks * 0.8) : p.weeks }));
-const teamPhases = (raw: Raw, n: number): Raw => { const { factor, overhead } = TEAM[n]; return raw.map((p) => (PARALLEL.includes(p.id) ? { ...p, weeks: p.weeks * factor + (p.id === 'build' ? overhead : 0) } : p)); };
+const teamPhases = (raw: Raw, n: number): Raw => {
+  const { factor, qa, overhead } = TEAM[n];
+  return raw.map((p) => (PARALLEL.includes(p.id) ? { ...p, weeks: p.weeks * factor + (p.id === 'build' ? overhead : 0) } : p.id === 'qa' ? { ...p, weeks: p.weeks * qa } : p));
+};
 const sum = (raw: Raw) => raw.reduce((total, p) => total + p.weeks, 0);
 
 /* ---------- How realistic is the launch date? ---------- */
@@ -524,7 +544,7 @@ function speedHelp(a: Answers) {
 
 export function estimate(a: Answers): Estimate {
   const t = type(a);
-  const empty: Estimate = { mode: 'none', low: 0, high: 0, phases: [], drivers: [], allDrivers: [], notes: [], tight: false, team: 1, basePhases: [], teams: [], routes: [] };
+  const empty: Estimate = { mode: 'none', low: 0, high: 0, phases: [], drivers: [], allDrivers: [], notes: [], tight: false, team: 1, basePhases: [], teams: [], routes: [], unsure: false };
   if (!t) return empty;
 
   if (t === 'support') {
@@ -549,7 +569,7 @@ export function estimate(a: Answers): Estimate {
     const x = choiceRange(m, id);
     return x ? [{ id, label: ROUTE[id][0], low: x.low, high: x.high, cost: ROUTE[id][1], fit: gradeOf(x.low) }] : [];
   })];
-  const result: Estimate = { mode: 'weeks', low: m.low, high: m.high, phases: basePhases, drivers: m.drivers, allDrivers: m.allDrivers, notes, tight: m.tight, team: 1, basePhases, teams: m.teams, routes, verdict: forDocument(deadlineNote(a)), choice: m.tight ? pick(a, 'speedup') || undefined : undefined };
+  const result: Estimate = { mode: 'weeks', low: m.low, high: m.high, phases: basePhases, drivers: m.drivers, allDrivers: m.allDrivers, notes, tight: m.tight, team: 1, basePhases, teams: m.teams, unsure: m.unsure, routes, verdict: forDocument(deadlineNote(a)), choice: m.tight ? pick(a, 'speedup') || undefined : undefined };
   const baseline = { low: m.low, high: m.high };
 
   // Comfortable or borderline dates (no speed-up needed).

@@ -1,6 +1,7 @@
 import { spawnSync } from 'node:child_process';
 import { cp, mkdir, readdir, rm, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
+import { protectQuote } from './protect-quote.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const repository = process.env.GITHUB_REPOSITORY || 'AngeloMig/KNB-GRANT-WEBSITE';
@@ -23,4 +24,9 @@ for (const name of generated) {
 }
 await cp(new URL('../dist-github/', import.meta.url), new URL('../docs/', import.meta.url), { recursive: true });
 await writeFile(new URL('../docs/.nojekyll', import.meta.url), '');
+
+// The private quote builder is published encrypted (or locked if no password is set).
+const quote = await protectQuote(new URL('../', import.meta.url));
+if (quote === 'protected') console.log('Quote builder: password-protected (docs/quote/).');
+if (quote === 'locked') console.warn('Quote builder: LOCKED. Add QUOTE_PASSWORD=... to .env and rebuild to enable it.');
 console.log(`GitHub Pages files ready: docs/index.html (${repository})`);

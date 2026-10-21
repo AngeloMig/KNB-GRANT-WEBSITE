@@ -8,9 +8,30 @@ export interface QuoteLine {
   id: string;
   title: string;
   detail: string;
+  /** Hours, or a quantity for fixed-price items. */
   hours: number;
   rate: number;
+  /** 'hours' bills hours × hourly rate; 'fixed' bills quantity × unit price. */
+  unit?: 'hours' | 'fixed';
+  /** Optional extras are listed for the client but not counted in the total. */
+  optional?: boolean;
+  /** Phase 2 work follows after launch (essentials first). */
+  phase?: 1 | 2;
+  /** Paid on to someone else at cost (e.g. a theme licence): not your income. */
+  passThrough?: boolean;
 }
+
+/** Quick-add items on the quote page. Hours use the current hourly rate; fixed items start at 0 for you to price. */
+export const LINE_PRESETS: { label: string; line: Omit<QuoteLine, 'id' | 'rate'> & { price?: number } }[] = [
+  { label: 'Custom item (hourly)', line: { title: 'New item', detail: '', hours: 1, unit: 'hours' } },
+  { label: 'Fixed-price item', line: { title: 'Fixed-price item', detail: '', hours: 1, unit: 'fixed' } },
+  { label: 'Extra page template', line: { title: 'Extra page template', detail: 'One more responsive page layout, built and tested.', hours: 8, unit: 'hours' } },
+  { label: 'App setup & configuration', line: { title: 'App setup & configuration', detail: 'Install, configure and style one third-party app.', hours: 4, unit: 'hours' } },
+  { label: 'Training session', line: { title: 'Training session', detail: 'A recorded walkthrough so your team can manage the site.', hours: 2, unit: 'hours' } },
+  { label: 'Premium theme licence', line: { title: 'Premium theme licence', detail: 'One-off licence, paid at cost.', hours: 1, unit: 'fixed', passThrough: true } },
+  { label: 'Monthly support (optional)', line: { title: 'Monthly support retainer', detail: 'Per month, starting after the 30-day bug-fix period.', hours: 10, unit: 'hours', optional: true } },
+  { label: 'Rush delivery (optional)', line: { title: 'Priority scheduling', detail: 'Starts sooner and is prioritised over other work.', hours: 1, unit: 'fixed', optional: true } },
+];
 
 export interface PricingSettings {
   currency: string;
@@ -66,12 +87,64 @@ export function scopeRows(answers: Answers): [string, string][] {
     .filter(([, value]) => value);
 }
 
+/** Lines that are part of the build (the work extra developers share). */
+export const isDevLine = (l: QuoteLine) => l.id === 'build' || l.id === 'build-2' || l.id.startsWith('feature-') || l.id.startsWith('fix-') || l.id === 'data';
+export const TEAM_LINE_IDS = ['team', 'team-premium'];
+
+/**
+ * The extra cost of a bigger team, as two clear lines:
+ * - a faster-delivery premium for each additional developer (a % of the build work), and
+ * - coordination, code reviews and integration work, billed at the extra developers' rate.
+ */
+export function teamLines(lines: QuoteLine[], team: number, rate: number, premiumPercent = 15): QuoteLine[] {
+  if (team < 2) return [];
+  const dev = lines.filter((l) => isDevLine(l) && !l.optional);
+  const devHours = dev.reduce((sum, l) => sum + l.hours, 0);
+  const devAmount = dev.reduce((sum, l) => sum + l.hours * l.rate, 0);
+  const extra = team - 1;
+  const out: QuoteLine[] = [];
+  const premium = Math.round((devAmount * premiumPercent * extra) / 100);
+  if (premium > 0) out.push({ id: 'team-premium', title: `Additional developer${extra > 1 ? 's' : ''} ×${extra} · priority delivery`, detail: `${extra === 1 ? 'A second developer works' : `${extra} more developers work`} alongside Grant so the project launches sooner (${premiumPercent}% of the build per extra developer).`, hours: 1, rate: premium, unit: 'fixed' });
+  const hours = Math.round(devHours * (team === 2 ? 0.15 : 0.25));
+  if (hours > 0) out.push({ id: 'team', title: 'Team coordination & code reviews', detail: `Planning, code reviews and integration work so ${team} developers can build in parallel.`, hours, rate, unit: 'hours' });
+  return out;
+}
+
+/** Features that can wait for a second phase when launching the essentials first. */
+const HEAVY = ['B2B / wholesale', 'Product customiser', 'Subscriptions', 'Multiple markets', 'Localisation', 'Members-only areas', 'Custom API work', 'Inventory / ERP link', 'CRM integration', 'Advanced interactions', 'Webflow Ecommerce', 'Search integration', 'Bundles & upsells', 'Reviews & loyalty'];
+
+/** Splits a full-scope price into Phase 1 (launch with the essentials) and Phase 2 (the rest, after launch). */
+export function splitEssentials(lines: QuoteLine[]): QuoteLine[] {
+  const out: QuoteLine[] = [];
+  for (const line of lines) {
+    if (line.id === 'build') {
+      const first = Math.max(1, Math.round(line.hours * 0.55));
+      out.push({ ...line, hours: first, phase: 1, detail: `${line.detail} Phase 1 covers the core pages.` });
+      out.push({ ...line, id: 'build-2', title: 'Remaining pages & templates', detail: 'The rest of the page layouts, built after launch.', hours: Math.max(1, line.hours - first), phase: 2 });
+    } else if (line.id.startsWith('feature-') && HEAVY.includes(line.title)) {
+      out.push({ ...line, phase: 2 });
+    } else if (line.id === 'qa') {
+      out.push({ ...line, phase: 1 });
+      out.push({ ...line, id: 'qa-2', title: 'Phase 2 testing & release', detail: 'Testing and releasing the phase 2 work.', hours: Math.max(1, Math.round(line.hours * 0.5)), phase: 2 });
+    } else {
+      out.push({ ...line, phase: line.phase ?? 1 });
+    }
+  }
+  return out;
+}
+
+/** Subtotals by phase (billable lines only). */
+export function phaseTotals(lines: QuoteLine[]) {
+  const sum = (phase: 1 | 2) => lines.filter((l) => !l.optional && (l.phase ?? 1) === phase).reduce((s, l) => s + l.hours * l.rate, 0);
+  return { one: sum(1), two: sum(2), split: lines.some((l) => !l.optional && l.phase === 2) };
+}
+
 /** Builds the starting line items for a quote from the client's answers. */
-export function quoteLines(answers: Answers, settings: PricingSettings): { lines: QuoteLine[]; result: Estimate } {
+export function quoteLines(answers: Answers, settings: PricingSettings, options: { team?: number; teamRate?: number; teamPremium?: number; essentials?: boolean } = {}): { lines: QuoteLine[]; result: Estimate } {
   const result = estimate(answers);
   const rate = settings.rate;
   const lines: QuoteLine[] = [];
-  const add = (id: string, title: string, detail: string, hours: number) => { if (hours > 0) lines.push({ id, title, detail, hours, rate }); };
+  const add = (id: string, title: string, detail: string, hours: number) => { if (hours > 0) lines.push({ id, title, detail, hours, rate, unit: 'hours' }); };
 
   if (result.mode === 'none') return { lines, result };
 
@@ -112,15 +185,12 @@ export function quoteLines(answers: Answers, settings: PricingSettings): { lines
   }
 
   // A bigger team does the same work faster, but adds coordination and code reviews.
-  if (result.team > 1) {
-    const dev = lines.filter((l) => l.id === 'build' || l.id.startsWith('feature-') || l.id === 'data').reduce((sum, l) => sum + l.hours, 0);
-    add('team', `Team of ${result.team} developers`, 'Coordination, code reviews and integration work so the build runs in parallel.', Math.round(dev * (result.team === 2 ? 0.15 : 0.25)));
-  }
+  lines.push(...teamLines(lines, options.team ?? result.team, options.teamRate ?? rate, options.teamPremium ?? 15));
   if (settings.pmPercent > 0) {
-    const base = lines.reduce((sum, l) => sum + l.hours, 0);
+    const base = lines.filter((l) => (l.unit ?? 'hours') === 'hours').reduce((sum, l) => sum + l.hours, 0);
     add('pm', 'Project management', 'Planning, weekly updates, calls and coordination throughout the project.', Math.round((base * settings.pmPercent) / 100));
   }
-  return { lines, result };
+  return { lines: options.essentials && result.mode === 'weeks' ? splitEssentials(lines) : lines, result };
 }
 
 /** Parses the plain-text brief the estimator emails ("Platform: Shopify Plus" lines) back into answers. */
@@ -143,6 +213,18 @@ export function parseBrief(text: string): Answers {
     if (ids.length) answers[step.id] = ids;
   }
   return answers;
+}
+
+/** Totals for a set of lines: optional extras are kept separate. */
+export function lineTotals(lines: QuoteLine[], pricing: { discount: number; discountType: 'percent' | 'amount'; tax: number }) {
+  const billable = lines.filter((l) => !l.optional);
+  const subtotal = billable.reduce((sum, l) => sum + l.hours * l.rate, 0);
+  const d = pricing.discount || 0;
+  const discount = Math.min(subtotal, pricing.discountType === 'percent' ? (subtotal * d) / 100 : d);
+  const tax = ((subtotal - discount) * (pricing.tax || 0)) / 100;
+  const hours = billable.filter((l) => (l.unit ?? 'hours') === 'hours').reduce((sum, l) => sum + l.hours, 0);
+  const optional = lines.filter((l) => l.optional).reduce((sum, l) => sum + l.hours * l.rate, 0);
+  return { subtotal, discount, tax, total: subtotal - discount + tax, hours, optional };
 }
 
 export const formatMoney = (amount: number, currency: string) => {
