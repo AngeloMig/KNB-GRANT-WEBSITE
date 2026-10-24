@@ -1,0 +1,153 @@
+---
+// Numbered idea labels and the "ideas" panel for the local design previews (/ideas/ and /ideas/more/).
+import { withBase } from '../utils/paths';
+interface Props { ideas: readonly (readonly [number, string])[]; links: { label: string; href: string }[] }
+const { ideas, links } = Astro.props;
+---
+<aside class="idea-legend" aria-label="Ideas in this preview">
+  <button type="button" class="idea-legend-toggle" aria-expanded="false">{ideas.length} ideas <span aria-hidden="true">▴</span></button>
+  <div class="idea-legend-panel" hidden>
+    <p class="idea-legend-note">Preview only. Anything marked “example” or “placeholder” is made up, so you can see the layout; real content would replace it.</p>
+    <ol>{ideas.map(([n, name]) => <li><a href={`#idea-${n}`}><b>{n}</b>{name}</a></li>)}</ol>
+    <slot />
+    <div class="idea-legend-links">{links.map((l) => <a href={withBase(l.href)}>{l.label}</a>)}</div>
+  </div>
+</aside>
+
+<script>
+  const toggle = document.querySelector<HTMLButtonElement>('.idea-legend-toggle')!;
+  const panel = document.querySelector<HTMLElement>('.idea-legend-panel')!;
+  const setOpen = (open: boolean) => { panel.hidden = !open; toggle.setAttribute('aria-expanded', String(open)); };
+  toggle.addEventListener('click', () => setOpen(panel.hidden));
+  panel.addEventListener('click', (e) => { if ((e.target as HTMLElement).closest('a[href^="#"]')) setOpen(false); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') setOpen(false); });
+</script>
+
+<style is:global>
+  .idea-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    width: fit-content;
+    margin: 0 0 12px;
+    padding: 4px 12px 4px 4px;
+    border-radius: 999px;
+    background: oklch(0.93 0.09 95);
+    color: oklch(0.25 0.03 90);
+    font: 600 12.5px Archivo, sans-serif;
+    letter-spacing: 0;
+    text-transform: none;
+    scroll-margin-top: 120px;
+  }
+  .idea-tag b {
+    display: grid;
+    place-items: center;
+    min-width: 22px;
+    height: 22px;
+    padding: 0 6px;
+    border-radius: 999px;
+    background: oklch(0.25 0.03 90);
+    color: oklch(0.95 0.06 95);
+    font-size: 11.5px;
+  }
+  .idea-tag em {
+    font-style: normal;
+    font-weight: 400;
+    opacity: 0.75;
+  }
+  .idea-tag em::before {
+    content: "· ";
+  }
+  .idea-tag-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 18px 0 0;
+  }
+  .idea-tag-gap {
+    margin: 48px 0 0;
+  }
+  .idea-tag-inline {
+    margin: 0;
+    align-self: center;
+  }
+  .idea-legend {
+    position: fixed;
+    left: 16px;
+    bottom: 16px;
+    z-index: 30;
+    max-width: calc(100vw - 32px);
+  }
+  .idea-legend-toggle {
+    padding: 10px 16px;
+    border: 0;
+    border-radius: 999px;
+    background: oklch(0.25 0.03 90);
+    color: oklch(0.95 0.06 95);
+    font: 600 13px Archivo, sans-serif;
+    cursor: pointer;
+    box-shadow: 0 10px 30px -10px oklch(0 0 0 / 0.4);
+  }
+  .idea-legend-panel {
+    position: absolute;
+    bottom: calc(100% + 10px);
+    left: 0;
+    width: min(340px, calc(100vw - 32px));
+    max-height: min(70vh, 620px);
+    overflow: auto;
+    padding: 16px;
+    border-radius: 18px;
+    background: var(--bg);
+    color: var(--ink);
+    box-shadow: 0 0 0 1px var(--line), 0 24px 60px -16px oklch(0 0 0 / 0.35);
+  }
+  .idea-legend-panel[hidden] {
+    display: none;
+  }
+  .idea-legend-note {
+    margin: 0 0 12px;
+    color: var(--muted);
+    font-size: 12.5px;
+    line-height: 1.45;
+  }
+  .idea-legend ol {
+    display: grid;
+    gap: 2px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .idea-legend ol a {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 8px;
+    border-radius: 10px;
+    font-size: 13.5px;
+  }
+  .idea-legend ol a:hover {
+    background: var(--surface);
+  }
+  .idea-legend ol b {
+    display: grid;
+    place-items: center;
+    min-width: 24px;
+    height: 24px;
+    border-radius: 999px;
+    background: oklch(0.93 0.09 95);
+    color: oklch(0.25 0.03 90);
+    font-size: 11.5px;
+  }
+  .idea-legend-links {
+    display: grid;
+    gap: 6px;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--line);
+  }
+  .idea-legend-links a {
+    font-size: 13px;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+</style>

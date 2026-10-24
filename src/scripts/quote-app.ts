@@ -9,6 +9,7 @@ import {
   canPhase, dateFit, margin, migrate, newOption, newQuoteNumber, nextInvoiceNumber, niceDate, optionKind, optionPlan, optionTimeline, optionTotals, quoteEmail, saveLibrary,
   saveProfile, saveQuotes, saveSettings, setCurrentQuoteId, lastBackupAt, markBackedUp, loadCapacity, saveCapacity, syncInvoice, today, uid, validUntil, warrantyEnd,
   RETAINER_EXCLUDED, addMonths, RETAINER_INCLUDED, RETAINER_TERMS, PACKAGES, loadPackageSettings, packagePrice, packageRate, planSavings, savePackageSettings, yearlyPrice, type PackageId, type PackagePrices, type PackageSettings, bankLine, defaultRetainer, isWeekend, packageTexts, packageHours, packageLine, packageOf, hoursText, monthFor, retainerMonths, retainerPlan, retainerTermsText,
+  AUDIT_AREAS, AUDIT_IMPACTS, AUDIT_PRESETS, SCORE_BANDS, auditHours, defaultAudit, scoreTone, screenshotToDataUrl, siteHost, type Audit, type AuditFinding,
   type ChangeOrder, type Invoice, type InvoiceLine, type LibraryItem, type MilestoneWhen, type NeedDue, type Profile, type QuoteOption, type QuoteState, type RetainerMonth, type Status, type SupportPackage,
 } from '../data/quote-model';
 
@@ -32,7 +33,7 @@ let filter: 'all' | 'retainer' | Status = 'all';
 
 const opt = () => state.options[state.active];
 const money = (n: number, currency = state.settings.currency) => formatMoney(n, currency);
-const hasContent = (q: QuoteState) => q.options.some((o) => o.lines.length) || Boolean(q.client.name || q.client.company || q.answers.type);
+const hasContent = (q: QuoteState) => q.options.some((o) => o.lines.length) || Boolean(q.client.name || q.client.company || q.answers.type || q.audit?.url || q.audit?.findings.length);
 
 /* ---------- Saving ---------- */
 let saveTimer = 0;
@@ -660,7 +661,7 @@ function renderSummary() {
   acc.replaceChildren(...state.options.map((x) => new Option(`${x.name} · ${money(optionTotals(state, x).total)}`, x.id)));
   acc.value = state.acceptedOption || o.id;
 
-  $('#q-total-label').textContent = multi ? `${o.name} total${state.status === 'accepted' ? ' · accepted' : ''}` : state.monthly && state.retainer ? 'Monthly fee' : 'Quotation total';
+  $('#q-total-label').textContent = state.audit && !ready ? 'Free website audit' : multi ? `${o.name} total${state.status === 'accepted' ? ' · accepted' : ''}` : state.monthly && state.retainer ? 'Monthly fee' : 'Quotation total';
   const total = $('#q-total');
   total.textContent = ready ? money(t.total) : '';
   total.classList.toggle('is-empty', !ready);
@@ -668,7 +669,7 @@ function renderSummary() {
   $('.q-actions').classList.toggle('is-empty', !ready && !state.options.some((x) => x.lines.some((l) => !l.optional)));
   $('#q-sub').textContent = ready
     ? `${state.monthly ? 'Per month' : 'Fixed price'}${t.tax ? `, including ${state.pricing.taxLabel || 'tax'}` : ''}${t.optional ? ` · plus ${money(t.optional)} optional` : ''}${multi ? ` · ${state.options.length} options` : ''}`
-    : 'Upload the client’s estimate to start pricing.';
+    : state.audit ? 'A free audit. It gets a price once the fixes become a quote.' : 'Upload the client’s estimate to start pricing.';
   const hourly = o.lines.filter((l) => !l.optional && (l.unit ?? 'hours') === 'hours');
   const retainer = state.monthly ? state.retainer : undefined;
   const thisMonth = retainer ? monthFor(state) : null;
@@ -1041,8 +1042,10 @@ function renderDelivery() {
 $('#q-launched-today').addEventListener('click', () => { state.delivery.launchedOn = today(); fillBound(); renderDelivery(); save(); });
 $('#q-kickoff-view').addEventListener('click', () => showPdf($<HTMLButtonElement>('#q-kickoff-view'), async (m) => m.buildKickoffPdf(state, profile)));
 $('#q-kickoff-pdf').addEventListener('click', () => savePdf($<HTMLButtonElement>('#q-kickoff-pdf'), async (m) => m.buildKickoffPdf(state, profile)));
-$('#q-handover-view').addEventListener('click', () => showPdf($<HTMLButtonElement>('#q-handover-view'), async (m) => m.buildHandoverPdf(state, profile)));
-$('#q-handover-pdf').addEventListener('click', () => savePdf($<HTMLButtonElement>('#q-handover-pdf'), async (m) => m.buildHandoverPdf(state, profile)));
+/** The handover describes the retainer made from this project, or suggests your plans. */
+const handoverOptions = () => ({ retainer: Object.values(quotes).find((q) => q.retainer?.fromQuote === state.id), prices: pkgSettings.prices });
+$('#q-handover-view').addEventListener('click', () => showPdf($<HTMLButtonElement>('#q-handover-view'), async (m) => m.buildHandoverPdf(state, profile, handoverOptions())));
+$('#q-handover-pdf').addEventListener('click', () => savePdf($<HTMLButtonElement>('#q-handover-pdf'), async (m) => m.buildHandoverPdf(state, profile, handoverOptions())));
 
 /* ---------- Retainers ---------- */
 const round2 = (n: number) => Math.round(n * 100) / 100;
@@ -1103,7 +1106,7 @@ function renderContext() {
 
 /** Sticky section bar: the sections shown for this quote, ticked when done (from the progress checks). */
 const SECTION_CHECK: Record<string, string> = { 's-import': 'import', 's-client': 'client', 's-scope': 'scope', 's-pricing': 'pricing', 's-retainer': 'retainer', 's-dates': 'dates', 's-payment': 'payment', 's-needs': 'needs', 's-terms': 'terms' };
-const SECTION_SHORT: Record<string, string> = { 's-import': 'Import', 's-client': 'Client', 's-scope': 'Scope', 's-pricing': 'Pricing', 's-retainer': 'Retainer', 's-dates': 'Dates', 's-payment': 'Payments', 's-needs': 'Checklist', 's-terms': 'Terms', 's-changes': 'Changes', 's-delivery': 'Delivery' };
+const SECTION_SHORT: Record<string, string> = { 's-audit': 'Audit', 's-import': 'Import', 's-client': 'Client', 's-scope': 'Scope', 's-pricing': 'Pricing', 's-retainer': 'Retainer', 's-dates': 'Dates', 's-payment': 'Payments', 's-needs': 'Checklist', 's-terms': 'Terms', 's-changes': 'Changes', 's-delivery': 'Delivery' };
 let jumpKey = '';
 function renderJump() {
   const sections = [...document.querySelectorAll<HTMLElement>('#v-editor .q-main > .q-card')].filter((x) => !x.hidden);
@@ -1270,6 +1273,8 @@ function renderMode() {
   document.querySelectorAll<HTMLElement>('[data-project-only]').forEach((e) => { e.hidden = ret; });
   document.querySelectorAll<HTMLElement>('[data-retainer-only]').forEach((e) => { e.hidden = !ret; });
   $('#s-send').hidden = !guided();
+  $('#s-audit').hidden = !state.audit;
+  $('#q-audit-start-row').hidden = Boolean(state.audit);
   let n = 0;
   document.querySelectorAll<HTMLElement>('#v-editor .q-main > .q-card').forEach((sec) => { if (sec.hidden) return; n += 1; const step = sec.querySelector('.q-step'); if (step) step.textContent = String(n).padStart(2, '0'); });
   if (ret) renderRetainer();
@@ -1986,7 +1991,7 @@ function openEmail(q: QuoteState, kind: EmailKind, ctx: EmailContext = {}) {
   emailFor = { q, ctx };
   const retainer = Boolean(q.retainer && q.monthly);
   const sel = $<HTMLSelectElement>('#q-email-kind');
-  sel.replaceChildren(...EMAIL_KINDS.filter((k) => k.for === 'any' || (k.for === 'retainer') === retainer).map((k) => new Option(k.label, k.id)));
+  sel.replaceChildren(...EMAIL_KINDS.filter((k) => (k.for === 'any' || (k.for === 'retainer') === retainer) && (k.id !== 'audit' || q.audit)).map((k) => new Option(k.label, k.id)));
   sel.value = kind;
   fillEmail();
   $('#q-emails-title').textContent = `Email · ${q.client.company || q.client.name || q.meta.number}`;
@@ -1999,7 +2004,7 @@ function fillEmail() {
   $<HTMLInputElement>('#q-email-to').value = emailFor.q.client.email || '(no email saved for this client)';
   $<HTMLInputElement>('#q-email-subject').value = e.subject;
   $<HTMLTextAreaElement>('#q-email-text').value = e.body;
-  $('#q-email-note').textContent = ['invoice', 'reminder', 'report'].includes(kind) ? 'Attach the PDF before sending.' : kind === 'testimonial' ? 'Copying or opening it marks the testimonial as asked, with today’s date.' : '';
+  $('#q-email-note').textContent = ['invoice', 'reminder', 'report'].includes(kind) ? 'Attach the PDF before sending.' : kind === 'audit' ? 'Attach the audit PDF. Copying or opening the email marks the audit as sent.' : kind === 'testimonial' ? 'Copying or opening it marks the testimonial as asked, with today’s date.' : '';
   syncEmailLink();
 }
 function syncEmailLink() {
@@ -2013,6 +2018,10 @@ function emailSent() {
   if (!emailFor) return;
   const kind = $<HTMLSelectElement>('#q-email-kind').value as EmailKind;
   const q = emailFor.q;
+  if (kind === 'audit' && q.audit && !q.audit.sentOn) {
+    q.audit.sentOn = today();
+    if (q === state) { renderAuditTotal(); renderSummary(); save(); } else { quotes[q.id] = q; saveQuotes(quotes); }
+  }
   if (kind === 'testimonial' && q.delivery.testimonial === 'none') {
     q.delivery.testimonial = 'asked';
     q.delivery.testimonialAsked = today();
@@ -2031,7 +2040,7 @@ document.querySelectorAll<HTMLButtonElement>('[data-email-kind]').forEach((b) =>
 $('#q-more-emails').addEventListener('click', () => {
   const retainer = Boolean(state.retainer && state.monthly);
   const unpaid = state.invoices.find((i) => balanceDue(i) > 0);
-  openEmail(state, unpaid ? (unpaid.due < today() ? 'reminder' : 'invoice') : retainer ? 'report' : state.status === 'sent' ? 'followup' : state.delivery.launchedOn ? 'testimonial' : 'followup', unpaid ? { invoice: unpaid } : {});
+  openEmail(state, unpaid ? (unpaid.due < today() ? 'reminder' : 'invoice') : state.audit && !state.audit.sentOn ? 'audit' : retainer ? 'report' : state.status === 'sent' ? 'followup' : state.delivery.launchedOn ? 'testimonial' : 'followup', unpaid ? { invoice: unpaid } : {});
 });
 
 /* ---------- Layout: guided (stages and steps) or classic (one long page) ---------- */
@@ -2063,14 +2072,17 @@ interface Stage { id: StageId; label: string; steps: string[] }
 const STEP_LABEL: Record<string, string> = { ...SECTION_SHORT, 's-send': 'Send', 's-payment:plan': 'Payment plan', 's-payment': 'Invoices', 's-retainer:setup': 'Retainer terms', 's-retainer:run': 'Hours & months' };
 const sectionShown = (step: string) => !document.getElementById(step.split(':')[0])?.hidden;
 /** The stages for this quote, each with the steps (sections, or part of one) that apply to it. */
+/** A free audit that hasn't been turned into a quote yet: only the audit and the client's details apply. */
+const auditOnly = () => Boolean(state.audit) && !state.options.some((o) => o.lines.some((l) => !l.optional));
 function stagesFor(): Stage[] {
+  if (auditOnly()) return [{ id: 'build', label: 'Website audit', steps: ['s-audit', 's-client'] }];
   const ret = Boolean(state.monthly && state.retainer);
   const stages: Stage[] = ret ? [
-    { id: 'build', label: 'Build the quote', steps: ['s-import', 's-client', 's-scope', 's-pricing', 's-retainer:setup', 's-terms'] },
+    { id: 'build', label: 'Build the quote', steps: ['s-audit', 's-import', 's-client', 's-scope', 's-pricing', 's-retainer:setup', 's-terms'] },
     { id: 'send', label: 'Send it', steps: ['s-send'] },
     { id: 'run', label: 'Monthly work', steps: ['s-retainer:run', 's-payment', 's-needs'] },
   ] : [
-    { id: 'build', label: 'Build the quote', steps: ['s-import', 's-client', 's-scope', 's-pricing', 's-dates', 's-payment:plan', 's-terms'] },
+    { id: 'build', label: 'Build the quote', steps: ['s-audit', 's-import', 's-client', 's-scope', 's-pricing', 's-dates', 's-payment:plan', 's-terms'] },
     { id: 'send', label: 'Send it', steps: ['s-send'] },
     { id: 'run', label: 'Run the project', steps: ['s-payment', 's-needs', 's-changes'] },
     { id: 'deliver', label: 'Deliver', steps: ['s-delivery'] },
@@ -2093,6 +2105,7 @@ function progressChecks(): Record<string, boolean> {
 function stepDone(step: string, c: Record<string, boolean>) {
   const [sid, part] = step.split(':');
   if (sid === 's-send') return state.status !== 'draft';
+  if (sid === 's-audit') return Boolean(state.audit?.sentOn);
   if (sid === 's-payment' && !part) return state.invoices.length > 0 && state.invoices.every((i) => invoiceStatus(i) === 'paid');
   if (sid === 's-delivery') return Boolean(state.delivery.launchedOn);
   if (sid === 's-changes' || part === 'run') return false;
@@ -2134,7 +2147,7 @@ function renderGuided() {
       const n = card.querySelector('.q-step');
       if (n) n.textContent = String(i + 1).padStart(2, '0');
       card.querySelector('.q-head')?.setAttribute('data-eyebrow', `Stage ${si + 1} · ${cur.label}`);
-      requestAnimationFrame(() => card.querySelectorAll<HTMLTextAreaElement>('textarea.q-in-detail').forEach((t) => { t.style.height = 'auto'; if (t.scrollHeight) t.style.height = `${t.scrollHeight}px`; }));
+      requestAnimationFrame(() => card.querySelectorAll<HTMLTextAreaElement>('textarea.q-in-detail, textarea.q-grow').forEach((t) => { t.style.height = 'auto'; if (t.scrollHeight) t.style.height = `${t.scrollHeight}px`; }));
     }
   });
   // Stages after the client says yes stay quiet until then (still clickable).
@@ -2146,11 +2159,19 @@ function renderGuided() {
       : `${done} of ${s.steps.length} done`;
     const b = el('button', { type: 'button', className: `q-stage${s.id === stage ? ' is-current' : ''}${later(s) ? ' is-later' : ''}${done === s.steps.length && !later(s) ? ' is-done' : ''}` },
       el('i', { textContent: String(n + 1) }),
-      el('span', { className: 'q-stage-text' }, el('strong', { textContent: s.label }), el('b', { className: 'q-stage-short', textContent: STAGE_SHORT[s.id] === 'Run' && state.monthly && state.retainer ? 'Monthly' : STAGE_SHORT[s.id] }), el('small', { textContent: hint })));
+      el('span', { className: 'q-stage-text' }, el('strong', { textContent: s.label }), el('b', { className: 'q-stage-short', textContent: auditOnly() ? 'Audit' : STAGE_SHORT[s.id] === 'Run' && state.monthly && state.retainer ? 'Monthly' : STAGE_SHORT[s.id] }), el('small', { textContent: hint })));
     b.setAttribute('aria-current', String(s.id === stage));
     b.addEventListener('click', () => { if (stage === s.id) return; stage = s.id; renderGuided(); scrollToEditor(); });
     return b;
   }));
+  // An audit's quote steps appear once its fixes become a quote; this tab does that.
+  if (auditOnly()) {
+    const q = el('button', { type: 'button', className: 'q-stage is-later' },
+      el('i', { textContent: '2' }),
+      el('span', { className: 'q-stage-text' }, el('strong', { textContent: 'The quote' }), el('b', { className: 'q-stage-short', textContent: 'Quote' }), el('small', { textContent: 'Turn the fixes into a quote' })));
+    q.addEventListener('click', auditToQuote);
+    $('#q-stages').append(q);
+  }
   jumpKey = '';
   $('#q-jump').replaceChildren(...cur.steps.map((st, n) => {
     const a = el('a', { href: `#${st.split(':')[0]}`, className: `${n === i ? 'is-active' : ''}${stepDone(st, c) ? ' is-done' : ''}` }, el('i', { textContent: String(n + 1).padStart(2, '0') }), STEP_LABEL[st] ?? STEP_LABEL[st.split(':')[0]] ?? '');
@@ -2168,8 +2189,8 @@ function renderGuided() {
   const nextStage = stages[si + 1];
   $<HTMLButtonElement>('#q-step-back').disabled = first;
   const next = $<HTMLButtonElement>('#q-step-next');
-  next.textContent = lastStep ? (nextStage ? `Next: ${nextStage.label} →` : 'All steps done') : `Next: ${STEP_LABEL[cur.steps[i + 1]] ?? STEP_LABEL[cur.steps[i + 1].split(':')[0]]} →`;
-  next.disabled = lastStep && !nextStage;
+  next.textContent = lastStep ? (nextStage ? `Next: ${nextStage.label} →` : auditOnly() ? 'Turn the fixes into a quote →' : 'All steps done') : `Next: ${STEP_LABEL[cur.steps[i + 1]] ?? STEP_LABEL[cur.steps[i + 1].split(':')[0]]} →`;
+  next.disabled = lastStep && !nextStage && !auditOnly();
   $('#q-step-count').textContent = `${cur.label} · step ${i + 1} of ${cur.steps.length}`;
   $<HTMLButtonElement>('#q-mobile-next').disabled = next.disabled;
 }
@@ -2177,7 +2198,7 @@ function moveStep(delta: number) {
   const stages = stagesFor();
   const si = stages.findIndex((s) => s.id === stage);
   const i = (stepOf[stage] ?? 0) + delta;
-  if (i >= stages[si].steps.length) { if (!stages[si + 1]) return; stage = stages[si + 1].id; stepOf[stage] = 0; }
+  if (i >= stages[si].steps.length) { if (!stages[si + 1]) { if (auditOnly()) auditToQuote(); return; } stage = stages[si + 1].id; stepOf[stage] = 0; }
   else if (i < 0) { if (!stages[si - 1]) return; stage = stages[si - 1].id; stepOf[stage] = stages[si - 1].steps.length - 1; }
   else stepOf[stage] = i;
   renderGuided();
@@ -2246,6 +2267,13 @@ function nextStep(): NextStep {
   const c = progressChecks();
   const ret = Boolean(state.monthly && state.retainer);
   const go = (target: string, label: string) => ({ label, run: () => goTo(target) });
+  const a = state.audit;
+  if (a && state.status === 'draft' && !c.pricing) {
+    if (!a.url.trim()) return { title: 'Add the website to audit', detail: 'Paste the request email, or type the address.', ...go('s-audit', 'Open the audit') };
+    if (!a.findings.length) return { title: 'Add what you found', detail: 'Run PageSpeed Insights, note the scores, then add findings.', ...go('s-audit', 'Open the audit') };
+    if (!a.sentOn) return { title: 'Send the audit', detail: 'Email the PDF with the three biggest findings.', label: 'Write the email', run: () => openEmail(state, 'audit') };
+    return { title: 'Turn the fixes into a quote', detail: `${a.findings.length} finding${a.findings.length === 1 ? '' : 's'}, about ${hoursText(auditHours(a))} hrs of work.`, label: 'Make the quote', run: auditToQuote };
+  }
   if (!c.pricing) return { title: 'Upload the client’s estimate', detail: 'Their answers fill in the scope and the price for you.', ...go('s-import', 'Upload estimate') };
   if (!c.client) return { title: 'Add the client’s name and email', detail: 'They go on the quote and in the emails.', ...go('s-client', 'Add details') };
   if (!$('#q-dirty').hidden) return { title: 'Recalculate the price', detail: 'The scope changed since the price was worked out.', ...go('s-scope', 'Open scope') };
@@ -2469,6 +2497,186 @@ function sampleQuote() {
 }
 $('#q-sample').addEventListener('click', sampleQuote);
 
+/* ---------- Website audit ---------- */
+/** Starts a new quote as a free website audit. */
+function newAudit() {
+  state = freshQuote();
+  state.audit = defaultAudit();
+  state.project.title = 'Website audit';
+  status('');
+  setView('editor');
+  goTo('s-audit');
+}
+$('#q-new-audit').addEventListener('click', newAudit);
+$('#q-audit-start').addEventListener('click', () => {
+  state.audit = defaultAudit(state.client.website);
+  if (!state.project.title) state.project.title = 'Website audit';
+  renderEditor();
+  save();
+  goTo('s-audit');
+});
+// The request email from the contact page's free audit form: company, email and website.
+$('#q-audit-read').addEventListener('click', () => {
+  const a = state.audit;
+  if (!a) return;
+  const c = briefClient($<HTMLTextAreaElement>('#q-audit-paste').value);
+  if (!c.email && !c.website && !c.company) { toast('Couldn’t find the details. Paste the lines that look like “email: …”.', true); return; }
+  state.client = { name: c.name || state.client.name, company: c.company || state.client.company, email: c.email || state.client.email, website: c.website || state.client.website };
+  if (c.website && !a.url) a.url = c.website;
+  fillBound();
+  renderSummary();
+  renderAudit();
+  save();
+  toast(`Read the request from ${c.company || c.email}`);
+});
+const syncAuditLink = () => {
+  const url = state.audit?.url.trim();
+  $<HTMLAnchorElement>('#q-audit-psi').href = url ? `https://pagespeed.web.dev/report?url=${encodeURIComponent(/^https?:\/\//i.test(url) ? url : `https://${url}`)}` : 'https://pagespeed.web.dev/';
+};
+$('[data-bind="audit.url"]').addEventListener('input', syncAuditLink);
+/** A score box: the ring fills to the score, in PageSpeed's colours, with the rating in words. */
+function paintScore(box: HTMLElement, v: number | null) {
+  const tone = scoreTone(v);
+  box.dataset.tone = tone;
+  box.querySelector('.q-score-fill')!.setAttribute('stroke-dashoffset', String(100 - (v ?? 0)));
+  box.querySelector('.q-score-band')!.textContent = SCORE_BANDS[tone];
+}
+document.querySelectorAll<HTMLElement>('.q-audit-score').forEach((box) => {
+  const input = box.querySelector('input')!;
+  input.addEventListener('input', () => {
+    const a = state.audit;
+    if (!a) return;
+    const id = box.dataset.score as keyof Audit['scores'];
+    a.scores[id] = input.value === '' ? null : Math.min(100, Math.max(0, Math.round(Number(input.value) || 0)));
+    paintScore(box, a.scores[id]);
+    save();
+  });
+});
+function renderAuditTotal() {
+  const a = state.audit;
+  if (!a) return;
+  const hours = auditHours(a);
+  $('#q-audit-total').textContent = a.findings.length ? `${a.findings.length} finding${a.findings.length === 1 ? '' : 's'} · about ${hoursText(hours)} hrs · ≈ ${money(hours * state.settings.rate)} at your rate` : '';
+  $('#q-audit-sent').textContent = a.sentOn ? `Audit emailed ${niceDate(a.sentOn, 'long')}.` : '';
+  renderNext();
+}
+/** A finding's screenshot, so the client can see the issue: paste it, drop it, or choose a file. */
+function auditShot(f: AuditFinding) {
+  const file = el('input', { type: 'file', accept: 'image/*', hidden: true, ariaLabel: 'Choose a screenshot' });
+  const attach = async (blob: Blob | null | undefined) => {
+    if (!blob || !blob.type.startsWith('image/')) { toast('That isn’t an image. Paste or choose a screenshot.', true); return; }
+    try { f.image = await screenshotToDataUrl(blob); } catch { toast('Couldn’t read that image.', true); return; }
+    renderAudit();
+    save();
+    toast(`Screenshot added (${Math.round((f.image.length * 0.75) / 1024)} KB)`);
+  };
+  file.addEventListener('change', () => attach(file.files?.[0]));
+  if (f.image) {
+    const replace = el('button', { type: 'button', textContent: 'Replace' });
+    replace.addEventListener('click', () => file.click());
+    const remove = el('button', { type: 'button', className: 'is-danger', textContent: 'Remove' });
+    remove.addEventListener('click', () => { delete f.image; renderAudit(); save(); });
+    return { attach, node: el('div', { className: 'q-audit-shot has-image' },
+      el('figure', { className: 'q-audit-shot-frame' }, el('img', { src: f.image, alt: `Screenshot: ${f.issue || 'finding'}` }), el('div', { className: 'q-audit-shot-tools' }, replace, remove)),
+      el('p', { className: 'q-audit-shot-note', textContent: 'Shown under this finding in the audit PDF. Paste a new one to replace it.' }),
+      file) };
+  }
+  const zone = el('button', { type: 'button', className: 'q-audit-shot-zone' }, el('strong', { textContent: '+ Screenshot' }), el('span', { textContent: 'Paste (⌘V / Ctrl+V), drop, or click to choose' }));
+  zone.addEventListener('click', () => file.click());
+  zone.addEventListener('dragover', (e) => { e.preventDefault(); zone.classList.add('is-over'); });
+  zone.addEventListener('dragleave', () => zone.classList.remove('is-over'));
+  zone.addEventListener('drop', (e) => { e.preventDefault(); zone.classList.remove('is-over'); attach(e.dataTransfer?.files[0]); });
+  return { attach, node: el('div', { className: 'q-audit-shot' }, zone, file) };
+}
+function renderAudit() {
+  const a = state.audit;
+  if (!a) return;
+  document.querySelectorAll<HTMLElement>('.q-audit-score').forEach((box) => {
+    const v = a.scores[box.dataset.score as keyof Audit['scores']];
+    const input = box.querySelector('input')!;
+    if (document.activeElement !== input) input.value = v === null ? '' : String(v);
+    paintScore(box, v);
+  });
+  syncAuditLink();
+  const box = $('#q-audit-findings');
+  if (!a.findings.length) box.replaceChildren(el('p', { className: 'q-empty', textContent: 'No findings yet. Add common ones from the list, or a blank one.' }));
+  else box.replaceChildren(...a.findings.map((f, index) => {
+    // Text boxes that grow with their text, so long findings stay readable on a phone.
+    const issue = el('textarea', { value: f.issue, className: 'q-in q-in-title q-grow', rows: 1, placeholder: 'What’s wrong', ariaLabel: 'Issue' });
+    const fix = el('textarea', { value: f.fix, className: 'q-in q-in-detail', rows: 1, placeholder: 'How to fix it', ariaLabel: 'Fix' });
+    const grow = (t: HTMLTextAreaElement) => { t.style.height = 'auto'; if (t.scrollHeight) t.style.height = `${t.scrollHeight}px`; };
+    requestAnimationFrame(() => { grow(issue); grow(fix); });
+    const area = el('select', { className: 'q-in q-when', ariaLabel: 'Area' });
+    AUDIT_AREAS.forEach((x) => area.append(new Option(x.label, x.id)));
+    area.value = f.area;
+    const impact = el('select', { className: `q-in q-when q-impact is-${f.impact}`, ariaLabel: 'Impact' });
+    AUDIT_IMPACTS.forEach((x) => impact.append(new Option(x.label, x.id)));
+    impact.value = f.impact;
+    const hours = el('input', { type: 'number', min: '0', step: '0.5', value: String(f.hours), className: 'q-in q-num', ariaLabel: 'Hours to fix' });
+    issue.addEventListener('input', () => { f.issue = issue.value; grow(issue); save(); });
+    fix.addEventListener('input', () => { f.fix = fix.value; grow(fix); save(); });
+    area.addEventListener('change', () => { f.area = area.value as AuditFinding['area']; save(); });
+    impact.addEventListener('change', () => { f.impact = impact.value as AuditFinding['impact']; impact.className = `q-in q-when q-impact is-${f.impact}`; save(); });
+    hours.addEventListener('input', () => { f.hours = Math.max(0, Number(hours.value) || 0); renderAuditTotal(); save(); });
+    const shot = auditShot(f);
+    const row = el('div', { className: 'q-audit-finding' },
+      el('div', { className: 'q-audit-top' },
+        el('span', { className: 'q-audit-num', textContent: String(index + 1).padStart(2, '0') }),
+        area, impact,
+        el('label', { className: 'q-audit-hours' }, hours, 'hrs'),
+        iconButton('×', 'Remove finding', () => deleteWithUndo({
+          title: 'Remove this finding?',
+          text: f.issue || 'Empty finding',
+          done: 'Finding removed',
+          run: () => { a.findings.splice(index, 1); renderAudit(); save(); },
+        }), 'is-danger')),
+      issue, fix, shot.node);
+    // Pasting an image anywhere in the finding (its text boxes included) attaches it as the screenshot.
+    row.addEventListener('paste', (e) => {
+      const item = [...(e.clipboardData?.items ?? [])].find((x) => x.kind === 'file' && x.type.startsWith('image/'));
+      if (!item) return;
+      e.preventDefault();
+      shot.attach(item.getAsFile());
+    });
+    return row;
+  }));
+  renderAuditTotal();
+}
+document.querySelectorAll<HTMLButtonElement>('[data-audit-preset]').forEach((b) => b.addEventListener('click', () => {
+  const a = state.audit;
+  if (!a) return;
+  const i = Number(b.dataset.auditPreset);
+  const preset = i >= 0 ? AUDIT_PRESETS[i] : { area: 'speed' as const, impact: 'medium' as const, hours: 2, issue: '', fix: '' };
+  a.findings.push({ id: uid(), ...preset });
+  $('#q-audit-add').removeAttribute('open');
+  renderAudit();
+  save();
+  if (i < 0) $('#q-audit-findings').querySelector<HTMLInputElement>('.q-audit-finding:last-child .q-in-title')?.focus();
+}));
+/** The audit's fixes become line items on this quote, at your hourly rate. */
+async function auditToQuote() {
+  const a = state.audit;
+  if (!a) return;
+  const fixes = a.findings.filter((f) => f.issue.trim() || f.fix.trim());
+  if (!fixes.length) { toast('Add at least one finding first.', true); return; }
+  const o = opt();
+  if (o.lines.length && !(await confirmDialog({ title: 'Add the fixes to this quote?', text: `${fixes.length} fix${fixes.length === 1 ? '' : 'es'} will be added to ${o.name}, after its ${o.lines.length} existing item${o.lines.length === 1 ? '' : 's'}.`, confirm: 'Add fixes', danger: false }))) return;
+  const rank = { high: 0, medium: 1, low: 2 };
+  o.lines.push(...[...fixes].sort((x, y) => rank[x.impact] - rank[y.impact]).map((f) => ({ id: `audit-${uid()}`, title: f.fix.trim() || f.issue.trim(), detail: f.fix.trim() ? f.issue.trim() : '', hours: f.hours || 1, rate: state.settings.rate, unit: 'hours' as const })));
+  o.edited = true;
+  const site = siteHost(a.url);
+  if (!state.project.title || state.project.title === 'Website audit') state.project.title = `Website fixes${site ? `: ${site}` : ''}`;
+  if (!state.project.summary && a.summary) state.project.summary = a.summary;
+  fillBound();
+  renderPricing();
+  save();
+  goTo('s-pricing');
+  toast(`Added ${fixes.length} fix${fixes.length === 1 ? '' : 'es'} as line items. Check the hours, then send the quote.`);
+}
+$('#q-audit-quote').addEventListener('click', auditToQuote);
+$('#q-audit-view').addEventListener('click', (e) => showPdf(e.currentTarget as HTMLButtonElement, async (m) => m.buildAuditPdf(state, profile)));
+$('#q-audit-pdf').addEventListener('click', (e) => savePdf(e.currentTarget as HTMLButtonElement, async (m) => m.buildAuditPdf(state, profile)));
+
 /* ---------- Render ---------- */
 function renderPricing() { renderOptionTabs(); renderTeam(); renderLines(); renderSummary(); renderInvoices(); renderTimeline(); }
 function renderEditor() {
@@ -2481,6 +2689,7 @@ function renderEditor() {
   renderNeeds();
   renderChanges();
   renderDelivery();
+  renderAudit();
 }
 renderPackageRates();
 // The monthly-work part of the Retainer section (shown in its own step in the guided layout).

@@ -1,0 +1,1383 @@
+---
+// Design preview of homepage ideas 21–40. Local preview only: in a build this route has no pages.
+// Open http://localhost:4321/ideas/more/ while `npm run dev` runs.
+import { withBase } from '../../utils/paths';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import DeviceFrames from '../../components/DeviceFrames.astro';
+import Arrow from '../../components/Arrow.astro';
+import IdeaLegend from '../../components/IdeaLegend.astro';
+import { projects } from '../../data/projects';
+import { profile } from '../../data/profile';
+
+export function getStaticPaths() {
+  return import.meta.env.DEV ? [{ params: { preview: 'ideas' } }] : [];
+}
+
+const IDEAS = [
+  [21, 'Quick start in the first screen'], [22, 'Rotating platform word'], [23, 'Project showcase in the hero'], [24, 'Online now and local time'],
+  [25, 'Time-zone overlap'], [26, 'Platform switcher'], [27, 'Case study story'], [28, 'Before / after slider'],
+  [29, 'Drag-to-scroll work strip'], [30, 'Words that fill in on scroll'], [31, 'Promise badges'], [32, 'Comparison table'],
+  [33, 'Tools I use'], [34, '“Meet Grant” video bubble'], [35, 'Free checklist download'], [36, 'Section index'],
+  [37, 'Cursor spotlight and grain'], [38, 'Button micro-interactions'], [39, 'Copy email in one click'], [40, 'PageSpeed badge'],
+] as const;
+const name = (n: number) => IDEAS[n - 21][1];
+
+// The estimator opens at the next question when a link carries answers (?brief=…).
+const brief = (answers: Record<string, string>) => `${withBase('/estimate/')}?brief=${Buffer.from(JSON.stringify(answers)).toString('base64url')}`;
+const quickStart = [
+  { label: 'A new store', answers: { type: 'new' } },
+  { label: 'A redesign', answers: { type: 'redesign' } },
+  { label: 'Move platforms', answers: { type: 'migration' } },
+  { label: 'Speed & fixes', answers: { type: 'improvements' } },
+  { label: 'Monthly help', answers: { type: 'support' } },
+];
+const showcase = projects.slice(0, 5);
+const platforms = [
+  { id: 'shopify', label: 'Shopify', pitch: 'Custom themes and Liquid development, Shopify Plus checkouts, and apps wired into your stack. Four years building stores at Rivyl.', estimate: { platform: 'shopify' } },
+  { id: 'webflow', label: 'Webflow', pitch: 'Pixel-accurate builds from your Figma files, a CMS your team can edit, and interactions that feel considered, not busy.', estimate: { platform: 'webflow' } },
+  { id: 'wordpress', label: 'WordPress', pitch: 'Flexible business sites and WooCommerce stores with custom themes, built to stay fast as the content grows.', estimate: { platform: 'wordpress' } },
+];
+const manifesto = 'I build websites the way good stores are run: clear, fast, and easy for your team to look after long after launch.';
+const promises = [
+  ['Fixed price', 'Agreed before work starts. Extra work only with your approval.'],
+  ['You own everything', 'Code, accounts and domains stay in your name.'],
+  ['30 days of bug fixes', 'Included after launch, no small print.'],
+  ['An update every Friday', 'What’s done, what’s next, and what I need from you.'],
+];
+const compare = [
+  ['', 'Working with Grant', 'Typical agency', 'Marketplace freelancer'],
+  ['Who builds it', 'Grant, start to finish', 'A rotating team', 'Varies by job'],
+  ['Price', 'Fixed, agreed upfront', 'Higher (overheads)', 'Low, often changes'],
+  ['Talk to', 'The developer directly', 'An account manager', 'Whoever is online'],
+  ['Shopify experience', '4+ years in an agency', 'Usually strong', 'Hard to tell'],
+  ['After launch', '30 days of fixes, then plans', 'Retainer contracts', 'Often gone'],
+];
+const tools = ['Shopify', 'Shopify Plus', 'Liquid', 'Webflow', 'WordPress', 'WooCommerce', 'Figma', 'GSAP', 'Klaviyo', 'Recharge', 'Google Analytics', 'Search Console', 'PHP', 'JavaScript', 'Git', 'Cloudflare'];
+const sections = [['top-hero', 'Start'], ['idea-26', 'Platforms'], ['idea-27', 'Case study'], ['idea-29', 'Work'], ['idea-31', 'Promises'], ['idea-32', 'Compare'], ['idea-33', 'Tools'], ['idea-35', 'Checklist']];
+---
+<BaseLayout title="More homepage ideas | Grant Dev14" description="Local design preview." noindex>
+  <IdeaLegend ideas={IDEAS} links={[{ label: 'Back: ideas 1–20', href: '/ideas/' }, { label: 'Compare with the current homepage', href: '/' }]} />
+
+  <nav class="ix-index" aria-label="Sections" id="idea-36">
+    <span class="idea-tag"><b>36</b>{name(36)}</span>
+    <ol>{sections.map(([id, label], i) => <li><a href={`#${id}`} data-index-for={id}><i>{String(i + 1).padStart(2, '0')}</i><span>{label}</span></a></li>)}</ol>
+  </nav>
+
+  <div class="wrap ix-page">
+    <!-- Hero: 21, 22, 23, 24, 37, 38 -->
+    <section class="ix-hero" id="top-hero" aria-label="Introduction">
+      <div class="ix-hero-grain" aria-hidden="true"></div>
+      <div class="ix-hero-copy">
+        <div class="idea-tag-row ix-first-tags">
+          <span class="idea-tag" id="idea-22"><b>22</b>{name(22)}</span>
+          <span class="idea-tag" id="idea-37"><b>37</b>{name(37)}<em>move your mouse here</em></span>
+        </div>
+        <h1 class="ix-title"><span class="ix-rotate" aria-live="off"><span class="is-on">Shopify</span><span>Webflow</span><span>WordPress</span></span><br />sites that sell.</h1>
+        <p class="ix-sub">I’m Grant, a web developer turning designs into fast, custom websites and stores for brands and agencies.</p>
+
+        <div class="ix-quick" id="idea-21">
+          <span class="idea-tag"><b>21</b>{name(21)}<em>each one opens the estimator with that answer picked</em></span>
+          <p>What are you planning?</p>
+          <div class="ix-chips">{quickStart.map((q) => <a class="ix-chip" href={brief(q.answers)} data-vt="grow">{q.label}<Arrow diagonal /></a>)}</div>
+        </div>
+
+        <div class="ix-actions">
+          <a class="ix-btn ix-btn-primary" href={withBase('/estimate/')} data-vt="grow"><span class="ix-roll" data-text="Get a free estimate">Get a free estimate</span><span class="ix-arrow"><Arrow diagonal /><Arrow diagonal /></span></a>
+          <a class="ix-btn ix-btn-ghost" href="#idea-29"><span class="ix-roll" data-text="See my work">See my work</span></a>
+          <span class="idea-tag idea-tag-inline" id="idea-38"><b>38</b>{name(38)}<em>hover them</em></span>
+        </div>
+
+        <div class="ix-status" id="idea-24">
+          <span class="idea-tag"><b>24</b>{name(24)}<em>live: uses Manila time</em></span>
+          <p><i class="ix-dot" aria-hidden="true"></i><span class="ix-status-text">Checking Grant’s time…</span></p>
+        </div>
+      </div>
+
+      <div class="ix-showcase" id="idea-23">
+        <span class="idea-tag"><b>23</b>{name(23)}</span>
+        <div class="ix-show-stage">
+          {showcase.map((p, i) => (
+            <figure class:list={['ix-show-slide', 'project-canvas', 'project-devices', p.canvas, { 'is-on': i === 0 }]}>
+              <DeviceFrames project={p} sizes="(max-width: 900px) 70vw, 30vw" phoneSizes="(max-width: 900px) 25vw, 10vw" eager={i === 0} />
+              <figcaption>{p.name}<span>{p.platform}</span></figcaption>
+            </figure>
+          ))}
+        </div>
+        <div class="ix-show-dots" aria-hidden="true">{showcase.map((_, i) => <i class:list={{ 'is-on': i === 0 }}></i>)}</div>
+      </div>
+    </section>
+
+    <!-- 40: PageSpeed badge -->
+    <div class="ix-speed" id="idea-40">
+      <span class="idea-tag"><b>40</b>{name(40)}<em>check the real score before using it</em></span>
+      <div class="ix-speed-row">
+        <span class="ix-ring-wrap"><svg viewBox="0 0 120 120" aria-hidden="true"><circle cx="60" cy="60" r="52" class="ix-ring-bg" /><circle cx="60" cy="60" r="52" class="ix-ring" /></svg><strong>100</strong></span>
+        <p>This site scores 100 on Google PageSpeed. Yours could too.</p>
+      </div>
+    </div>
+
+    <!-- 25: time-zone overlap -->
+    <section class="ix-tz" id="idea-25" aria-labelledby="ix-tz-h">
+      <span class="idea-tag"><b>25</b>{name(25)}<em>live: uses your time zone</em></span>
+      <h2 id="ix-tz-h" class="ix-h2">Working hours that overlap.</h2>
+      <p class="ix-tz-text">Working out your time zone…</p>
+      <div class="ix-tz-bar" aria-hidden="true">{Array.from({ length: 24 }, (_, h) => <i data-hour={h}></i>)}</div>
+      <div class="ix-tz-axis" aria-hidden="true"><span>12am</span><span>6am</span><span>12pm</span><span>6pm</span><span>12am</span></div>
+      <p class="ix-tz-key"><i></i>Grant’s working hours, shown in your time</p>
+    </section>
+
+    <!-- 26: platform switcher -->
+    <section class="ix-platforms" id="idea-26" aria-labelledby="ix-pl-h">
+      <span class="idea-tag"><b>26</b>{name(26)}</span>
+      <h2 id="ix-pl-h" class="ix-h2">Which platform are you on?</h2>
+      <div class="ix-tabs" role="tablist">{platforms.map((p, i) => <button type="button" role="tab" aria-selected={i === 0 ? 'true' : 'false'} data-tab={p.id}>{p.label}</button>)}</div>
+      {platforms.map((p, i) => (
+        <div class="ix-tab-panel" role="tabpanel" data-panel={p.id} hidden={i !== 0}>
+          <div class="ix-tab-copy"><p>{p.pitch}</p><a class="text-link" href={brief(p.estimate)} data-vt="grow">Estimate a {p.label} project <Arrow diagonal /></a></div>
+          <div class="ix-tab-work">{projects.filter((x) => x.platform === p.label).slice(0, 3).map((x) => (
+            <a href={withBase(`/work/${x.slug}/`)} class:list={['ix-tab-thumb', x.canvas]}><img src={withBase(`/images/projects/${x.slug}-640.webp`)} alt="" loading="lazy" /><span>{x.name}</span></a>
+          ))}</div>
+        </div>
+      ))}
+    </section>
+
+    <!-- 27: case study story -->
+    <section class="ix-case" id="idea-27" aria-labelledby="ix-case-h">
+      <span class="idea-tag"><b>27</b>{name(27)}<em>example result</em></span>
+      <div class="ix-case-grid">
+        <div class:list={['ix-case-visual', 'project-canvas', 'project-devices', projects[0].canvas]}><DeviceFrames project={projects[0]} sizes="(max-width: 900px) 80vw, 45vw" phoneSizes="(max-width: 900px) 25vw, 14vw" /></div>
+        <div class="ix-case-copy">
+          <p class="ix-eyebrow">Featured case study · {projects[0].platform}</p>
+          <h2 id="ix-case-h" class="ix-h2">{projects[0].name}</h2>
+          <dl>
+            <dt>The challenge</dt><dd>A large catalogue of vehicle-specific parts that customers struggled to find on mobile.</dd>
+            <dt>What I built</dt><dd>A custom Shopify theme with vehicle filters, faster product pages and a cleaner checkout path.</dd>
+            <dt>The result</dt><dd class="ix-case-result">PageSpeed 41 → 89, and more customers reaching checkout.</dd>
+          </dl>
+          <a class="text-link" href={withBase(`/work/${projects[0].slug}/`)}>Read the full story <Arrow diagonal /></a>
+        </div>
+      </div>
+    </section>
+
+    <!-- 28: before / after -->
+    <section class="ix-ba" id="idea-28" aria-labelledby="ix-ba-h">
+      <span class="idea-tag"><b>28</b>{name(28)}<em>placeholder “before”: real before screenshots needed</em></span>
+      <h2 id="ix-ba-h" class="ix-h2">Before and after.</h2>
+      <div class="ix-ba-frame">
+        <img src={withBase(`/images/projects/${projects[2].slug}.webp`)} alt={`${projects[2].name} after the rebuild`} />
+        <div class="ix-ba-before"><img src={withBase(`/images/projects/${projects[2].slug}.webp`)} alt="" /><span>Before</span></div>
+        <span class="ix-ba-after-label">After</span>
+        <i class="ix-ba-handle" aria-hidden="true"></i>
+        <input type="range" min="0" max="100" value="50" aria-label="Compare before and after" />
+      </div>
+    </section>
+
+    <!-- 29: drag strip -->
+    <section class="ix-strip" id="idea-29" aria-labelledby="ix-strip-h">
+      <span class="idea-tag"><b>29</b>{name(29)}<em>drag it, or swipe on a phone</em></span>
+      <div class="ix-strip-head"><h2 id="ix-strip-h" class="ix-h2">Selected work.</h2><p><span class="ix-strip-count">01</span> / {String(projects.length).padStart(2, '0')}</p></div>
+      <div class="ix-strip-track">{projects.map((p) => (
+        <a href={withBase(`/work/${p.slug}/`)} class="ix-strip-card" draggable="false">
+          <div class:list={['project-canvas', 'project-devices', p.canvas]}><DeviceFrames project={p} sizes="(max-width: 640px) 70vw, 32vw" phoneSizes="(max-width: 640px) 25vw, 10vw" /></div>
+          <p><strong>{p.name}</strong><span>{p.category} · {p.platform}</span></p>
+        </a>
+      ))}</div>
+    </section>
+
+    <!-- 30: manifesto -->
+    <section class="ix-manifesto" id="idea-30" aria-label="Approach">
+      <span class="idea-tag"><b>30</b>{name(30)}<em>scroll slowly</em></span>
+      <p class="ix-manifesto-text">{manifesto.split(' ').map((w) => <span>{w} </span>)}</p>
+    </section>
+
+    <!-- 31: promises -->
+    <section class="ix-promises" id="idea-31" aria-label="What you can count on">
+      <span class="idea-tag"><b>31</b>{name(31)}</span>
+      <ul>{promises.map(([t, d], i) => <li data-reveal style={`--reveal-index:${i}`}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5 10 17 19 7" /></svg><strong>{t}</strong><span>{d}</span></li>)}</ul>
+    </section>
+
+    <!-- 32: comparison -->
+    <section class="ix-compare" id="idea-32" aria-labelledby="ix-cmp-h">
+      <span class="idea-tag"><b>32</b>{name(32)}</span>
+      <h2 id="ix-cmp-h" class="ix-h2">Why work with one developer?</h2>
+      <div class="ix-compare-scroll">
+        <table>
+          <thead><tr>{compare[0].map((c, i) => <th scope="col" class:list={{ 'is-me': i === 1 }}>{c}</th>)}</tr></thead>
+          <tbody>{compare.slice(1).map((row) => <tr>{row.map((c, i) => (i === 0 ? <th scope="row">{c}</th> : <td class:list={{ 'is-me': i === 1 }}>{c}</td>))}</tr>)}</tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 33: tools -->
+    <section class="ix-tools" id="idea-33" aria-labelledby="ix-tools-h">
+      <span class="idea-tag"><b>33</b>{name(33)}</span>
+      <h2 id="ix-tools-h" class="ix-h2">Tools I use every day.</h2>
+      <ul>{tools.map((t) => <li>{t}</li>)}</ul>
+    </section>
+
+    <!-- 35: checklist download -->
+    <section class="ix-magnet" id="idea-35" aria-labelledby="ix-mag-h">
+      <span class="idea-tag idea-tag-light"><b>35</b>{name(35)}<em>the checklist itself still needs writing</em></span>
+      <div class="ix-magnet-grid">
+        <div>
+          <h2 id="ix-mag-h">The Shopify launch checklist.</h2>
+          <p>42 things to check before your store goes live: speed, SEO, checkout, emails and legal pages. Free, as a one-page PDF.</p>
+        </div>
+        <form class="ix-magnet-form">
+          <label><span class="sr-only">Your email</span><input type="email" placeholder="you@company.com" required /></label>
+          <button type="submit">Send me the checklist</button>
+          <p class="ix-magnet-note" role="status">No spam. One email with the PDF.</p>
+        </form>
+      </div>
+    </section>
+
+    <!-- 39: copy email -->
+    <section class="ix-contact" id="idea-39" aria-labelledby="ix-contact-h">
+      <span class="idea-tag"><b>39</b>{name(39)}</span>
+      <h2 id="ix-contact-h" class="ix-h2">Prefer email?</h2>
+      <button type="button" class="ix-copy" data-email={profile.email}><span class="ix-copy-email">{profile.email}</span><span class="ix-copy-label">Copy</span></button>
+    </section>
+  </div>
+
+  <!-- 34: video bubble -->
+  <div class="ix-bubble" id="idea-34">
+    <button type="button" class="ix-bubble-btn" aria-label="Play a 30-second intro from Grant (placeholder)">
+      <span class="ix-bubble-face" aria-hidden="true">G</span>
+      <span class="ix-bubble-ring" aria-hidden="true"></span>
+    </button>
+    <div class="ix-bubble-card" hidden>
+      <span class="idea-tag"><b>34</b>{name(34)}<em>needs a 30-second recording</em></span>
+      <div class="ix-bubble-video" aria-hidden="true"><span>G</span><p>“Hi, I’m Grant. Here’s how I work, in 30 seconds.”</p></div>
+      <button type="button" class="ix-bubble-close">Close</button>
+    </div>
+  </div>
+</BaseLayout>
+
+<script>
+  const root = document.documentElement;
+  const motion = root.classList.contains('motion');
+  const fine = matchMedia('(hover: hover) and (pointer: fine)').matches;
+
+  // 22: the platform word rotates.
+  const words = [...document.querySelectorAll<HTMLElement>('.ix-rotate span')];
+  let w = 0;
+  if (motion) setInterval(() => { words[w].classList.remove('is-on'); words[w].classList.add('is-off'); const prev = words[w]; setTimeout(() => prev.classList.remove('is-off'), 600); w = (w + 1) % words.length; words[w].classList.add('is-on'); }, 2400);
+
+  // 23: projects cycle in the hero.
+  const slides = [...document.querySelectorAll<HTMLElement>('.ix-show-slide')];
+  const dots = [...document.querySelectorAll<HTMLElement>('.ix-show-dots i')];
+  let s = 0;
+  if (motion) setInterval(() => { slides[s].classList.remove('is-on'); dots[s].classList.remove('is-on'); s = (s + 1) % slides.length; slides[s].classList.add('is-on'); dots[s].classList.add('is-on'); }, 3200);
+
+  // 24: Grant's local time and whether he's working now (9am–6pm Manila, Monday–Friday).
+  const manila = () => {
+    const parts = Object.fromEntries(new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Manila', hour: 'numeric', minute: '2-digit', weekday: 'short', hour12: false }).formatToParts(new Date()).map((p) => [p.type, p.value]));
+    return { hour: Number(parts.hour) % 24, minute: parts.minute, day: parts.weekday };
+  };
+  const status = document.querySelector<HTMLElement>('.ix-status')!;
+  const syncStatus = () => {
+    const m = manila();
+    const time = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Manila', hour: 'numeric', minute: '2-digit' }).format(new Date());
+    const working = !['Sat', 'Sun'].includes(m.day) && m.hour >= 9 && m.hour < 18;
+    status.classList.toggle('is-online', working);
+    const weekend = ['Sat', 'Sun'].includes(m.day);
+    const later = weekend ? 'Grant replies on Monday' : m.hour < 9 ? 'Grant replies once his day starts at 9am' : 'Grant replies first thing tomorrow';
+    status.querySelector('.ix-status-text')!.textContent = working ? `Online now · ${time} in Manila · usually replies within a few hours` : `It’s ${weekend ? `${m.day === 'Sat' ? 'Saturday' : 'Sunday'}, ` : ''}${time} in Manila · ${later}`;
+  };
+  syncStatus();
+  setInterval(syncStatus, 30000);
+
+  // 25: Grant's working hours in the visitor's time zone.
+  const offsetHours = (tz: string) => {
+    const d = new Date();
+    const local = new Date(d.toLocaleString('en-US', { timeZone: tz }));
+    const utc = new Date(d.toLocaleString('en-US', { timeZone: 'UTC' }));
+    return Math.round((local.getTime() - utc.getTime()) / 36e5);
+  };
+  const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const diff = offsetHours(zone) - offsetHours('Asia/Manila');
+  const fmt = (h: number) => { const x = ((h % 24) + 24) % 24; return `${x % 12 || 12}${x < 12 ? 'am' : 'pm'}`; };
+  const start = 9 + diff;
+  const end = 18 + diff;
+  document.querySelectorAll<HTMLElement>('.ix-tz-bar i').forEach((cell) => {
+    const h = Number(cell.dataset.hour);
+    const inRange = [h, h + 24, h - 24].some((x) => x >= start && x < end);
+    cell.classList.toggle('is-on', inRange);
+  });
+  const city = zone.split('/').pop()?.replace(/_/g, ' ') ?? zone;
+  document.querySelector('.ix-tz-text')!.textContent = diff === 0
+    ? `You’re on Manila time: Grant works 9am–6pm, your hours exactly.`
+    : `For you in ${city}, Grant works ${fmt(start)}–${fmt(end)} your time${Math.abs(diff) >= 8 ? ', so you wake up to progress' : ', with plenty of overlap for calls'}.`;
+
+  // 26: platform tabs.
+  const tabs = [...document.querySelectorAll<HTMLButtonElement>('.ix-tabs button')];
+  tabs.forEach((t) => t.addEventListener('click', () => {
+    tabs.forEach((x) => x.setAttribute('aria-selected', String(x === t)));
+    document.querySelectorAll<HTMLElement>('.ix-tab-panel').forEach((p) => { p.hidden = p.dataset.panel !== t.dataset.tab; });
+  }));
+
+  // 28: before / after.
+  const ba = document.querySelector<HTMLElement>('.ix-ba-frame')!;
+  const range = ba.querySelector<HTMLInputElement>('input')!;
+  const syncBa = () => ba.style.setProperty('--split', `${range.value}%`);
+  range.addEventListener('input', syncBa);
+  syncBa();
+
+  // 29: drag the work strip with a mouse; touch scrolls natively.
+  const track = document.querySelector<HTMLElement>('.ix-strip-track')!;
+  const count = document.querySelector<HTMLElement>('.ix-strip-count')!;
+  let down = false, moved = false, sx = 0, sl = 0;
+  track.addEventListener('pointerdown', (e) => { if (e.pointerType !== 'mouse') return; down = true; moved = false; sx = e.clientX; sl = track.scrollLeft; track.classList.add('is-dragging'); });
+  addEventListener('pointermove', (e) => { if (!down) return; const dx = e.clientX - sx; if (Math.abs(dx) > 4) moved = true; track.scrollLeft = sl - dx; });
+  addEventListener('pointerup', () => { if (!down) return; down = false; track.classList.remove('is-dragging'); });
+  track.addEventListener('click', (e) => { if (moved) { e.preventDefault(); moved = false; } }, true);
+  track.addEventListener('scroll', () => {
+    const cards = [...track.children] as HTMLElement[];
+    const i = cards.findIndex((c) => c.offsetLeft + c.offsetWidth / 2 >= track.scrollLeft + 1);
+    count.textContent = String(Math.max(0, i) + 1).padStart(2, '0');
+  }, { passive: true });
+
+  // 30: words fill in as the paragraph scrolls through the screen.
+  const manifesto = document.querySelector<HTMLElement>('.ix-manifesto-text')!;
+  const mWords = [...manifesto.querySelectorAll('span')];
+  const fill = () => {
+    const r = manifesto.getBoundingClientRect();
+    const p = Math.min(1, Math.max(0, (innerHeight * 0.85 - r.top) / (r.height + innerHeight * 0.35)));
+    const n = Math.round(p * mWords.length);
+    mWords.forEach((el, i) => el.classList.toggle('is-in', i < n));
+  };
+  addEventListener('scroll', fill, { passive: true });
+  fill();
+
+  // 35: the form only previews.
+  document.querySelector<HTMLFormElement>('.ix-magnet-form')!.addEventListener('submit', (e) => { e.preventDefault(); (e.target as HTMLElement).querySelector('.ix-magnet-note')!.textContent = 'Preview only: nothing was sent.'; });
+
+  // 36: section index follows the reader.
+  const links = [...document.querySelectorAll<HTMLElement>('[data-index-for]')];
+  const seen = new IntersectionObserver((entries) => entries.forEach((e) => { if (e.isIntersecting) links.forEach((l) => l.classList.toggle('is-active', l.dataset.indexFor === e.target.id)); }), { rootMargin: '-40% 0px -55% 0px' });
+  links.forEach((l) => { const t = document.getElementById(l.dataset.indexFor!); if (t) seen.observe(t); });
+
+  // 37: a soft light follows the pointer across the hero.
+  const hero = document.querySelector<HTMLElement>('.ix-hero')!;
+  if (fine) hero.addEventListener('pointermove', (e) => { const r = hero.getBoundingClientRect(); hero.style.setProperty('--mx', `${e.clientX - r.left}px`); hero.style.setProperty('--my', `${e.clientY - r.top}px`); });
+
+  // 34: video bubble.
+  const bubble = document.querySelector<HTMLElement>('.ix-bubble')!;
+  const card = bubble.querySelector<HTMLElement>('.ix-bubble-card')!;
+  bubble.querySelector('.ix-bubble-btn')!.addEventListener('click', () => { card.hidden = false; bubble.classList.add('is-open'); });
+  bubble.querySelector('.ix-bubble-close')!.addEventListener('click', () => { card.hidden = true; bubble.classList.remove('is-open'); });
+
+  // 39: copy the email address in one click.
+  const copy = document.querySelector<HTMLButtonElement>('.ix-copy')!;
+  copy.addEventListener('click', async () => {
+    try { await navigator.clipboard.writeText(copy.dataset.email!); } catch { /* clipboard blocked: the address is still visible */ }
+    copy.classList.add('is-copied');
+    copy.querySelector('.ix-copy-label')!.textContent = 'Copied';
+    setTimeout(() => { copy.classList.remove('is-copied'); copy.querySelector('.ix-copy-label')!.textContent = 'Copy'; }, 2000);
+  });
+</script>
+
+<style is:global>
+  .ix-page {
+    padding-top: 12px;
+  }
+  .ix-h2 {
+    margin: 0 0 28px;
+    font-size: clamp(36px, 4.2vw, 60px);
+    font-weight: 500;
+    letter-spacing: -0.045em;
+    line-height: 1;
+  }
+  .ix-eyebrow {
+    margin: 0 0 12px;
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .ix-page > section,
+  .ix-page > div {
+    margin-top: 110px;
+  }
+  .ix-page > .ix-hero {
+    margin-top: 0;
+  }
+
+  /* Hero */
+  .ix-hero {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+    gap: 48px;
+    align-items: center;
+    padding: 40px 0 20px;
+    isolation: isolate;
+  }
+  .ix-hero::before {
+    content: "";
+    position: absolute;
+    inset: -40px calc(50% - 50vw);
+    z-index: -1;
+    background: radial-gradient(520px circle at var(--mx, 30%) var(--my, 40%), oklch(0.93 0.05 95 / 0.65), transparent 60%);
+    transition: background 0.1s;
+  }
+  .ix-hero-grain {
+    position: absolute;
+    inset: -40px calc(50% - 50vw);
+    z-index: -1;
+    opacity: 0.06;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    pointer-events: none;
+  }
+  .ix-title {
+    margin: 0;
+    font-family: "Big Shoulders Display", Impact, sans-serif;
+    font-size: clamp(56px, 8vw, 128px);
+    font-weight: 800;
+    line-height: 0.9;
+    letter-spacing: -0.01em;
+    text-transform: uppercase;
+  }
+  .ix-rotate {
+    position: relative;
+    display: inline-grid;
+    overflow: hidden;
+    vertical-align: bottom;
+  }
+  .ix-rotate span {
+    grid-area: 1 / 1;
+    opacity: 0;
+    transform: translateY(100%);
+    transition: transform 0.6s var(--ease), opacity 0.6s var(--ease);
+  }
+  .ix-rotate span.is-on {
+    opacity: 1;
+    transform: none;
+  }
+  .ix-rotate span.is-off {
+    opacity: 0;
+    transform: translateY(-100%);
+  }
+  .ix-sub {
+    max-width: 46ch;
+    margin: 22px 0 0;
+    color: var(--muted);
+    font-size: 17px;
+    line-height: 1.55;
+  }
+  .ix-quick {
+    margin-top: 28px;
+  }
+  .ix-quick > p {
+    margin: 0 0 10px;
+    font-size: 14px;
+    font-weight: 600;
+  }
+  .ix-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .ix-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px 10px 16px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: var(--bg);
+    font-size: 14px;
+    transition: border-color 0.2s, background 0.2s, color 0.2s;
+  }
+  .ix-chip .arrow-icon {
+    width: 12px;
+    height: 12px;
+    opacity: 0.5;
+    transition: transform 0.3s var(--ease), opacity 0.2s;
+  }
+  .ix-chip:hover {
+    border-color: var(--ink);
+    background: var(--ink);
+    color: var(--bg);
+  }
+  .ix-chip:hover .arrow-icon {
+    opacity: 1;
+    transform: translate(2px, -2px);
+  }
+
+  /* 38: rolling text and sliding arrow */
+  .ix-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    margin-top: 28px;
+  }
+  .ix-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 24px;
+    border: 1px solid var(--ink);
+    border-radius: 999px;
+    font-size: 15px;
+    font-weight: 500;
+    transition: background 0.3s, color 0.3s;
+  }
+  .ix-btn-primary {
+    background: var(--ink);
+    color: var(--bg);
+  }
+  .ix-btn-ghost:hover {
+    background: var(--ink);
+    color: var(--bg);
+  }
+  .ix-roll {
+    position: relative;
+    display: inline-block;
+    overflow: hidden;
+    line-height: 1.25;
+  }
+  .ix-roll::after {
+    content: attr(data-text);
+    position: absolute;
+    left: 0;
+    top: 100%;
+  }
+  .ix-roll,
+  .ix-roll::after {
+    transition: transform 0.45s var(--ease);
+  }
+  .ix-btn:hover .ix-roll {
+    transform: translateY(-100%);
+  }
+  .ix-arrow {
+    position: relative;
+    display: inline-grid;
+    width: 16px;
+    height: 16px;
+    overflow: hidden;
+  }
+  .ix-arrow .arrow-icon {
+    grid-area: 1 / 1;
+    width: 16px;
+    height: 16px;
+    transition: transform 0.45s var(--ease);
+  }
+  .ix-arrow .arrow-icon:last-child {
+    transform: translate(-100%, 100%);
+  }
+  .ix-btn:hover .ix-arrow .arrow-icon:first-child {
+    transform: translate(100%, -100%);
+  }
+  .ix-btn:hover .ix-arrow .arrow-icon:last-child {
+    transform: none;
+  }
+
+  /* 24: status */
+  .ix-status {
+    margin-top: 26px;
+  }
+  .ix-status p {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0;
+    color: var(--muted);
+    font-size: 14px;
+  }
+  .ix-dot {
+    position: relative;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: oklch(0.7 0.02 0);
+  }
+  .ix-status.is-online .ix-dot {
+    background: oklch(0.65 0.17 150);
+    box-shadow: 0 0 0 4px oklch(0.65 0.17 150 / 0.2);
+  }
+  .ix-status.is-online p {
+    color: var(--ink);
+  }
+
+  /* 23: showcase */
+  .ix-show-stage {
+    position: relative;
+    aspect-ratio: 5 / 4;
+    border-radius: 18px;
+    overflow: hidden;
+  }
+  .ix-show-slide {
+    position: absolute;
+    inset: 0;
+    margin: 0;
+    opacity: 0;
+    transform: scale(1.04);
+    transition: opacity 0.9s var(--ease), transform 1.4s var(--ease);
+  }
+  .ix-show-slide.is-on {
+    opacity: 1;
+    transform: none;
+  }
+  .ix-show-slide figcaption {
+    position: absolute;
+    left: 16px;
+    bottom: 14px;
+    z-index: 3;
+    display: flex;
+    gap: 8px;
+    align-items: baseline;
+    padding: 8px 14px;
+    border-radius: 999px;
+    background: var(--bg);
+    color: var(--ink);
+    font-size: 13.5px;
+    font-weight: 600;
+  }
+  .ix-show-slide figcaption span {
+    color: var(--muted);
+    font-weight: 400;
+  }
+  .ix-show-dots {
+    display: flex;
+    gap: 6px;
+    justify-content: center;
+    margin-top: 12px;
+  }
+  .ix-show-dots i {
+    width: 18px;
+    height: 3px;
+    border-radius: 3px;
+    background: var(--line);
+    transition: background 0.3s, width 0.3s;
+  }
+  .ix-show-dots i.is-on {
+    width: 32px;
+    background: var(--ink);
+  }
+
+  /* 40: PageSpeed */
+  .ix-speed-row {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    width: fit-content;
+    padding: 14px 24px 14px 14px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+  }
+  .ix-speed svg {
+    width: 64px;
+    height: 64px;
+    transform: rotate(-90deg);
+  }
+  .ix-ring-bg,
+  .ix-ring {
+    fill: none;
+    stroke-width: 10;
+  }
+  .ix-ring-bg {
+    stroke: oklch(0.93 0.05 150);
+  }
+  .ix-ring {
+    stroke: oklch(0.6 0.16 150);
+    stroke-dasharray: 327;
+    stroke-linecap: round;
+  }
+  .ix-ring-wrap {
+    position: relative;
+    display: grid;
+    place-items: center;
+    flex: none;
+    width: 64px;
+    height: 64px;
+  }
+  .ix-ring-wrap svg {
+    position: absolute;
+    inset: 0;
+  }
+  .ix-ring-wrap strong {
+    color: oklch(0.45 0.13 150);
+    font-family: "Big Shoulders Display", Impact, sans-serif;
+    font-size: 22px;
+    font-weight: 800;
+  }
+  .ix-speed p {
+    margin: 0;
+    font-size: 15px;
+  }
+
+  /* 25: time zones */
+  .ix-tz-text {
+    margin: -12px 0 22px;
+    font-size: 18px;
+  }
+  .ix-tz-bar {
+    display: grid;
+    grid-template-columns: repeat(24, minmax(0, 1fr));
+    gap: 3px;
+  }
+  .ix-tz-bar i {
+    height: 36px;
+    border-radius: 6px;
+    background: var(--surface);
+  }
+  .ix-tz-bar i.is-on {
+    background: var(--ink);
+  }
+  .ix-tz-axis {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 8px;
+    color: var(--muted);
+    font-size: 12px;
+  }
+  .ix-tz-key {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 14px 0 0;
+    color: var(--muted);
+    font-size: 13px;
+  }
+  .ix-tz-key i {
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+    background: var(--ink);
+  }
+
+  /* 26: platforms */
+  .ix-tabs {
+    display: inline-flex;
+    gap: 4px;
+    padding: 4px;
+    border-radius: 999px;
+    background: var(--surface);
+  }
+  .ix-tabs button {
+    padding: 10px 22px;
+    border: 0;
+    border-radius: 999px;
+    background: none;
+    color: var(--muted);
+    font: 500 15px Archivo, sans-serif;
+    cursor: pointer;
+  }
+  .ix-tabs button[aria-selected="true"] {
+    background: var(--ink);
+    color: var(--bg);
+  }
+  .ix-tab-panel {
+    display: grid;
+    grid-template-columns: minmax(0, 0.8fr) minmax(0, 2fr);
+    gap: 40px;
+    margin-top: 32px;
+    animation: ix-fade 0.5s var(--ease);
+  }
+  .ix-tab-panel[hidden] {
+    display: none;
+  }
+  @keyframes ix-fade {
+    from { opacity: 0; transform: translateY(8px); }
+  }
+  .ix-tab-copy p {
+    margin: 0 0 20px;
+    font-size: 18px;
+    line-height: 1.5;
+  }
+  .ix-tab-work {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+  }
+  .ix-tab-thumb {
+    display: grid;
+    gap: 8px;
+    font-size: 14px;
+  }
+  .ix-tab-thumb img {
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    border-radius: 12px;
+    object-fit: cover;
+    object-position: top;
+    transition: transform 0.6s var(--ease);
+  }
+  .ix-tab-thumb:hover img {
+    transform: translateY(-4px);
+  }
+
+  /* 27: case study */
+  .ix-case-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+    gap: 48px;
+    align-items: center;
+  }
+  .ix-case-visual {
+    border-radius: 18px;
+    overflow: hidden;
+  }
+  .ix-case dl {
+    display: grid;
+    gap: 6px;
+    margin: 0 0 24px;
+  }
+  .ix-case dt {
+    margin-top: 12px;
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .ix-case dd {
+    margin: 0;
+    font-size: 16px;
+    line-height: 1.5;
+  }
+  .ix-case-result {
+    font-size: 20px !important;
+    font-weight: 600;
+  }
+
+  /* 28: before / after */
+  .ix-ba-frame {
+    position: relative;
+    overflow: hidden;
+    border-radius: 18px;
+    aspect-ratio: 16 / 9;
+    --split: 50%;
+  }
+  .ix-ba-frame > img,
+  .ix-ba-before img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: top;
+  }
+  .ix-ba-before {
+    position: absolute;
+    inset: 0;
+    clip-path: inset(0 calc(100% - var(--split)) 0 0);
+  }
+  .ix-ba-before img {
+    filter: grayscale(1) contrast(0.8) blur(1.2px);
+  }
+  .ix-ba-before span,
+  .ix-ba-after-label {
+    position: absolute;
+    top: 16px;
+    padding: 6px 12px;
+    border-radius: 999px;
+    background: var(--ink);
+    color: var(--bg);
+    font-size: 12.5px;
+    font-weight: 600;
+  }
+  .ix-ba-before span {
+    left: 16px;
+  }
+  .ix-ba-after-label {
+    right: 16px;
+    background: var(--bg);
+    color: var(--ink);
+  }
+  .ix-ba-handle {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: var(--split);
+    width: 2px;
+    background: var(--bg);
+    pointer-events: none;
+  }
+  .ix-ba-handle::after {
+    content: "‹ ›";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: var(--bg);
+    color: var(--ink);
+    font-size: 16px;
+    font-weight: 700;
+    transform: translate(-50%, -50%);
+    box-shadow: 0 6px 20px oklch(0 0 0 / 0.25);
+  }
+  .ix-ba-frame input {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    opacity: 0;
+    cursor: ew-resize;
+  }
+
+  /* 29: strip */
+  .ix-strip-head {
+    display: flex;
+    align-items: end;
+    justify-content: space-between;
+    gap: 20px;
+  }
+  .ix-strip-head p {
+    margin: 0 0 28px;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+  }
+  .ix-strip-count {
+    color: var(--ink);
+    font-weight: 600;
+  }
+  .ix-strip-track {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: min(78vw, 520px);
+    gap: 20px;
+    margin-inline: calc(50% - 50vw);
+    padding-inline: var(--gutter);
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scroll-padding-inline: var(--gutter);
+    scrollbar-width: none;
+    cursor: grab;
+  }
+  .ix-strip-track::-webkit-scrollbar {
+    display: none;
+  }
+  .ix-strip-track.is-dragging {
+    cursor: grabbing;
+    scroll-snap-type: none;
+  }
+  .ix-strip-card {
+    scroll-snap-align: start;
+    user-select: none;
+  }
+  .ix-strip-card .project-canvas {
+    border-radius: 16px;
+    overflow: hidden;
+  }
+  .ix-strip-card p {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    margin: 12px 0 0;
+  }
+  .ix-strip-card p span {
+    color: var(--muted);
+    font-size: 13px;
+  }
+  .ix-strip-card img {
+    pointer-events: none;
+  }
+
+  /* 30: manifesto */
+  .ix-manifesto-text {
+    max-width: 22ch;
+    margin: 0;
+    font-size: clamp(36px, 5.2vw, 76px);
+    font-weight: 500;
+    letter-spacing: -0.045em;
+    line-height: 1.05;
+  }
+  .ix-manifesto-text span {
+    color: oklch(0.85 0 0);
+    transition: color 0.4s;
+  }
+  .ix-manifesto-text span.is-in {
+    color: var(--ink);
+  }
+
+  /* 31: promises */
+  .ix-promises ul {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .ix-promises li {
+    display: grid;
+    gap: 8px;
+    align-content: start;
+    padding: 22px;
+    border-radius: 18px;
+    background: var(--surface);
+  }
+  .ix-promises svg {
+    width: 28px;
+    height: 28px;
+    padding: 5px;
+    border-radius: 50%;
+    background: var(--ink);
+    fill: none;
+    stroke: var(--bg);
+    stroke-width: 2.4;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  .ix-promises strong {
+    margin-top: 8px;
+    font-size: 18px;
+    font-weight: 500;
+  }
+  .ix-promises span {
+    color: var(--muted);
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  /* 32: comparison */
+  .ix-compare-scroll {
+    overflow-x: auto;
+  }
+  .ix-compare table {
+    width: 100%;
+    min-width: 640px;
+    border-collapse: collapse;
+    font-size: 15px;
+  }
+  .ix-compare th,
+  .ix-compare td {
+    padding: 16px 14px;
+    border-bottom: 1px solid var(--line);
+    text-align: left;
+    vertical-align: top;
+  }
+  .ix-compare thead th {
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  .ix-compare tbody th {
+    color: var(--muted);
+    font-weight: 400;
+  }
+  .ix-compare .is-me {
+    background: var(--surface);
+    color: var(--ink);
+    font-weight: 600;
+  }
+  .ix-compare thead .is-me {
+    border-radius: 12px 12px 0 0;
+    background: var(--ink);
+    color: var(--bg);
+  }
+
+  /* 33: tools */
+  .ix-tools ul {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .ix-tools li {
+    padding: 12px 18px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    font-size: 15px;
+    transition: border-color 0.2s, transform 0.3s var(--ease);
+  }
+  .ix-tools li:hover {
+    border-color: var(--ink);
+    transform: translateY(-3px);
+  }
+
+  /* 35: checklist */
+  .ix-magnet {
+    padding: clamp(36px, 5vw, 64px);
+    border-radius: 24px;
+    background: oklch(0.95 0.04 95);
+  }
+  .ix-magnet-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+    gap: 40px;
+    align-items: center;
+  }
+  .ix-magnet h2 {
+    margin: 0 0 12px;
+    font-size: clamp(30px, 3.4vw, 48px);
+    font-weight: 500;
+    letter-spacing: -0.04em;
+    line-height: 1;
+  }
+  .ix-magnet-grid p {
+    margin: 0;
+    color: oklch(0.38 0.03 90);
+    line-height: 1.55;
+  }
+  .ix-magnet-form {
+    display: grid;
+    gap: 10px;
+  }
+  .ix-magnet-form input {
+    width: 100%;
+    padding: 16px 18px;
+    border: 1px solid oklch(0.82 0.05 95);
+    border-radius: 999px;
+    background: var(--bg);
+    font: inherit;
+  }
+  .ix-magnet-form button {
+    padding: 16px 18px;
+    border: 0;
+    border-radius: 999px;
+    background: var(--ink);
+    color: var(--bg);
+    font: 500 15px Archivo, sans-serif;
+    cursor: pointer;
+  }
+  .ix-magnet-note {
+    font-size: 13px;
+  }
+
+  /* 39: copy email */
+  .ix-copy {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 16px;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--ink);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+  }
+  .ix-copy-email {
+    font-size: clamp(26px, 4vw, 52px);
+    letter-spacing: -0.035em;
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 8px;
+  }
+  .ix-copy-label {
+    padding: 8px 14px;
+    border: 1px solid var(--ink);
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 600;
+    transition: background 0.2s, color 0.2s;
+  }
+  .ix-copy:hover .ix-copy-label,
+  .ix-copy.is-copied .ix-copy-label {
+    background: var(--ink);
+    color: var(--bg);
+  }
+  .ix-contact {
+    padding-bottom: 40px;
+  }
+
+  /* 34: video bubble */
+  .ix-bubble {
+    position: fixed;
+    right: 24px;
+    bottom: 24px;
+    z-index: 30;
+  }
+  .ix-bubble-btn {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: 76px;
+    height: 76px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: oklch(0.85 0.05 60);
+    cursor: pointer;
+    box-shadow: 0 14px 34px -10px oklch(0 0 0 / 0.4);
+    transition: transform 0.3s var(--ease);
+  }
+  .ix-bubble-btn:hover {
+    transform: scale(1.06);
+  }
+  .ix-bubble-face {
+    font-family: "Big Shoulders Display", Impact, sans-serif;
+    font-size: 30px;
+    font-weight: 800;
+  }
+  .ix-bubble-ring {
+    position: absolute;
+    inset: -5px;
+    border: 2px solid var(--ink);
+    border-radius: 50%;
+    animation: idea-ring 2.2s ease-out infinite;
+  }
+  @keyframes idea-ring {
+    from { opacity: 0.8; transform: scale(0.95); }
+    to { opacity: 0; transform: scale(1.25); }
+  }
+  .ix-bubble.is-open .ix-bubble-btn {
+    display: none;
+  }
+  .ix-bubble-card {
+    width: min(300px, calc(100vw - 48px));
+    padding: 14px;
+    border-radius: 20px;
+    background: var(--bg);
+    box-shadow: 0 0 0 1px var(--line), 0 24px 60px -16px oklch(0 0 0 / 0.35);
+  }
+  .ix-bubble-video {
+    display: grid;
+    place-items: center;
+    align-content: center;
+    gap: 12px;
+    aspect-ratio: 9 / 14;
+    padding: 20px;
+    border-radius: 14px;
+    background: oklch(0.85 0.05 60);
+    text-align: center;
+  }
+  .ix-bubble-video span {
+    font-family: "Big Shoulders Display", Impact, sans-serif;
+    font-size: 64px;
+    font-weight: 800;
+  }
+  .ix-bubble-video p {
+    margin: 0;
+    font-size: 15px;
+  }
+  .ix-bubble-close {
+    width: 100%;
+    margin-top: 10px;
+    padding: 10px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: none;
+    color: var(--ink);
+    font: 500 13px Archivo, sans-serif;
+    cursor: pointer;
+  }
+
+  /* 36: section index */
+  .ix-index {
+    position: fixed;
+    top: 50%;
+    right: 14px;
+    z-index: 20;
+    transform: translateY(-50%);
+  }
+  .ix-index .idea-tag {
+    display: none;
+  }
+  .ix-index ol {
+    display: grid;
+    gap: 2px;
+    margin: 0;
+    padding: 8px;
+    border-radius: 16px;
+    background: color-mix(in oklab, var(--bg) 85%, transparent);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    box-shadow: 0 0 0 1px var(--line);
+    list-style: none;
+  }
+  .ix-index ol {
+    padding: 6px !important;
+  }
+  .ix-index a {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 9px;
+    color: var(--muted);
+    font-size: 12.5px;
+    transition: background 0.2s, color 0.2s;
+  }
+  .ix-index a span {
+    position: absolute;
+    right: calc(100% + 12px);
+    padding: 5px 10px;
+    border-radius: 999px;
+    background: var(--ink);
+    color: var(--bg);
+    white-space: nowrap;
+    opacity: 0;
+    transform: translateX(6px);
+    transition: opacity 0.2s, transform 0.3s var(--ease);
+    pointer-events: none;
+  }
+  .ix-index a:hover span,
+  .ix-index a:focus-visible span {
+    opacity: 1;
+    transform: none;
+  }
+  .ix-index a i {
+    font-family: "Big Shoulders Display", Impact, sans-serif;
+    font-style: normal;
+    font-weight: 800;
+  }
+  .ix-index a.is-active {
+    background: var(--ink);
+    color: var(--bg);
+  }
+  .ix-index:hover .idea-tag {
+    display: inline-flex;
+    position: absolute;
+    right: 0;
+    bottom: calc(100% + 8px);
+    white-space: nowrap;
+  }
+
+  @media (max-width: 1180px) {
+    .ix-index {
+      display: none;
+    }
+  }
+  @media (max-width: 900px) {
+    .ix-hero,
+    .ix-case-grid,
+    .ix-tab-panel,
+    .ix-magnet-grid {
+      grid-template-columns: 1fr;
+    }
+    .ix-promises ul {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+  @media (max-width: 640px) {
+    .ix-page > section,
+    .ix-page > div {
+      margin-top: 80px;
+    }
+    .ix-tab-work {
+      grid-template-columns: 1fr 1fr;
+    }
+    .ix-promises ul {
+      grid-template-columns: 1fr;
+    }
+    .ix-tz-bar i {
+      height: 28px;
+    }
+    .ix-speed-row {
+      border-radius: 20px;
+    }
+    .ix-bubble {
+      right: 16px;
+      bottom: 16px;
+    }
+    .ix-bubble-btn {
+      width: 60px;
+      height: 60px;
+    }
+  }
+</style>

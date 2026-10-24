@@ -2,14 +2,15 @@
 // how many hours are committed against your capacity, and income over the last 12 months.
 import { formatMoney } from './pricing';
 import {
-  addDays, addMonths, balanceDue, billedOption, hoursText, margin, monthFor, niceDate, optionPlan, optionTotals, packageOf,
+  addDays, addMonths, auditHours, balanceDue, siteHost, billedOption, hoursText, margin, monthFor, niceDate, optionPlan, optionTotals, packageOf,
   retainerMonths, retainerPlan, today, validUntil, warrantyEnd, yearlyPrice,
   type Invoice, type PackageId, type Profile, type QuoteState, type RetainerMonth,
 } from './quote-model';
 
 /* ---------- Emails ---------- */
-export type EmailKind = 'followup' | 'invoice' | 'reminder' | 'report' | 'upgrade' | 'checkin' | 'yearly' | 'launch' | 'testimonial';
+export type EmailKind = 'audit' | 'followup' | 'invoice' | 'reminder' | 'report' | 'upgrade' | 'checkin' | 'yearly' | 'launch' | 'testimonial';
 export const EMAIL_KINDS: { id: EmailKind; label: string; for: 'any' | 'project' | 'retainer' }[] = [
+  { id: 'audit', label: 'Send the free audit', for: 'any' },
   { id: 'followup', label: 'Follow up on the quote', for: 'any' },
   { id: 'invoice', label: 'Send an invoice', for: 'any' },
   { id: 'reminder', label: 'Payment reminder', for: 'any' },
@@ -38,6 +39,21 @@ export function buildEmail(q: QuoteState, kind: EmailKind, profile: Profile, ctx
   const inv = ctx.invoice ?? q.invoices.find((i) => balanceDue(i) > 0) ?? q.invoices[q.invoices.length - 1];
   const r = q.retainer;
   switch (kind) {
+    case 'audit': {
+      const a = q.audit;
+      const site = siteHost(a?.url || q.client.website) || 'your website';
+      const rank = { high: 0, medium: 1, low: 2 };
+      const top = [...(a?.findings ?? [])].sort((x, y) => rank[x.impact] - rank[y.impact]).slice(0, 3);
+      const hours = a ? auditHours(a) : 0;
+      return done(`Your free website audit: ${site}`, [
+        `Thanks for asking me to look at ${site}. The full audit is attached as a PDF.`,
+        ...(top.length ? ['', 'The biggest opportunities:', ...top.map((f) => `• ${f.issue}`)] : []),
+        '',
+        hours ? `Fixing everything in the report would take about ${hours} hours. I can send you a fixed quote for it, or you're welcome to use the report with your own team.` : 'Happy to send a fixed quote for the fixes, or you are welcome to use the report with your own team.',
+        '',
+        'Any questions, just reply.',
+      ]);
+    }
     case 'followup':
       return done(`Following up: quotation ${q.meta.number}`, [
         `I wanted to check in on the quotation for ${title} (${q.meta.number}). Did you have any questions, or anything you'd like me to adjust?`,

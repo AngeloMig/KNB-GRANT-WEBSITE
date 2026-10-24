@@ -3,6 +3,7 @@ import { jsPDF } from 'jspdf';
 import type { Answers, Estimate } from '../data/estimator';
 import { encodePayload } from '../data/payload';
 import { PACKAGES, RETAINER_EXCLUDED, RETAINER_INCLUDED, packageIncluded } from '../data/quote-model';
+import { ARCHIVO_400, ARCHIVO_600, BIG_SHOULDERS_800 } from './pdf-fonts';
 
 interface PdfInput {
   rows: [string, string][];
@@ -52,6 +53,10 @@ const clean = (text: string) => text.replace(/[‘’]/g, "'").replace(/[“”]
 
 export async function downloadEstimatePdf(input: PdfInput) {
   const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+  // The same brand fonts as the quote builder's documents.
+  doc.addFileToVFS('Archivo-400.ttf', ARCHIVO_400); doc.addFont('Archivo-400.ttf', 'Archivo', 'normal');
+  doc.addFileToVFS('Archivo-600.ttf', ARCHIVO_600); doc.addFont('Archivo-600.ttf', 'Archivo', 'bold');
+  doc.addFileToVFS('BigShoulders-800.ttf', BIG_SHOULDERS_800); doc.addFont('BigShoulders-800.ttf', 'Display', 'normal');
   const W = 210;
   const H = 297;
   const M = 18;
@@ -64,7 +69,8 @@ export async function downloadEstimatePdf(input: PdfInput) {
   const contact = input.contact && (input.contact.name || input.contact.email) ? input.contact : undefined;
 
   const color = (c: [number, number, number]) => doc.setTextColor(c[0], c[1], c[2]);
-  const font = (size: number, style: 'normal' | 'bold' = 'normal') => { doc.setFont('helvetica', style); doc.setFontSize(size); };
+  /** Archivo for text; Big Shoulders ('display') for the name and the big figure. */
+  const font = (size: number, style: 'normal' | 'bold' | 'display' = 'normal') => { if (style === 'display') doc.setFont('Display', 'normal'); else doc.setFont('Archivo', style); doc.setFontSize(size); };
   const ensure = (h: number) => { if (y + h > H - 22) { doc.addPage(); y = M; } };
   const rule = (yy: number, dots = false) => {
     doc.setDrawColor(...(dots ? INK : LINE));
@@ -86,10 +92,11 @@ export async function downloadEstimatePdf(input: PdfInput) {
     const n = String(sectionNo).padStart(2, '0');
     ensure(16);
     y += 6;
-    font(8, 'bold'); color(MUTED);
-    doc.text(n, M, y);
-    font(13, 'bold'); color(INK);
-    doc.text(clean(title), M + 9, y);
+    // A numbered ink tab, as on the quote builder's documents.
+    doc.setFillColor(...INK); doc.roundedRect(M, y - 4.1, 8, 5.4, 1.2, 1.2, 'F');
+    font(10, 'display'); doc.setTextColor(255, 255, 255); doc.text(n, M + 4, y - 0.1, { align: 'center' });
+    font(12.5, 'bold'); color(INK);
+    doc.text(clean(title), M + 11, y);
     y += 3.5;
     rule(y);
     y += 5;
@@ -107,7 +114,7 @@ export async function downloadEstimatePdf(input: PdfInput) {
   };
 
   // Header
-  font(22, 'bold'); color(INK);
+  font(26, 'display'); color(INK);
   doc.text('GRANT DEV14', M, y + 7);
   font(8.5); color(MUTED);
   doc.text('Shopify, Webflow & WordPress developer', M, y + 12.5);
@@ -164,7 +171,7 @@ export async function downloadEstimatePdf(input: PdfInput) {
   const r = input.result;
   heading(r.mode === 'monthly' ? 'Ongoing support' : 'Estimated timeline');
   ensure(26);
-  font(30, 'bold'); color(INK);
+  font(34, 'display'); color(INK);
   const plan = r.support;
   const big = r.mode === 'monthly' && plan ? `${plan.name} · ${plan.daily ? `${plan.daily} hours a day` : `${plan.hours} hours / month`}` : `${r.low}–${r.high} weeks`;
   doc.text(clean(big), M, y + 11);
@@ -272,8 +279,8 @@ export async function downloadEstimatePdf(input: PdfInput) {
     }
   }
 
-  // 04 Notes & recommendations
-  if (r.notes.length) {
+  // 04 Notes & recommendations (support plans say all of this in their own sections below)
+  if (r.notes.length && r.mode !== 'monthly') {
     heading('Notes & recommendations');
     bullets(r.notes);
   }

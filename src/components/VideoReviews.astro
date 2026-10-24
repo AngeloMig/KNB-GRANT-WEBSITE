@@ -7,8 +7,10 @@ import talking2Poster from '../assets/placeholder/talking-2.webp?url';
 import talking3 from '../assets/placeholder/talking-3.webm?url';
 import talking3Poster from '../assets/placeholder/talking-3.webp?url';
 import { withBase } from '../utils/paths';
-// Placeholders always show in dev; on the published site only while showPlaceholdersLive is on.
-const reviews = videoReviews.filter((review) => !review.placeholder || import.meta.env.DEV || showPlaceholdersLive);
+interface Props { realOnly?: boolean }
+const { realOnly = false } = Astro.props;
+// Placeholders always show in dev; on the published site only while showPlaceholdersLive is on. realOnly hides them.
+const reviews = videoReviews.filter((review) => !review.placeholder || (!realOnly && (import.meta.env.DEV || showPlaceholdersLive)));
 // Written testimonials appear live only once the client has approved the wording; drafts show in dev.
 const quotes = textReviews.filter((review) => review.approved || import.meta.env.DEV);
 const devClips = [

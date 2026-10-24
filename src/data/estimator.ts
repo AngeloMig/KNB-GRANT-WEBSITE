@@ -76,11 +76,12 @@ export const steps: Step[] = [
     question: 'Where is the site now?',
     when: (a) => type(a) === 'migration',
     options: [
-      { id: 'woocommerce', label: 'WooCommerce / WordPress' },
+      // You can't move to the platform you're already on (that's a redesign), so it isn't offered.
+      { id: 'woocommerce', label: 'WooCommerce / WordPress', when: (a) => !['wordpress', 'woocommerce'].includes(pick(a, 'platform')) },
       { id: 'magento', label: 'Magento / Adobe Commerce', hint: 'Usually the most complex' },
       { id: 'bigcommerce', label: 'BigCommerce' },
       { id: 'squarespace', label: 'Squarespace or Wix', hint: 'Limited data export' },
-      { id: 'shopify', label: 'Shopify' },
+      { id: 'shopify', label: 'Shopify', when: (a) => !['shopify', 'shopify-plus'].includes(pick(a, 'platform')) },
       { id: 'custom', label: 'Custom or other', hint: 'Needs a closer look' },
     ],
   },

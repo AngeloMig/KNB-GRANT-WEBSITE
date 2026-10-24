@@ -345,6 +345,61 @@ export interface Retainer {
   log: WorkEntry[];
 }
 
+/* ---------- Website audit: a free audit for a lead, which can turn into a quote ---------- */
+export type AuditArea = 'speed' | 'mobile' | 'seo' | 'checkout' | 'design' | 'other';
+/** Each area with a plain line on why it matters, for the audit PDF. */
+export const AUDIT_AREAS: { id: AuditArea; label: string; why: string }[] = [
+  { id: 'speed', label: 'Speed', why: 'Faster pages keep more visitors, especially on phones, and Google ranks them higher.' },
+  { id: 'mobile', label: 'Mobile', why: 'Most visitors arrive on a phone, so this is where first impressions are made.' },
+  { id: 'seo', label: 'SEO', why: 'Clear titles, working links and described images help people find you in search.' },
+  { id: 'checkout', label: 'Checkout & conversion', why: 'Small hurdles near the buy button decide whether a visit becomes a sale.' },
+  { id: 'design', label: 'Design & content', why: 'Visitors decide in seconds whether they are in the right place.' },
+  { id: 'other', label: 'Other', why: '' },
+];
+export type AuditImpact = 'high' | 'medium' | 'low';
+export const AUDIT_IMPACTS: { id: AuditImpact; label: string }[] = [{ id: 'high', label: 'High impact' }, { id: 'medium', label: 'Medium' }, { id: 'low', label: 'Low' }];
+export interface AuditFinding {
+  id: string; area: AuditArea; issue: string; fix: string; impact: AuditImpact; hours: number;
+  /** A screenshot showing the issue (a small JPEG data URL). */
+  image?: string;
+}
+export interface Audit {
+  url: string;
+  date: string;
+  /** Mobile scores from Google PageSpeed Insights, 0–100 (null = not checked). */
+  scores: { performance: number | null; accessibility: number | null; bestPractices: number | null; seo: number | null };
+  summary: string;
+  findings: AuditFinding[];
+  /** When the audit was emailed to the client. */
+  sentOn: string;
+}
+export const AUDIT_SCORES: { id: keyof Audit['scores']; label: string }[] = [
+  { id: 'performance', label: 'Performance' }, { id: 'accessibility', label: 'Accessibility' }, { id: 'bestPractices', label: 'Best practices' }, { id: 'seo', label: 'SEO' },
+];
+/** Common findings to start from; the hours are a first guess to adjust. */
+export const AUDIT_PRESETS: Omit<AuditFinding, 'id'>[] = [
+  { area: 'speed', impact: 'high', hours: 3, issue: 'Large, uncompressed images slow every page', fix: 'Convert images to WebP, size them correctly and lazy-load anything below the first screen' },
+  { area: 'speed', impact: 'high', hours: 4, issue: 'Apps and scripts load on every page, even where they aren’t used', fix: 'Remove unused apps and tracking, and load the rest only where needed' },
+  { area: 'speed', impact: 'medium', hours: 3, issue: 'Fonts and code hold up the first screen', fix: 'Preload the main font, defer non-essential scripts and inline the critical styles' },
+  { area: 'mobile', impact: 'medium', hours: 2, issue: 'Buttons and links are small or close together on phones', fix: 'Make tap targets larger and add spacing on mobile' },
+  { area: 'mobile', impact: 'medium', hours: 4, issue: 'The menu and filters are hard to use on a phone', fix: 'Simplify the mobile menu and make filters easy to reach' },
+  { area: 'seo', impact: 'medium', hours: 3, issue: 'Missing or duplicate page titles and descriptions', fix: 'Write unique titles and descriptions for the main pages and products' },
+  { area: 'seo', impact: 'medium', hours: 2, issue: 'Broken links and pages that return errors', fix: 'Fix the links and redirect removed pages' },
+  { area: 'seo', impact: 'low', hours: 2, issue: 'Images have no alt text', fix: 'Add descriptive alt text to product and content images' },
+  { area: 'checkout', impact: 'high', hours: 3, issue: 'Shipping costs only appear at the end of checkout', fix: 'Show shipping costs and delivery times on product and cart pages' },
+  { area: 'checkout', impact: 'medium', hours: 2, issue: 'Few trust signals near the buy button', fix: 'Add reviews, the returns policy and payment icons near Add to cart' },
+  { area: 'design', impact: 'medium', hours: 2, issue: 'The first screen doesn’t say clearly what you sell', fix: 'Rewrite the headline and add one clear main button above the fold' },
+];
+export const defaultAudit = (url = ''): Audit => ({ url, date: today(), scores: { performance: null, accessibility: null, bestPractices: null, seo: null }, summary: '', findings: [], sentOn: '' });
+export const auditHours = (a: Audit) => a.findings.reduce((t, f) => t + (Number(f.hours) || 0), 0);
+export const SCORE_BANDS = { good: 'Good', ok: 'Needs work', poor: 'Poor', none: 'Not checked' } as const;
+/** The average of the scores that were checked (null when none were). */
+export const auditOverall = (a: Audit) => { const v = Object.values(a.scores).filter((x): x is number => x !== null); return v.length ? Math.round(v.reduce((t, x) => t + x, 0) / v.length) : null; };
+/** PageSpeed's own bands: 90+ good, 50–89 needs work, below 50 poor. */
+export const scoreTone = (n: number | null) => (n === null ? 'none' : n >= 90 ? 'good' : n >= 50 ? 'ok' : 'poor');
+/** "example.com" from whatever was typed. */
+export const siteHost = (url: string) => url.trim().replace(/^https?:\/\//i, '').replace(/^www\./i, '').replace(/\/.*$/, '');
+
 export interface QuoteState {
   v: 4;
   id: string;
@@ -376,6 +431,8 @@ export interface QuoteState {
   delivery: Delivery;
   /** Only on monthly support quotes. */
   retainer?: Retainer;
+  /** Only when the quote started as a free website audit. */
+  audit?: Audit;
 }
 
 /* ---------- Storage ---------- */
@@ -475,6 +532,7 @@ export function migrate(raw: any): QuoteState {
   if (q.monthly && !q.retainer) q.retainer = defaultRetainer({ start: q.delivery.kickoff, rate: q.settings.rate });
   // Retainers saved before rollover modes: a carry limit meant "next month".
   if (q.retainer) q.retainer = { ...defaultRetainer({ start: q.delivery.kickoff, rate: q.settings.rate }), ...q.retainer, rolloverMode: q.retainer.rolloverMode ?? (q.retainer.rollover ? 'next' : 'none') };
+  if (q.audit) q.audit = { ...defaultAudit(), ...q.audit, scores: { ...defaultAudit().scores, ...q.audit.scores } };
   q.active = Math.min(Math.max(0, q.active ?? 0), q.options.length - 1);
   delete (q as any).lines; delete (q as any).team; delete (q as any).edited;
   return q;
@@ -892,7 +950,7 @@ export function retainerTermsText(q: QuoteState) {
     ...(r.weekendEmergency ? ['Weekend emergencies are included: if something urgent breaks on a Saturday or Sunday (for example the site is down or checkout isn’t working), call or message for an urgent fix, at no extra charge.'] : []),
     `If a month needs more than its hours, you’ll hear first (at about ${r.warnAt}% used). Extra hours are billed at ${money(r.overageRate)} an hour on the next invoice, and only after you approve them.`,
     ...(r.response.trim() ? [`${r.response.trim().replace(/\.$/, '')}.`] : []),
-    `${r.minMonths ? `Minimum term of ${r.minMonths} month${r.minMonths === 1 ? '' : 's'}, then month to month. ` : 'Month to month. '}Either side can end it with ${r.noticeDays} days’ written notice.`,
+    `${r.minMonths ? `Minimum term of ${r.minMonths} month${r.minMonths === 1 ? '' : 's'}, then month to month. ` : 'Month to month. '}The monthly hours can be changed with a month’s notice, and either side can end it with ${r.noticeDays} days’ written notice.`,
     'You get a short report each month: what was done and the hours used.',
   ];
 }
@@ -923,6 +981,26 @@ export function dashboardStats(quotes: QuoteState[]) {
 }
 
 /** Resizes an uploaded image to a small PNG data URL (keeps localStorage and PDFs light). */
+/** A screenshot for an audit finding: a JPEG at most 1400px wide, small enough to keep in the browser. */
+export function screenshotToDataUrl(file: Blob, max = 1400): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const scale = Math.min(1, max / img.width);
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.round(img.width * scale);
+      canvas.height = Math.round(img.height * scale);
+      const ctx = canvas.getContext('2d')!;
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      URL.revokeObjectURL(img.src);
+      resolve(canvas.toDataURL('image/jpeg', 0.72));
+    };
+    img.onerror = reject;
+    img.src = URL.createObjectURL(file);
+  });
+}
 export function imageToDataUrl(file: File, max = 360): Promise<string> {
   return new Promise((resolve, reject) => {
     const img = new Image();

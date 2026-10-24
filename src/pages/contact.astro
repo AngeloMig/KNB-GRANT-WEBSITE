@@ -4,15 +4,201 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import SectionTitle from '../components/SectionTitle.astro';
 import Arrow from '../components/Arrow.astro';
 import { profile } from '../data/profile';
+// Both forms go to Grant's inbox through FormSubmit, with a copy to the second address (as the estimator does).
+import { FORM_CC, FORM_INBOX } from '../data/forms';
+const needs = ['A new website or store', 'A redesign', 'Moving to a new platform', 'Speed, SEO & fixes', 'Ongoing support', 'Something else'];
+const budgets = ['Not sure yet', 'Under $2,000', '$2,000–$5,000', '$5,000–$10,000', '$10,000+'];
+const timings = ['As soon as possible', 'Within a month', 'In 1–3 months', 'Just exploring'];
+const faqs = [
+  { q: 'What does the free audit include?', a: 'Grant checks your site by hand and with Google PageSpeed Insights: speed and Core Web Vitals, mobile layout, SEO basics and broken links, and the path to checkout. You get a short PDF with the scores, each finding ranked by impact, and roughly how long the fixes would take. It’s free, with no obligation to hire him.' },
+  { q: 'Will you sign an NDA?', a: 'Yes. If your project is confidential, say so in your message and Grant will sign your NDA (or send a simple one) before you share the details.' },
+  { q: 'How do payments work?', a: 'You get a fixed price before any work starts. Projects usually begin with a deposit, with the rest due at agreed milestones such as staging and launch. Invoices list the ways to pay, and international clients are welcome.' },
+  { q: 'Do you work with agencies?', a: 'Yes. Grant spent four years building Shopify stores inside an agency (Rivyl), so white-label work, your processes and your project managers are familiar ground.' },
+  { q: 'How do we work across time zones?', a: 'Grant is based in the Philippines (UTC+8), which overlaps with working hours in Australia and Asia, mornings in the UK and evenings in the US. You get a written progress update every Friday, and calls are booked at a time that suits you.' },
+];
+const faqSchema = { '@context': 'https://schema.org', '@type': 'FAQPage', mainEntity: faqs.map((x) => ({ '@type': 'Question', name: x.q, acceptedAnswer: { '@type': 'Answer', text: x.a } })) };
 ---
 <BaseLayout title="Contact Grant Dev14 — Let’s Build Your Website" description="Contact Grant Dev14 about Shopify, Webflow, WordPress, website migrations, and development collaboration. Get in touch by email or connect on LinkedIn.">
   <div class="wrap">
     <SectionTitle title="LET’S TALK" detail="Every good website starts with a conversation" as="h1" />
     <section class="intro-split contact-intro"><div class="intro-aside"><span class="tiny-heading">GET IN TOUCH</span><p>Based in the Philippines.<br />Working across time zones.</p><button type="button" class="text-link copy-email" data-email={profile.email} hidden>Copy email address</button><span class="sr-only" id="copy-status" aria-live="polite"></span></div><div><p class="lead">A new website?<br />A better online store?<br />Let’s make it happen.</p><p class="intro-support">Tell me a little about your project, the platform you’re using, and what you have in mind.</p></div></section>
+    <section class="contact-forms" aria-label="Contact forms">
+      <form class="contact-card contact-audit" id="audit" data-form="audit" data-reply={profile.email} data-email={FORM_INBOX} data-cc={FORM_CC} novalidate>
+        <p class="contact-eyebrow">Free website audit</p>
+        <h2>Find out what’s holding your site back.</h2>
+        <p class="contact-card-text">Send your website and Grant will review it personally: speed, mobile, SEO basics and checkout. You get the quick wins by email. Free, no obligation.</p>
+        <ul class="contact-audit-list"><li>Page speed and Core Web Vitals</li><li>Mobile layout and usability</li><li>SEO basics and broken links</li><li>Checkout and conversion</li></ul>
+        <div class="contact-fields">
+          <label><span>Company name <i aria-hidden="true">*</i></span><input name="company" autocomplete="organization" required /></label>
+          <label><span>Email <i aria-hidden="true">*</i></span><input type="email" name="email" autocomplete="email" required /></label>
+          <label class="contact-span"><span>Current website <i aria-hidden="true">*</i></span><input name="website" autocomplete="url" inputmode="url" placeholder="yourstore.com" required /></label>
+        </div>
+        <input type="text" name="_honey" class="contact-honey" tabindex="-1" autocomplete="off" aria-hidden="true" />
+        <button type="submit" class="contact-submit">Get my free audit <Arrow diagonal /></button>
+        <p class="contact-status" role="status" aria-live="polite"></p>
+        <p class="contact-note">Your details go only to Grant.</p>
+        <p class="contact-draft" hidden>We kept what you typed last time. <button type="button" class="contact-draft-clear">Clear it</button></p>
+        <div class="contact-done" hidden>
+          <span class="contact-done-check" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12.5 10 17 19 7" /></svg></span>
+          <h2 class="contact-done-title" tabindex="-1"></h2>
+          <p class="contact-done-text"></p>
+          <p class="contact-done-label">What happens next</p>
+          <ol class="contact-done-steps"><li><strong>Grant reviews your site</strong><span>By hand and with Google PageSpeed Insights.</span></li><li><strong>You get the audit by email</strong><span>A short PDF with the quick wins, biggest first.</span></li><li><strong>Fix it yourself, or ask for a quote</strong><span>The findings are yours to keep either way.</span></li></ol>
+          <p class="contact-done-label">While you wait</p>
+          <div class="contact-done-links"><a href={withBase('/#work')}>See recent work <Arrow diagonal /></a><a href={withBase('/#reviews')}>Hear from clients <Arrow diagonal /></a></div>
+          <button type="button" class="contact-again">Send another request</button>
+        </div>
+      </form>
+
+      <form class="contact-card contact-enquiry" id="enquiry" data-form="enquiry" data-reply={profile.email} data-email={FORM_INBOX} data-cc={FORM_CC} novalidate>
+        <p class="contact-eyebrow">Project enquiry</p>
+        <h2>Tell me about your project.</h2>
+        <p class="contact-card-text">A few details are enough to start. Grant replies within 1 business day. Want a timeline first? <a href={withBase('/estimate/')}>Use the estimator</a>.</p>
+        <div class="contact-fields">
+          <label><span>Your name <i aria-hidden="true">*</i></span><input name="name" autocomplete="name" required /></label>
+          <label><span>Email <i aria-hidden="true">*</i></span><input type="email" name="email" autocomplete="email" required /></label>
+          <label><span>Company</span><input name="company" autocomplete="organization" /></label>
+          <label><span>Current website</span><input name="website" autocomplete="url" inputmode="url" placeholder="Optional" /></label>
+        </div>
+        <fieldset class="contact-choices">
+          <legend>What do you need?</legend>
+          <div>{needs.map((n, i) => <label class="contact-chip"><input type="radio" name="need" value={n} checked={i === 0} /><span>{n}</span></label>)}</div>
+        </fieldset>
+        <div class="contact-fields">
+          <label><span>Budget</span><select name="budget">{budgets.map((b) => <option>{b}</option>)}</select></label>
+          <label><span>Timing</span><select name="timing">{timings.map((t) => <option>{t}</option>)}</select></label>
+          <label class="contact-span"><span>Message <i aria-hidden="true">*</i></span><textarea name="message" rows="5" placeholder="What are you building, and what would make it a success?" required></textarea></label>
+        </div>
+        <input type="text" name="_honey" class="contact-honey" tabindex="-1" autocomplete="off" aria-hidden="true" />
+        <button type="submit" class="contact-submit">Send enquiry <Arrow diagonal /></button>
+        <p class="contact-status" role="status" aria-live="polite"></p>
+        <p class="contact-note">Your details go only to Grant, and he’s happy to sign an NDA before you share more. Prefer email? <a href={`mailto:${profile.email}?subject=Website%20project%20inquiry`}>{profile.email}</a></p>
+        <p class="contact-draft" hidden>We kept what you typed last time. <button type="button" class="contact-draft-clear">Clear it</button></p>
+        <div class="contact-done" hidden>
+          <span class="contact-done-check" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12.5 10 17 19 7" /></svg></span>
+          <h2 class="contact-done-title" tabindex="-1"></h2>
+          <p class="contact-done-text"></p>
+          <p class="contact-done-label">What happens next</p>
+          <ol class="contact-done-steps"><li><strong>Grant reads your enquiry</strong><span>And replies within 1 business day.</span></li><li><strong>A short call or a few questions</strong><span>To fill in anything the form didn’t cover.</span></li><li><strong>A fixed quote with real dates</strong><span>Agreed before any work starts.</span></li></ol>
+          <p class="contact-done-label">While you wait</p>
+          <div class="contact-done-links"><a href={withBase('/#work')}>See recent work <Arrow diagonal /></a><a href={withBase('/#reviews')}>Hear from clients <Arrow diagonal /></a><a href={withBase('/estimate/')}>Get a timeline estimate <Arrow diagonal /></a></div>
+          <button type="button" class="contact-again">Send another enquiry</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="contact-faq" aria-labelledby="contact-faq-heading">
+      <h2 id="contact-faq-heading">Questions,<br />answered.</h2>
+      <div>{faqs.map((x, i) => <details open={i === 0}><summary>{x.q}<i aria-hidden="true"></i></summary><p>{x.a}</p></details>)}</div>
+    </section>
+    <script type="application/ld+json" set:html={JSON.stringify(faqSchema).replace(/</g, '\\u003c')} />
+
+    <h2 class="contact-more-title">Other ways to reach me</h2>
     <div class="contact-options"><a href={`mailto:${profile.email}?subject=Website%20project%20inquiry`}><span>Email</span><strong>{profile.email}</strong><Arrow diagonal /></a><a href={profile.linkedin} target="_blank" rel="noopener noreferrer"><span>Connect</span><strong>Find me on LinkedIn</strong><Arrow diagonal /></a><a href={withBase('/estimate/')}><span>Planning</span><strong>Estimate your project</strong><Arrow diagonal /></a><a href={withBase('/resume/grant-payad-resume.pdf')} download><span>Background</span><strong>Download my résumé</strong><Arrow diagonal /></a></div>
   </div>
 </BaseLayout>
 <script>
+  import { formEndpoint } from '../data/forms';
+  import { sourceFields } from '../scripts/lead-source';
+
+  /* ---------- Free audit and project enquiry ---------- */
+  // Bots fill and send forms within moments of loading; people take longer. Sends quicker than this are dropped quietly.
+  const opened = performance.now();
+  const TOO_FAST_MS = 2500;
+  // Drafts: what someone typed is kept on this device until it's sent, so a refresh doesn't lose it.
+  const DRAFTS = 'contact-drafts-v1';
+  const readDrafts = (): Record<string, Record<string, string>> => { try { return JSON.parse(localStorage.getItem(DRAFTS) || '{}'); } catch { return {}; } };
+  const writeDrafts = (drafts: Record<string, Record<string, string>>) => { try { localStorage.setItem(DRAFTS, JSON.stringify(drafts)); } catch { /* storage unavailable */ } };
+  const emailOk = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+  const siteOk = (v: string) => /^(https?:\/\/)?[^\s.]+\.[^\s]{2,}$/i.test(v);
+  document.querySelectorAll<HTMLFormElement>('form[data-form]').forEach((form) => {
+    const kind = form.dataset.form as 'audit' | 'enquiry';
+    const status = form.querySelector<HTMLElement>('.contact-status')!;
+    const submit = form.querySelector<HTMLButtonElement>('.contact-submit')!;
+    const value = (name: string) => (form.elements.namedItem(name) as HTMLInputElement | null)?.value.trim() ?? '';
+    const say = (text: string, tone: 'ok' | 'error' | '' = '') => { status.textContent = text; status.dataset.tone = tone; };
+    const draftNote = form.querySelector<HTMLElement>('.contact-draft')!;
+    const fieldsOf = () => [...form.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>('input[name], select[name], textarea[name]')].filter((x) => x.name !== '_honey');
+    const saveDraft = () => {
+      const draft: Record<string, string> = {};
+      fieldsOf().forEach((x) => { if (x instanceof HTMLInputElement && x.type === 'radio') { if (x.checked) draft[x.name] = x.value; } else if (x.value.trim()) draft[x.name] = x.value; });
+      const drafts = readDrafts();
+      if (Object.keys(draft).some((k) => k !== 'need' && k !== 'budget' && k !== 'timing')) drafts[kind] = draft; else delete drafts[kind];
+      writeDrafts(drafts);
+    };
+    const clearDraft = () => { const drafts = readDrafts(); delete drafts[kind]; writeDrafts(drafts); draftNote.hidden = true; };
+    const saved = readDrafts()[kind];
+    if (saved) {
+      fieldsOf().forEach((x) => { const v = saved[x.name]; if (v === undefined) return; if (x instanceof HTMLInputElement && x.type === 'radio') x.checked = x.value === v; else x.value = v; });
+      draftNote.hidden = false;
+    }
+    draftNote.querySelector('button')!.addEventListener('click', () => { form.reset(); clearDraft(); say(''); });
+    form.addEventListener('input', (e) => { (e.target as HTMLElement).removeAttribute('aria-invalid'); if (status.dataset.tone === 'error') say(''); saveDraft(); });
+    form.addEventListener('change', saveDraft);
+    // After sending: a thank-you panel with what happens next, in place of the form.
+    const done = form.querySelector<HTMLElement>('.contact-done')!;
+    const showDone = () => {
+      const first = value('name').split(' ')[0];
+      done.querySelector('.contact-done-title')!.textContent = kind === 'audit' ? 'Audit requested.' : `Thanks${first ? `, ${first}` : ''}.`;
+      done.querySelector('.contact-done-text')!.textContent = kind === 'audit'
+        ? `Grant will review ${value('website')} and email the audit to ${value('email')}.`
+        : `Your enquiry is with Grant. He’ll reply to ${value('email')} within 1 business day.`;
+      done.hidden = false;
+      form.classList.add('is-done');
+      clearDraft();
+      done.querySelector<HTMLElement>('.contact-done-title')!.focus({ preventScroll: true });
+      form.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    };
+    form.querySelector('.contact-again')!.addEventListener('click', () => {
+      form.reset();
+      form.classList.remove('is-done');
+      done.hidden = true;
+      submit.disabled = false;
+      submit.innerHTML = submitLabel;
+      say('');
+    });
+    const submitLabel = submit.innerHTML;
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      // First problem wins: say what's missing and put the cursor there.
+      const checks: [string, boolean, string][] = kind === 'audit'
+        ? [['company', Boolean(value('company')), 'Please add your company name.'], ['email', emailOk(value('email')), 'Please add a valid email, so Grant can send the audit.'], ['website', siteOk(value('website')), 'Please add your website address, like yourstore.com.']]
+        : [['name', Boolean(value('name')), 'Please add your name.'], ['email', emailOk(value('email')), 'Please add a valid email, so Grant can reply.'], ['message', Boolean(value('message')), 'Please add a short message about your project.']];
+      const problem = checks.find(([, ok]) => !ok);
+      if (problem) {
+        const field = form.elements.namedItem(problem[0]) as HTMLElement;
+        field.setAttribute('aria-invalid', 'true');
+        field.focus();
+        say(problem[2], 'error');
+        return;
+      }
+      // Too quick to be a person, or the hidden field was filled: look sent, send nothing.
+      if (performance.now() - opened < TOO_FAST_MS || value('_honey')) { showDone(); return; }
+      submit.disabled = true;
+      submit.textContent = 'Sending…';
+      say('');
+      const fields = kind === 'audit'
+        ? { company: value('company'), email: value('email'), website: value('website') }
+        : { name: value('name'), email: value('email'), company: value('company') || '—', website: value('website') || '—', need: value('need') || (form.querySelector<HTMLInputElement>('input[name="need"]:checked')?.value ?? '—'), budget: value('budget'), timing: value('timing'), message: value('message') };
+      const subject = kind === 'audit' ? `Free audit request: ${value('company')} (${value('website')})` : `New enquiry: ${value('name')}${value('company') ? `, ${value('company')}` : ''}`;
+      try {
+        const response = await fetch(formEndpoint(form.dataset.email!), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+          body: JSON.stringify({ _subject: subject, _cc: form.dataset.cc, _template: 'table', _captcha: 'false', _honey: value('_honey'), ...fields, ...sourceFields() }),
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok || String(data.success) !== 'true') throw new Error(data.message || 'Not sent');
+        showDone();
+        return;
+      } catch {
+        say(`That didn’t go through. Please email ${form.dataset.reply} instead, or try again in a moment.`, 'error');
+      }
+      submit.disabled = false;
+      submit.innerHTML = submitLabel;
+    });
+  });
+
   const copyButton = document.querySelector<HTMLButtonElement>('.copy-email');
   const copyStatus = document.querySelector('#copy-status');
   if (copyButton && navigator.clipboard) {

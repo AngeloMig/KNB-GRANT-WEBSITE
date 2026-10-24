@@ -1,0 +1,844 @@
+---
+// Design preview of the 20 homepage ideas. Local preview only: in a build this route has no pages,
+// so it never reaches the live site. Open http://localhost:4321/ideas/ while `npm run dev` runs.
+import { withBase } from '../utils/paths';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import SectionTitle from '../components/SectionTitle.astro';
+import DeviceFrames from '../components/DeviceFrames.astro';
+import Arrow from '../components/Arrow.astro';
+import VideoReviews from '../components/VideoReviews.astro';
+import IdeaLegend from '../components/IdeaLegend.astro';
+import { projects } from '../data/projects';
+import { experience } from '../data/profile';
+
+export function getStaticPaths() {
+  return import.meta.env.DEV ? [{ params: { preview: 'ideas' } }] : [];
+}
+
+const IDEAS = [
+  [1, 'A headline that sells'], [2, 'Availability badge'], [3, 'Proof numbers'], [4, 'Client logo strip'],
+  [5, 'Results on each card'], [6, 'Hover preview on cards'], [7, 'Bigger first project'], [8, 'Live site link'],
+  [9, 'Real reviews only'], [10, 'Pull-quote ribbon'], [11, 'Price and time on services'], [12, 'Image preview on services'],
+  [13, 'Support plans teaser'], [14, 'How it works'], [15, 'FAQ'], [16, 'Closing call to action'],
+  [17, 'Magnetic buttons'], [18, 'Scroll progress line'], [19, 'Reveals with depth'], [20, 'Dark mode'],
+] as const;
+const tag = (n: number, note = '') => ({ n, name: IDEAS[n - 1][1], note });
+
+const marqueeItems = ['Shopify', 'Webflow', 'WordPress', 'Migrations', 'Technical SEO', 'Integrations'];
+const clients = ['Rivyl', 'MDO Digital', 'Modern Shelving', 'Road Armor', 'Feedbird', 'Coptrz', 'Omenz', 'Skinistry', 'Light My Bricks'];
+// Example results only: replace with real numbers before anything goes live.
+const results: Record<string, string> = {
+  'road-armor': 'PageSpeed 41 → 89',
+  feedbird: 'Launched in 5 weeks',
+  omenz: 'Checkout steps 5 → 3',
+  coptrz: 'Moved 1,200 pages, kept rankings',
+  skinistry: 'Mobile sales up 24%',
+  'light-my-bricks': '600 products, 4 currencies',
+};
+// Example prices only: you'd set the real "from" prices.
+const services = [
+  { name: 'Shopify development', text: 'Custom themes, Liquid development, ecommerce builds, and integrations that connect your store to the tools you use.', tags: 'Shopify · Shopify Plus · Liquid', from: 'From $2,500', time: '4–8 weeks', image: 'road-armor' },
+  { name: 'Webflow development', text: 'Bring your designs to life with responsive Webflow development, CMS-driven pages, and considered interactions.', tags: 'Webflow · Finsweet Client-First · GSAP', from: 'From $1,800', time: '3–6 weeks', image: 'feedbird' },
+  { name: 'WordPress development', text: 'Flexible business websites, custom themes, WooCommerce stores, and ongoing website improvements.', tags: 'WordPress · WooCommerce · PHP', from: 'From $1,500', time: '3–6 weeks', image: 'coptrz' },
+  { name: 'Migrations & technical SEO', text: 'Platform migrations, third-party integrations, page-speed improvements, and technical search optimization.', tags: 'Migrations · APIs · Technical SEO', from: 'From $1,200', time: '2–4 weeks', image: 'omenz' },
+];
+const plans = [
+  { name: 'Basic', hours: '20 hrs a month', price: '$299' },
+  { name: 'Medium', hours: '40 hrs a month', price: '$549', popular: true },
+  { name: 'Large', hours: '80 hrs a month', price: '$999' },
+  { name: 'VIP', hours: '8 hrs a day, Mon–Fri', price: '$2,499' },
+];
+const steps = [
+  { title: 'Estimate', time: '2 minutes', text: 'Answer a few questions and get a realistic timeline. No sign-up.' },
+  { title: 'Call', time: '30 minutes', text: 'We go through the details, then you get a fixed quote with dates.' },
+  { title: 'Build', time: 'Weekly updates', text: 'A short progress update every Friday, with a staging site to review.' },
+  { title: 'Launch & support', time: '30-day bug fixes', text: 'Go live with a handover guide, then monthly support if you want it.' },
+];
+const faqs = [
+  { q: 'How much does a website cost?', a: 'It depends on the platform, pages and features. The free estimator gives you a realistic timeline in two minutes, and Grant confirms a fixed price after a short call.' },
+  { q: 'Do you work with agencies?', a: 'Yes. Grant spent four years building Shopify stores inside an agency (Rivyl), so white-label work, your processes and your project managers are familiar ground.' },
+  { q: 'Which platform should I choose?', a: 'Shopify for most online stores, Webflow for marketing sites with rich design, WordPress when content and flexibility matter most. Not sure? Pick “Not sure yet” in the estimator.' },
+  { q: 'What happens after launch?', a: 'A 30-day bug-fix period is included. After that, monthly support plans start at $299 for 20 hours.' },
+  { q: 'How do we work across time zones?', a: 'Grant is based in the Philippines and overlaps with Australian, UK and US working hours, with a written update every Friday.' },
+];
+const ribbon = [
+  ['He’s just an absolute weapon when it comes to Shopify.', 'Carlos, MDO Digital'],
+  ['He’s always got a solution ready to go.', 'Carlos, MDO Digital'],
+  ['Grant made our website faster and much easier for our team to manage.', 'John, Modern Shelving'],
+  ['He replied quickly, explained things in plain English and delivered when he said he would.', 'John, Modern Shelving'],
+];
+---
+<BaseLayout title="Homepage ideas preview | Grant Dev14" description="Local design preview." noindex>
+  <div class="idea-progress" aria-hidden="true"><i></i></div>
+
+  <IdeaLegend ideas={IDEAS} links={[{ label: 'Next: ideas 21–40', href: '/ideas/more/' }, { label: 'Compare with the current homepage', href: '/' }]}>
+    <label class="idea-dark-toggle"><input type="checkbox" id="idea-dark" /> Try dark mode (idea 20)</label>
+  </IdeaLegend>
+
+  <div class="wrap idea-page">
+    <div class="idea-tag-row"><span class="idea-tag" id="idea-1"><b>1</b>{tag(1).name}</span></div>
+    <SectionTitle title="BUILT TO SELL." detail="Shopify, Webflow & WordPress developer" id="top-title" as="h1" />
+    <section class="intro-split" aria-label="Introduction">
+      <div class="intro-aside is-in" data-reveal="load" style="--reveal-index:0">
+        <span class="idea-tag" id="idea-2"><b>2</b>{tag(2).name}<em>example</em></span>
+        <p class="idea-avail"><i aria-hidden="true"></i>Taking 2 new projects for December</p>
+        <p>Custom websites & ecommerce<br />Based in the Philippines</p>
+        <p class="intro-trust"><strong>4+ years</strong> building Shopify stores at Rivyl<br />Trusted by Rivyl, MDO Digital & Modern Shelving</p>
+      </div>
+      <div class="intro-copy">
+        <p class="lead is-in" data-reveal="load" style="--reveal-index:1">Thoughtful websites. <br />Built to work beautifully.</p>
+        <p class="intro-support is-in" data-reveal="load" style="--reveal-index:2">I’m Grant, a web developer turning designs into custom websites and ecommerce experiences for brands and agencies.</p>
+        <div class="intro-actions is-in" data-reveal="load" style="--reveal-index:3">
+          <a class="cta-primary idea-magnetic" href={withBase('/estimate/')} data-vt="grow">Get a free estimate <Arrow diagonal /></a>
+          <a class="cta-ghost idea-magnetic" href="#work">See my work</a>
+          <span class="idea-tag idea-tag-inline"><b>17</b>{tag(17).name}<em>hover them</em></span>
+        </div>
+        <div class="idea-proof is-in" data-reveal="load" style="--reveal-index:4">
+          <span class="idea-tag" id="idea-3"><b>3</b>{tag(3).name}<em>example numbers</em></span>
+          <div class="idea-proof-row">
+            <div><strong data-count="40">0</strong><span>+ stores shipped</span></div>
+            <div><strong data-count="4">0</strong><span>+ years at Rivyl</span></div>
+            <div><strong data-count="24">0</strong><span>hr reply time</span></div>
+          </div>
+        </div>
+        <a class="intro-quote is-in" href="#reviews" data-reveal="load" style="--reveal-index:5">
+          <span class="review-avatar" aria-hidden="true">C</span>
+          <span><q>He’s just an absolute weapon when it comes to Shopify.</q><small>Carlos · CEO & Owner, MDO Digital · <u>Watch the video</u></small></span>
+        </a>
+      </div>
+    </section>
+    <div class="marquee" aria-hidden="true"><div class="marquee-track">{[0, 1].map(() => <div class="marquee-group">{marqueeItems.map((item) => <><span>{item}</span><i class="marquee-dot"></i></>)}</div>)}</div></div>
+    <div class="idea-logos" aria-label="Clients">
+      <span class="idea-tag" id="idea-4"><b>4</b>{tag(4).name}<em>wordmarks until we have logo files</em></span>
+      <ul>{clients.map((c) => <li>{c}</li>)}</ul>
+    </div>
+
+    <section aria-label="Selected projects" id="work" class="work-section">
+      <div class="work-toolbar"><p>Selected work <span>({String(projects.length).padStart(2, '0')})</span></p></div>
+      <div class="idea-tag-row">
+        <span class="idea-tag" id="idea-5"><b>5</b>{tag(5).name}<em>example results</em></span>
+        <span class="idea-tag" id="idea-6"><b>6</b>{tag(6).name}<em>hover a card</em></span>
+        <span class="idea-tag" id="idea-7"><b>7</b>{tag(7).name}</span>
+        <span class="idea-tag" id="idea-8"><b>8</b>{tag(8).name}</span>
+        <span class="idea-tag" id="idea-19"><b>19</b>{tag(19).name}<em>scroll down</em></span>
+      </div>
+      <div class="project-grid idea-grid">
+        {projects.map((project, index) => (
+          <article class="project-card idea-card" data-platform={project.platform} data-reveal style={`--reveal-index:${index % 2}`}>
+            <a href={withBase(`/work/${project.slug}/`)} class="project-link">
+              <div class="project-heading"><h2>{project.name}</h2><Arrow diagonal /></div>
+              <div class:list={['project-canvas', 'project-devices', project.canvas]}>
+                <DeviceFrames project={project} sizes={index === 0 ? '(max-width: 640px) 90vw, 60vw' : '(max-width: 640px) 62vw, (max-width: 1720px) 29vw, 500px'} phoneSizes="(max-width: 640px) 25vw, (max-width: 1720px) 9vw, 155px" />
+                <span class="idea-result">{results[project.slug]}</span>
+              </div>
+              <div class="project-caption"><span>{project.category}</span><span>{project.platform}</span></div>
+              <p class="project-description">{project.description}</p>
+            </a>
+            <a class="idea-live" href={project.url} target="_blank" rel="noopener noreferrer">Visit live site ↗</a>
+          </article>
+        ))}
+      </div>
+    </section>
+
+    <div class="idea-tag-row idea-tag-gap"><span class="idea-tag" id="idea-9"><b>9</b>{tag(9).name}<em>Hans’s placeholder hidden until his video arrives</em></span></div>
+    <VideoReviews realOnly />
+
+    <div class="idea-ribbon" aria-label="What clients say">
+      <span class="idea-tag" id="idea-10"><b>10</b>{tag(10).name}<em>real quotes</em></span>
+      <div class="idea-ribbon-band"><div class="idea-ribbon-track">{[0, 1].map(() => <div class="idea-ribbon-group">{ribbon.map(([q, who]) => <p><q>{q}</q><span>{who}</span></p>)}</div>)}</div></div>
+    </div>
+
+    <section class="idea-steps" aria-labelledby="idea-steps-h">
+      <span class="idea-tag" id="idea-14"><b>14</b>{tag(14).name}</span>
+      <div class="idea-steps-head"><h2 id="idea-steps-h">How it works.</h2><p>From first question to launch, with no surprises.</p></div>
+      <ol>{steps.map((s, i) => <li data-reveal style={`--reveal-index:${i}`}><span class="idea-step-num">{String(i + 1).padStart(2, '0')}</span><h3>{s.title}</h3><small>{s.time}</small><p>{s.text}</p></li>)}</ol>
+    </section>
+
+    <section id="services" class="services-section">
+      <SectionTitle title="SERVICES" detail="From the first build to what comes next" />
+      <div class="idea-tag-row">
+        <span class="idea-tag" id="idea-11"><b>11</b>{tag(11).name}<em>example prices</em></span>
+        <span class="idea-tag" id="idea-12"><b>12</b>{tag(12).name}<em>hover a row</em></span>
+      </div>
+      <div class="services-list idea-services">{services.map((service, index) => (
+        <a class="service-row" data-reveal style={`--reveal-index:${index}`} href={withBase('/contact/')} data-preview={withBase(`/images/projects/${service.image}-640.webp`)}>
+          <h3>{service.name}<span class="idea-price"><b>{service.from}</b> · {service.time}</span></h3>
+          <div><p>{service.text}</p><span>{service.tags}</span></div><Arrow diagonal />
+        </a>
+      ))}</div>
+      <div class="idea-plans" data-reveal>
+        <span class="idea-tag" id="idea-13"><b>13</b>{tag(13).name}<em>your current prices</em></span>
+        <div class="idea-plans-row">
+          <p><strong>Ongoing support</strong><span>After launch, a set number of hours every month.</span></p>
+          <ul>{plans.map((p) => <li class:list={{ 'is-popular': p.popular }}>{p.popular && <em>Most popular</em>}<b>{p.name}</b><span>{p.hours}</span><strong>{p.price}<small>/mo</small></strong></li>)}</ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="idea-faq" aria-labelledby="idea-faq-h">
+      <span class="idea-tag" id="idea-15"><b>15</b>{tag(15).name}</span>
+      <div class="idea-faq-grid">
+        <h2 id="idea-faq-h">Questions,<br />answered.</h2>
+        <div>{faqs.map((f, i) => <details open={i === 0}><summary>{f.q}<i aria-hidden="true"></i></summary><p>{f.a}</p></details>)}</div>
+      </div>
+    </section>
+
+    <section class="experience-section" aria-labelledby="experience-heading">
+      <div class="experience-intro" data-reveal><h2 id="experience-heading" data-lines>Good work comes<br />from experience.</h2><a href={withBase('/about/')} class="text-link">The full story <Arrow diagonal /></a></div>
+      <div class="experience-list">{experience.map((item, index) => <div class="experience-item" data-reveal style={`--reveal-index:${index}`}><div><h3>{item.company}</h3><p>{item.role}</p></div><span>{item.dates}</span></div>)}</div>
+    </section>
+
+    <p class="idea-tag-row idea-tag-gap"><span class="idea-tag" id="idea-18"><b>18</b>{tag(18).name}<em>the line at the very top</em></span><span class="idea-tag" id="idea-20"><b>20</b>{tag(20).name}<em>try it in the “20 ideas” panel</em></span></p>
+    <section class="idea-close" aria-labelledby="idea-close-h">
+      <span class="idea-tag idea-tag-light" id="idea-16"><b>16</b>{tag(16).name}</span>
+      <h2 id="idea-close-h">Have a project<br />in mind?</h2>
+      <p>Get a realistic timeline in two minutes, or tell me about it directly.</p>
+      <div class="idea-close-actions">
+        <a class="idea-close-primary idea-magnetic" href={withBase('/estimate/')} data-vt="grow">Get a free estimate <Arrow diagonal /></a>
+        <a class="idea-close-ghost idea-magnetic" href={withBase('/contact/')}>Book a call</a>
+      </div>
+    </section>
+  </div>
+  <div class="idea-hover-img" aria-hidden="true"><img alt="" /></div>
+</BaseLayout>
+
+<script>
+  const root = document.documentElement;
+  const motion = root.classList.contains('motion');
+  const fine = matchMedia('(hover: hover) and (pointer: fine)').matches;
+
+  // 20: dark mode, from the ideas panel.
+  document.querySelector<HTMLInputElement>('#idea-dark')!.addEventListener('change', (e) => root.classList.toggle('idea-dark', (e.target as HTMLInputElement).checked));
+
+  // 18: scroll progress line.
+  const bar = document.querySelector<HTMLElement>('.idea-progress i')!;
+  const syncBar = () => { const max = root.scrollHeight - innerHeight; bar.style.transform = `scaleX(${max > 0 ? scrollY / max : 0})`; };
+  addEventListener('scroll', syncBar, { passive: true });
+  syncBar();
+
+  // 3: proof numbers count up when they come into view.
+  const counters = document.querySelectorAll<HTMLElement>('[data-count]');
+  const run = (el: HTMLElement) => {
+    const to = Number(el.dataset.count);
+    if (!motion) { el.textContent = String(to); return; }
+    const start = performance.now();
+    const tick = (now: number) => { const p = Math.min(1, (now - start) / 1200); el.textContent = String(Math.round(to * (1 - (1 - p) ** 3))); if (p < 1) requestAnimationFrame(tick); };
+    requestAnimationFrame(tick);
+  };
+  const io = new IntersectionObserver((entries) => entries.forEach((e) => { if (e.isIntersecting) { run(e.target as HTMLElement); io.unobserve(e.target); } }));
+  counters.forEach((c) => io.observe(c));
+
+  // 17: magnetic buttons lean toward the pointer and spring back.
+  if (fine && motion) {
+    document.querySelectorAll<HTMLElement>('.idea-magnetic').forEach((b) => {
+      b.addEventListener('pointermove', (e) => {
+        const r = b.getBoundingClientRect();
+        const x = (e.clientX - r.left - r.width / 2) * 0.25;
+        const y = (e.clientY - r.top - r.height / 2) * 0.35;
+        b.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px)`;
+      });
+      b.addEventListener('pointerleave', () => { b.style.transform = ''; });
+    });
+  }
+
+  // 12: a project image follows the pointer over the service rows.
+  const hover = document.querySelector<HTMLElement>('.idea-hover-img')!;
+  const hoverImg = hover.querySelector('img')!;
+  if (fine) {
+    let x = 0, y = 0, tx = 0, ty = 0, raf = 0;
+    const follow = () => { x += (tx - x) * 0.18; y += (ty - y) * 0.18; hover.style.transform = `translate(${x}px, ${y}px)`; raf = requestAnimationFrame(follow); };
+    document.querySelectorAll<HTMLElement>('.idea-services .service-row').forEach((row) => {
+      row.addEventListener('pointerenter', (e) => { hoverImg.src = row.dataset.preview!; tx = x = e.clientX; ty = y = e.clientY; hover.classList.add('is-on'); cancelAnimationFrame(raf); raf = requestAnimationFrame(follow); });
+      row.addEventListener('pointermove', (e) => { tx = e.clientX; ty = e.clientY; });
+      row.addEventListener('pointerleave', () => { hover.classList.remove('is-on'); cancelAnimationFrame(raf); });
+    });
+  }
+</script>
+
+<style is:global>
+  .idea-dark-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--line);
+    font-size: 13.5px;
+    cursor: pointer;
+  }
+
+  /* 2: availability */
+  .idea-avail {
+    display: inline-flex !important;
+    align-items: center;
+    gap: 10px;
+    margin: 0 0 14px !important;
+    padding: 6px 12px 6px 10px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    color: var(--ink) !important;
+    font-size: 13px;
+  }
+  .idea-avail i {
+    position: relative;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: oklch(0.65 0.17 150);
+  }
+  .idea-avail i::after {
+    content: "";
+    position: absolute;
+    inset: -4px;
+    border-radius: 50%;
+    background: oklch(0.65 0.17 150 / 0.35);
+    animation: idea-pulse 1.8s ease-out infinite;
+  }
+  @keyframes idea-pulse {
+    from { transform: scale(0.6); opacity: 1; }
+    to { transform: scale(1.8); opacity: 0; }
+  }
+
+  /* 3: proof numbers */
+  .idea-proof {
+    margin-top: 30px;
+  }
+  .idea-proof-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px 40px;
+    padding-top: 18px;
+    border-top: 1px solid var(--line);
+  }
+  .idea-proof-row div {
+    display: flex;
+    align-items: baseline;
+    gap: 2px;
+  }
+  .idea-proof-row strong {
+    font-family: "Big Shoulders Display", Impact, sans-serif;
+    font-size: clamp(40px, 4vw, 56px);
+    font-weight: 800;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+  .idea-proof-row span {
+    color: var(--muted);
+    font-size: 14px;
+  }
+
+  /* 4: logos */
+  .idea-logos {
+    margin: -24px 0 64px;
+  }
+  .idea-logos ul {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 14px 32px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .idea-logos li {
+    color: oklch(0.72 0 0);
+    font-family: "Big Shoulders Display", Impact, sans-serif;
+    font-size: clamp(20px, 2vw, 28px);
+    font-weight: 800;
+    letter-spacing: 0.01em;
+    text-transform: uppercase;
+    transition: color 0.25s;
+  }
+  .idea-logos li:hover {
+    color: var(--ink);
+  }
+
+  /* 5–8: cards */
+  .idea-grid .idea-card:first-child {
+    grid-column: 1 / -1;
+  }
+  @media (min-width: 901px) {
+    .idea-grid .idea-card:first-child {
+      display: grid;
+      grid-template-columns: minmax(0, 1.75fr) minmax(0, 1fr);
+      column-gap: 48px;
+      align-content: start;
+    }
+    .idea-grid .idea-card:first-child .project-link {
+      display: contents;
+    }
+    .idea-grid .idea-card:first-child .project-canvas {
+      grid-column: 1;
+      grid-row: 1 / span 5;
+    }
+    .idea-grid .idea-card:first-child > * > :not(.project-canvas),
+    .idea-grid .idea-card:first-child > .idea-live {
+      grid-column: 2;
+    }
+    .idea-grid .idea-card:first-child .project-heading {
+      align-self: start;
+      margin-top: 0;
+    }
+    .idea-grid .idea-card:first-child .project-heading h2 {
+      font-size: clamp(30px, 3vw, 44px);
+      letter-spacing: -0.03em;
+    }
+    .idea-grid .idea-card:first-child .project-description {
+      font-size: 17px;
+      line-height: 1.55;
+    }
+  }
+  .idea-card .project-canvas {
+    position: relative;
+    overflow: hidden;
+  }
+  .idea-result {
+    position: absolute;
+    left: 16px;
+    bottom: 16px;
+    z-index: 3;
+    padding: 8px 14px;
+    border-radius: 999px;
+    background: var(--bg);
+    color: var(--ink);
+    font-size: 13px;
+    font-weight: 600;
+    box-shadow: 0 8px 24px -10px oklch(0 0 0 / 0.35);
+  }
+  .idea-card .laptop-screen img,
+  .idea-card .phone-screen img {
+    transition: transform 1.6s var(--ease), object-position 2.4s var(--ease);
+  }
+  @media (hover: hover) {
+    .idea-card:hover .laptop-screen img {
+      transform: scale(1.08);
+      transform-origin: 50% 0;
+    }
+    .idea-card:hover .phone-screen img {
+      transform: translateY(-6%);
+    }
+  }
+  .idea-live {
+    display: inline-block;
+    margin-top: 10px;
+    font-size: 13.5px;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  /* 19: reveals with depth */
+  .motion .idea-card .project-canvas > * {
+    transition: transform 1.3s var(--ease);
+  }
+  .motion .idea-card:not(.is-in) .project-canvas > .device-laptop,
+  .motion .idea-card:not(.is-in) .project-canvas > .device-phone {
+    transform: scale(1.08);
+  }
+
+  /* 10: ribbon */
+  .idea-ribbon {
+    margin: 56px 0 0;
+  }
+  .idea-ribbon-band {
+    margin-inline: calc(50% - 50vw);
+    overflow: hidden;
+    border-block: 1px solid var(--line);
+  }
+  .idea-ribbon-track {
+    display: flex;
+    width: max-content;
+    padding-block: 22px;
+    animation: marquee 70s linear infinite;
+  }
+  .idea-ribbon-group {
+    display: flex;
+    flex-shrink: 0;
+  }
+  .idea-ribbon p {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    margin: 0;
+    padding-inline: 32px;
+    white-space: nowrap;
+  }
+  .idea-ribbon q {
+    font-size: clamp(20px, 2vw, 28px);
+    letter-spacing: -0.02em;
+  }
+  .idea-ribbon span {
+    color: var(--muted);
+    font-size: 13px;
+  }
+
+  /* 14: how it works */
+  .idea-steps {
+    margin: 110px 0 40px;
+  }
+  .idea-steps-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: end;
+    justify-content: space-between;
+    gap: 12px 40px;
+    padding-bottom: 22px;
+    border-bottom: 1px solid var(--line);
+  }
+  .idea-steps h2,
+  .idea-faq h2,
+  .idea-close h2 {
+    margin: 0;
+    font-size: clamp(40px, 4.4vw, 64px);
+    font-weight: 500;
+    letter-spacing: -0.045em;
+    line-height: 1;
+  }
+  .idea-steps-head p {
+    margin: 0;
+    color: var(--muted);
+  }
+  .idea-steps ol {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    counter-reset: none;
+  }
+  .idea-steps li {
+    position: relative;
+    display: grid;
+    gap: 8px;
+    align-content: start;
+    padding: 28px 28px 8px 0;
+  }
+  .idea-steps li + li {
+    padding-left: 28px;
+    border-left: 1px solid var(--line);
+  }
+  .idea-step-num {
+    font-family: "Big Shoulders Display", Impact, sans-serif;
+    font-size: 48px;
+    font-weight: 800;
+    line-height: 1;
+  }
+  .idea-steps h3 {
+    margin: 10px 0 0;
+    font-size: 20px;
+    font-weight: 500;
+  }
+  .idea-steps small {
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  .idea-steps p {
+    margin: 4px 0 0;
+    color: var(--muted);
+    font-size: 14.5px;
+    line-height: 1.55;
+  }
+
+  /* 11: price and time on services */
+  .idea-price {
+    display: block;
+    margin-top: 8px;
+    color: var(--muted);
+    font-size: 14px;
+    font-weight: 400;
+    letter-spacing: 0;
+  }
+  .idea-price b {
+    color: var(--ink);
+    font-weight: 600;
+  }
+  /* 12: floating image */
+  .idea-hover-img {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 25;
+    width: 300px;
+    margin: -100px 0 0 24px;
+    border-radius: 14px;
+    overflow: hidden;
+    opacity: 0;
+    pointer-events: none;
+    box-shadow: 0 30px 60px -20px oklch(0 0 0 / 0.45);
+    transition: opacity 0.25s;
+  }
+  .idea-hover-img.is-on {
+    opacity: 1;
+  }
+  .idea-hover-img img {
+    display: block;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+    object-position: top;
+  }
+
+  /* 13: support plans */
+  .idea-plans {
+    margin-top: 40px;
+  }
+  .idea-plans-row {
+    display: grid;
+    grid-template-columns: minmax(0, 0.8fr) minmax(0, 2fr);
+    gap: 24px;
+    align-items: center;
+    padding: 22px 24px;
+    border-radius: 20px;
+    background: var(--surface);
+  }
+  .idea-plans-row > p {
+    display: grid;
+    gap: 4px;
+    margin: 0;
+  }
+  .idea-plans-row > p strong {
+    font-size: 20px;
+    font-weight: 500;
+  }
+  .idea-plans-row > p span {
+    color: var(--muted);
+    font-size: 14px;
+  }
+  .idea-plans ul {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .idea-plans li {
+    position: relative;
+    display: grid;
+    gap: 2px;
+    padding: 14px 16px;
+    border-radius: 14px;
+    background: var(--bg);
+  }
+  .idea-plans li.is-popular {
+    box-shadow: inset 0 0 0 1.5px var(--ink);
+  }
+  .idea-plans li em {
+    position: absolute;
+    top: -10px;
+    right: 12px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: var(--ink);
+    color: var(--bg);
+    font-size: 11px;
+    font-style: normal;
+    font-weight: 600;
+  }
+  .idea-plans li b {
+    font-size: 14px;
+  }
+  .idea-plans li span {
+    color: var(--muted);
+    font-size: 12.5px;
+  }
+  .idea-plans li strong {
+    margin-top: 6px;
+    font-family: "Big Shoulders Display", Impact, sans-serif;
+    font-size: 30px;
+    font-weight: 800;
+    line-height: 1;
+  }
+  .idea-plans li small {
+    margin-left: 2px;
+    font-family: Archivo, sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--muted);
+  }
+
+  /* 15: FAQ */
+  .idea-faq {
+    margin: 110px 0 40px;
+  }
+  .idea-faq-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
+    gap: 40px;
+  }
+  .idea-faq details {
+    border-top: 1px solid var(--line);
+  }
+  .idea-faq details:last-child {
+    border-bottom: 1px solid var(--line);
+  }
+  .idea-faq summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    padding: 22px 0;
+    font-size: 19px;
+    font-weight: 500;
+    list-style: none;
+    cursor: pointer;
+  }
+  .idea-faq summary::-webkit-details-marker {
+    display: none;
+  }
+  .idea-faq summary i {
+    position: relative;
+    flex: none;
+    width: 14px;
+    height: 14px;
+  }
+  .idea-faq summary i::before,
+  .idea-faq summary i::after {
+    content: "";
+    position: absolute;
+    top: 6px;
+    left: 0;
+    width: 14px;
+    height: 1.5px;
+    background: var(--ink);
+    transition: transform 0.3s var(--ease);
+  }
+  .idea-faq summary i::after {
+    transform: rotate(90deg);
+  }
+  .idea-faq details[open] summary i::after {
+    transform: rotate(0);
+  }
+  .idea-faq details p {
+    max-width: 60ch;
+    margin: -6px 0 22px;
+    color: var(--muted);
+    font-size: 15px;
+    line-height: 1.6;
+  }
+
+  /* 16: closing call to action */
+  .idea-close {
+    margin: 100px calc(50% - 50vw) 0;
+    padding: clamp(60px, 9vw, 130px) var(--gutter);
+    background: var(--ink);
+    color: var(--bg);
+  }
+  .idea-close h2 {
+    font-size: clamp(56px, 8vw, 120px);
+  }
+  .idea-close > p {
+    max-width: 44ch;
+    margin: 22px 0 34px;
+    color: oklch(0.78 0 0);
+    font-size: 17px;
+  }
+  .idea-close-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .idea-close-primary,
+  .idea-close-ghost {
+    display: inline-flex;
+    align-items: center;
+    gap: 14px;
+    padding: 18px 28px;
+    border: 1px solid var(--bg);
+    border-radius: 999px;
+    font-size: 15px;
+    font-weight: 500;
+    transition: background 0.25s, color 0.25s, transform 0.35s var(--ease);
+  }
+  .idea-close-primary {
+    background: var(--bg);
+    color: var(--ink);
+  }
+  .idea-close-ghost:hover {
+    background: var(--bg);
+    color: var(--ink);
+  }
+  .idea-tag-light {
+    background: oklch(0.93 0.09 95);
+  }
+  .idea-page .experience-section {
+    margin-bottom: 0;
+  }
+  /* The closing band ends the page: it fills main's bottom padding and its rounded corners. */
+  main:has(.idea-close) {
+    padding-bottom: 0;
+    overflow: hidden;
+  }
+
+  /* 18: scroll progress */
+  .idea-progress {
+    position: fixed;
+    inset: 0 0 auto;
+    z-index: 40;
+    height: 3px;
+    pointer-events: none;
+  }
+  .idea-progress i {
+    display: block;
+    height: 100%;
+    background: var(--ink);
+    transform: scaleX(0);
+    transform-origin: 0 50%;
+  }
+
+  /* 20: dark mode */
+  html.idea-dark {
+    --bg: oklch(0.17 0 0);
+    --ink: oklch(0.96 0 0);
+    --muted: oklch(0.7 0 0);
+    --line: oklch(0.32 0 0);
+    --surface: oklch(0.23 0 0);
+    color-scheme: dark;
+  }
+  html.idea-dark body {
+    background: var(--bg);
+    color: var(--ink);
+  }
+
+  @media (max-width: 900px) {
+    .idea-steps ol {
+      grid-template-columns: 1fr 1fr;
+    }
+    .idea-steps li:nth-child(3) {
+      padding-left: 0;
+      border-left: 0;
+    }
+    .idea-plans-row,
+    .idea-faq-grid {
+      grid-template-columns: 1fr;
+    }
+    .idea-plans ul {
+      grid-template-columns: 1fr 1fr;
+      row-gap: 18px;
+    }
+  }
+  @media (max-width: 640px) {
+    .idea-steps ol {
+      grid-template-columns: 1fr;
+    }
+    .idea-steps li,
+    .idea-steps li + li {
+      padding: 22px 0;
+      border-left: 0;
+      border-top: 1px solid var(--line);
+    }
+    .idea-logos ul {
+      justify-content: flex-start;
+      gap: 8px 20px;
+    }
+    .idea-faq summary {
+      font-size: 17px;
+    }
+    .idea-proof-row {
+      gap: 14px 28px;
+    }
+  }
+</style>

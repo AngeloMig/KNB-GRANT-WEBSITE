@@ -1,7 +1,7 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import { CURRENCIES, LINE_PRESETS } from '../data/pricing';
-import { ROLLOVER_MODES, STATUSES } from '../data/quote-model';
+import { AUDIT_AREAS, AUDIT_PRESETS, AUDIT_SCORES, ROLLOVER_MODES, STATUSES } from '../data/quote-model';
 ---
 <BaseLayout title="Quotation Builder | Grant Dev14" description="Private tool for preparing project quotations." noindex>
   <div class="wrap quote-page">
@@ -21,6 +21,7 @@ import { ROLLOVER_MODES, STATUSES } from '../data/quote-model';
           <button type="button" class="q-btn q-ghost" id="q-layout-toggle" title="Switch between the guided layout and the classic single page">Classic layout</button>
           <button type="button" class="q-btn q-ghost" id="q-lock" title="Forget the saved password on this device">Lock</button>
           <button type="button" class="q-btn q-ghost" id="q-open-profile">Business profile</button>
+          <button type="button" class="q-btn q-ghost" id="q-new-audit">New audit</button>
         </div>
         <button type="button" class="q-btn" id="q-new">New quote</button>
       </div>
@@ -70,6 +71,50 @@ import { ROLLOVER_MODES, STATUSES } from '../data/quote-model';
         </div>
         <nav class="q-stages" id="q-stages" aria-label="Stages" data-guided-only></nav>
         <nav class="q-jump" id="q-jump" aria-label="Sections"></nav>
+        <section class="q-card" id="s-audit" aria-labelledby="q-h-audit" hidden>
+          <header class="q-head"><span class="q-step">01</span><h2 id="q-h-audit">Website audit</h2></header>
+          <p class="q-help">A free audit for a lead. Check the site, note the scores and what you found, email the PDF, then turn the fixes into a quote.</p>
+          <details class="q-paste">
+            <summary>Paste the audit request email</summary>
+            <textarea id="q-audit-paste" rows="5" placeholder="company: Outdoor Supply Co.&#10;email: sam@outdoorsupply.com&#10;website: outdoorsupply.com"></textarea>
+            <button type="button" class="q-btn" id="q-audit-read">Read request</button>
+          </details>
+          <div class="q-grid q-gap-top">
+            <label>Website<input data-bind="audit.url" placeholder="yourstore.com" /></label>
+            <label>Audit date<input type="date" data-bind="audit.date" /></label>
+          </div>
+
+          <h3 class="q-sub-head">Scores</h3>
+          <p class="q-help">From Google PageSpeed Insights, mobile tab. Leave a score empty to skip it. <a class="q-link" id="q-audit-psi" href="https://pagespeed.web.dev/" target="_blank" rel="noopener noreferrer">Open PageSpeed Insights ↗</a></p>
+          <div class="q-audit-scores">{AUDIT_SCORES.map((x) => <label class="q-audit-score" data-score={x.id} data-tone="none">
+            <span class="q-score-ring"><svg viewBox="0 0 64 64" aria-hidden="true"><circle class="q-score-track" cx="32" cy="32" r="28" /><circle class="q-score-fill" cx="32" cy="32" r="28" pathLength="100" stroke-dasharray="100" stroke-dashoffset="100" /></svg><input type="number" min="0" max="100" step="1" inputmode="numeric" placeholder="–" aria-label={`${x.label} score`} /></span>
+            <span class="q-score-text"><strong>{x.label}</strong><small class="q-score-band">Not checked</small></span>
+          </label>)}</div>
+
+          <h3 class="q-sub-head">Summary</h3>
+          <label class="q-block">Overall impression and the biggest opportunity<textarea rows="3" data-bind="audit.summary" placeholder="e.g. The store looks great but is slow on phones. Fixing images and apps would make the biggest difference."></textarea></label>
+
+          <h3 class="q-sub-head">Findings</h3>
+          <div class="q-audit-findings" id="q-audit-findings"></div>
+          <div class="q-add-row">
+            <details class="q-menu" id="q-audit-add">
+              <summary class="q-btn q-ghost">+ Add finding</summary>
+              <div class="q-menu-list">
+                <button type="button" data-audit-preset="-1">Blank finding</button>
+                {AUDIT_AREAS.filter((a) => AUDIT_PRESETS.some((p) => p.area === a.id)).map((a) => <><p class="q-menu-title">{a.label}</p>{AUDIT_PRESETS.map((p, i) => p.area === a.id && <button type="button" data-audit-preset={i}>{p.issue}</button>)}</>)}
+              </div>
+            </details>
+            <span class="q-legend" id="q-audit-total"></span>
+          </div>
+          <div class="q-doc-actions">
+            <button type="button" class="q-btn q-ghost" id="q-audit-view">View audit PDF</button>
+            <button type="button" class="q-btn" id="q-audit-pdf">Download audit PDF</button>
+            <button type="button" class="q-btn q-ghost" data-email-kind="audit">Write the email</button>
+            <button type="button" class="q-btn q-ghost" id="q-audit-quote">Turn the fixes into a quote</button>
+          </div>
+          <p class="q-help q-gap-top" id="q-audit-sent"></p>
+        </section>
+
         <section class="q-card" id="s-import" aria-labelledby="q-h-import">
           <header class="q-head"><span class="q-step">01</span><h2 id="q-h-import">Start from the client’s estimate</h2></header>
           <label class="q-drop" id="q-drop">
@@ -84,6 +129,7 @@ import { ROLLOVER_MODES, STATUSES } from '../data/quote-model';
             <button type="button" class="q-btn" id="q-read">Read brief</button>
           </details>
           <p class="q-status" id="q-status" role="status"></p>
+          <p class="q-help q-gap-top" id="q-audit-start-row">Doing a free website audit first? <button type="button" class="q-link" id="q-audit-start">Start an audit</button></p>
         </section>
 
         <section class="q-card" id="s-client" aria-labelledby="q-h-client">
@@ -419,12 +465,12 @@ import { ROLLOVER_MODES, STATUSES } from '../data/quote-model';
 
           <div class="q-actions">
             <button class="q-download" id="q-download" type="button">Download PDF</button>
-            <button class="q-icon-btn" id="q-preview" type="button" title="Preview PDF" aria-label="Preview PDF"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.6"/></svg></button>
-            <button class="q-icon-btn" id="q-copy-email" type="button" title="Copy email to client" aria-label="Copy email to client"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><rect x="8.5" y="8.5" width="11" height="11" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M15.5 5.5v-.5a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v7.5a2 2 0 0 0 2 2h.5" fill="none" stroke="currentColor" stroke-width="1.6"/></svg></button>
-            <a class="q-icon-btn" id="q-mail" href="#" title="Open email to client" aria-label="Open email to client"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><rect x="3" y="5.5" width="18" height="13" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="m3.5 7 8.5 6.5L20.5 7" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg></a>
+            <button class="q-icon-btn" id="q-preview" type="button" title="Preview PDF" aria-label="Preview PDF"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.6"/></svg><span class="q-icon-label">Preview</span></button>
+            <button class="q-icon-btn" id="q-copy-email" type="button" title="Copy email to client" aria-label="Copy email to client"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><rect x="8.5" y="8.5" width="11" height="11" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M15.5 5.5v-.5a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v7.5a2 2 0 0 0 2 2h.5" fill="none" stroke="currentColor" stroke-width="1.6"/></svg><span class="q-icon-label">Copy email</span></button>
+            <a class="q-icon-btn" id="q-mail" href="#" title="Open email to client" aria-label="Open email to client"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><rect x="3" y="5.5" width="18" height="13" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="m3.5 7 8.5 6.5L20.5 7" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg><span class="q-icon-label">Email client</span></a>
           </div>
 
-          <button type="button" class="q-email-link" id="q-more-emails">Email templates: follow-up, invoice, reminder, report…</button>
+          <button type="button" class="q-email-link" id="q-more-emails"><strong>Email templates</strong><span>Follow-up, invoice, reminder, report…</span></button>
 
           <details class="q-side-section q-profit" id="q-profit">
             <summary><span class="q-side-label" id="q-profit-label">Profit check</span><strong id="q-profit-peek"></strong></summary>

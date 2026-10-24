@@ -20,6 +20,7 @@ const path = Astro.url.pathname;
     <div class="menu-preview-set">{['coptrz', 'skinistry', 'light-my-bricks'].map((slug) => <img src={withBase(`/images/projects/${slug}-480.webp`)} alt="" width="480" height="270" loading="lazy" decoding="async" />)}</div>
     <div class="menu-preview-set"><p class="menu-preview-text">Plan<br />it.</p></div>
     <div class="menu-preview-set"><p class="menu-preview-text">Let’s<br />talk.</p></div>
+    <div class="menu-preview-set"><p class="menu-preview-text">Free<br />audit.</p></div>
   </div>
   <nav class="menu-links" aria-label="Main">
     <a style="--i:0" href={withBase('/')} aria-current={path === withBase('/') ? 'page' : undefined}>Selected work <Arrow /></a>
@@ -27,6 +28,7 @@ const path = Astro.url.pathname;
     <a style="--i:2" href={withBase('/#services')}>Services <Arrow /></a>
     <a style="--i:3" href={withBase('/estimate/')} aria-current={path === withBase('/estimate/') ? 'page' : undefined}>Estimate a project <Arrow /></a>
     <a style="--i:4" href={withBase('/contact/')} aria-current={path === withBase('/contact/') ? 'page' : undefined}>Get in touch <Arrow /></a>
+    <a style="--i:5" href={withBase('/contact/#audit')}>Free website audit <Arrow /></a>
   </nav>
   <div class="menu-bottom"><a href={`mailto:${profile.email}`}>{profile.email}</a><a href={profile.linkedin} target="_blank" rel="noopener noreferrer">LinkedIn ↗︎</a></div>
 </dialog>

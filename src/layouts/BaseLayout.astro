@@ -55,6 +55,61 @@ const person = { '@context': 'https://schema.org', '@type': 'Person', name: prof
         }, 6000);
       })();
     </script>
+    <script is:inline define:vars={{ base: import.meta.env.BASE_URL }}>
+      // "Grow" page transition: a link to another page on this site opens it as a circle growing from
+      // where it was clicked. Project pages keep their own transition (the card's picture morphs into the
+      // page and back), so links into a project, and from a project back to the homepage, are left out.
+      // Browsers without cross-page view transitions just load the page.
+      (function () {
+        var root = document.documentElement;
+        var KEY = 'gp-vt-grow';
+        var home = base.replace(/\/?$/, '/');
+        var isProject = function (path) { return path.indexOf(home + 'work/') === 0; };
+        var isHome = function (path) { return path === home || path === home + 'index.html'; };
+        var link = function (e) {
+          var a = e.target && e.target.closest ? e.target.closest('a[href]') : null;
+          if (!a || a.target === '_blank' || a.hasAttribute('download') || a.dataset.vt === 'none') return null;
+          var url;
+          try { url = new URL(a.href, location.href); } catch (err) { return null; }
+          if (url.origin !== location.origin || url.pathname === location.pathname) return null;
+          if (isProject(url.pathname) || (isProject(location.pathname) && isHome(url.pathname))) return null;
+          return a;
+        };
+        document.addEventListener('click', function (e) {
+          var a = link(e);
+          if (!a || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+          var r = a.getBoundingClientRect();
+          var x = e.clientX || r.left + r.width / 2;
+          var y = e.clientY || r.top + r.height / 2;
+          try { sessionStorage.setItem(KEY, JSON.stringify({ x: x / innerWidth, y: y / innerHeight, t: Date.now() })); } catch (err) {}
+        }, true);
+        window.addEventListener('pagereveal', function (e) {
+          var raw = null;
+          try { raw = sessionStorage.getItem(KEY); sessionStorage.removeItem(KEY); } catch (err) {}
+          if (!raw || !e.viewTransition || !e.viewTransition.types) return;
+          var o = JSON.parse(raw);
+          if (Date.now() - o.t > 6000) return;
+          var x = o.x * innerWidth, y = o.y * innerHeight;
+          root.style.setProperty('--vt-x', x + 'px');
+          root.style.setProperty('--vt-y', y + 'px');
+          root.style.setProperty('--vt-r', Math.ceil(Math.hypot(Math.max(x, innerWidth - x), Math.max(y, innerHeight - y))) + 'px');
+          e.viewTransition.types.add('grow');
+          e.viewTransition.finished.finally(function () { ['--vt-x', '--vt-y', '--vt-r'].forEach(function (p) { root.style.removeProperty(p); }); });
+        });
+        // Start loading the page on hover or touch, so the transition starts the moment it's clicked.
+        var warm = function (e) {
+          var a = link(e);
+          if (!a || a.dataset.warm) return;
+          a.dataset.warm = '1';
+          var l = document.createElement('link');
+          l.rel = 'prefetch';
+          l.href = a.href;
+          document.head.appendChild(l);
+        };
+        ['pointerover', 'touchstart', 'focusin'].forEach(function (t) { document.addEventListener(t, warm, { passive: true }); });
+      })();
+    </script>
+    <script type="speculationrules" is:inline>{"prerender":[{"where":{"and":[{"href_matches":"/*"},{"not":{"selector_matches":"[target=_blank], [download], [data-vt=none]"}}]},"eagerness":"moderate"}]}</script>
     <script type="application/ld+json" set:html={JSON.stringify(person).replace(/</g, '\\u003c')} />
   </head>
   <body>
@@ -64,8 +119,11 @@ const person = { '@context': 'https://schema.org', '@type': 'Person', name: prof
   </body>
 </html>
 <script>
+  import { captureSource } from '../scripts/lead-source';
   const root = document.documentElement;
   root.dataset.motionReady = 'true';
+  // Remember how this visit started, for the lead emails.
+  captureSource();
 
   // Headings marked data-lines reveal one line at a time (lines are split at <br>).
   if (root.classList.contains('motion')) {
@@ -89,6 +147,51 @@ const person = { '@context': 'https://schema.org', '@type': 'Person', name: prof
   };
 
   startReveals();
+
+  // Same-page links ("See my work", the review quote, back to top) glide with an eased scroll
+  // instead of the browser's quick jump. A wheel, touch or key press takes over straight away.
+  const glide = (top: number, done: () => void) => {
+    const from = window.scrollY;
+    const to = Math.max(0, Math.min(top, root.scrollHeight - window.innerHeight));
+    const distance = to - from;
+    if (!root.classList.contains('motion') || Math.abs(distance) < 4) { window.scrollTo({ top: to, behavior: 'instant' }); done(); return; }
+    const duration = Math.min(1500, 650 + Math.abs(distance) * 0.22);
+    const start = performance.now();
+    let stopped = false;
+    const stop = () => { stopped = true; };
+    const events = ['wheel', 'touchstart', 'keydown'] as const;
+    events.forEach((t) => window.addEventListener(t, stop, { passive: true, once: true }));
+    root.style.scrollBehavior = 'auto';
+    const finish = () => { root.style.scrollBehavior = ''; events.forEach((t) => window.removeEventListener(t, stop)); done(); };
+    const step = (now: number) => {
+      if (stopped) { finish(); return; }
+      const p = Math.min(1, (now - start) / duration);
+      const eased = p < 0.5 ? 4 * p * p * p : 1 - (-2 * p + 2) ** 3 / 2;
+      window.scrollTo(0, from + distance * eased);
+      if (p < 1) requestAnimationFrame(step); else finish();
+    };
+    requestAnimationFrame(step);
+  };
+  document.addEventListener('click', (e) => {
+    const link = (e.target as HTMLElement).closest<HTMLAnchorElement>('a[href*="#"]');
+    if (!link || link.classList.contains('skip-link') || e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    const url = new URL(link.href, location.href);
+    if (url.origin !== location.origin || url.pathname !== location.pathname) return;
+    const hash = url.hash;
+    const target = hash === '#top' ? document.body : document.getElementById(decodeURIComponent(hash.slice(1)));
+    if (!target || hash.length < 2) return;
+    e.preventDefault();
+    const offset = (parseFloat(getComputedStyle(root).scrollPaddingTop) || 0) + (parseFloat(getComputedStyle(target).scrollMarginTop) || 0);
+    const top = target === document.body ? 0 : target.getBoundingClientRect().top + window.scrollY - offset;
+    history.pushState(null, '', hash);
+    glide(top, () => {
+      // Keyboard users land on the section they asked for.
+      if (e.detail === 0 && target !== document.body) {
+        if (!target.hasAttribute('tabindex')) target.setAttribute('tabindex', '-1');
+        target.focus({ preventScroll: true });
+      }
+    });
+  });
 
   // Intro loader: count to 100, then lift the curtain. The page underneath is already in place.
   const loader = document.querySelector<HTMLElement>('.page-loader');

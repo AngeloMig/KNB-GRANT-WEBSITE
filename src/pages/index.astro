@@ -12,7 +12,7 @@ const services = [
   { name: 'Shopify development', text: 'Custom themes, Liquid development, ecommerce builds, and integrations that connect your store to the tools you use.', tags: 'Shopify · Shopify Plus · Liquid' },
   { name: 'Webflow development', text: 'Bring your designs to life with responsive Webflow development, CMS-driven pages, and considered interactions.', tags: 'Webflow · Finsweet Client-First · GSAP' },
   { name: 'WordPress development', text: 'Flexible business websites, custom themes, WooCommerce stores, and ongoing website improvements.', tags: 'WordPress · WooCommerce · PHP' },
-  { name: 'Migrations & technical SEO', text: 'Platform migrations, third-party integrations, page-speed improvements, and technical search optimization.', tags: 'Migrations · APIs · Technical SEO' },
+  { name: 'Migrations & technical SEO', text: 'Platform migrations, third-party integrations, page-speed improvements, and technical search optimization. Not sure where to start? Get a free audit.', tags: 'Migrations · APIs · Technical SEO', href: '/contact/#audit' },
 ];
 ---
 <BaseLayout loader>
@@ -43,12 +43,20 @@ const services = [
     <section id="services" class="services-section">
       <SectionTitle title="SERVICES" detail="From the first build to what comes next" />
       <div class="intro-split section-intro" data-reveal><div class="intro-aside"><span class="tiny-heading">What I do</span><p>Build, migrate, improve<br />and support websites</p></div><p class="lead" data-lines>Your vision. <br />The right development.</p></div>
-      <div class="services-list">{services.map((service, index) => <a class="service-row" data-reveal style={`--reveal-index:${index}`} href={withBase('/contact/')}><h3>{service.name}</h3><div><p>{service.text}</p><span>{service.tags}</span></div><Arrow diagonal /></a>)}</div>
+      <div class="services-list">{services.map((service, index) => <a class="service-row" data-reveal style={`--reveal-index:${index}`} href={withBase(service.href ?? '/contact/')}><h3>{service.name}</h3><div><p>{service.text}</p><span>{service.tags}</span></div><Arrow diagonal /></a>)}</div>
     </section>
     <section class="experience-section" aria-labelledby="experience-heading">
       <div class="experience-intro" data-reveal><h2 id="experience-heading" data-lines>Good work comes<br />from experience.</h2><a href={withBase('/about/')} class="text-link">The full story <Arrow diagonal /></a></div>
       <div class="experience-list">{experience.map((item, index) => <div class="experience-item" data-reveal style={`--reveal-index:${index}`}><div><h3>{item.company}</h3><p>{item.role}</p></div><span>{item.dates}</span></div>)}</div>
-      <a class="text-link services-estimate" href={withBase('/estimate/')} data-reveal>Not sure what you need? Estimate your project <Arrow diagonal /></a>
+    </section>
+    <section class="closing-cta" aria-labelledby="closing-cta-heading">
+      <h2 id="closing-cta-heading" data-lines data-reveal>Have a project<br />in mind?</h2>
+      <p data-reveal>Not sure what you need yet? Get a realistic timeline in two minutes, or tell me about it directly.</p>
+      <div class="closing-cta-actions" data-reveal>
+        <a class="closing-cta-primary" href={withBase('/estimate/')}>Get a free estimate <Arrow diagonal /></a>
+        <a class="closing-cta-ghost" href={withBase('/contact/')}>Get in touch</a>
+      </div>
+      <p class="closing-cta-audit" data-reveal>Already have a website? <a href={withBase('/contact/#audit')}>Get a free audit of it <Arrow diagonal /></a></p>
     </section>
   </div>
   <a class="mobile-cta" href={withBase('/estimate/')} aria-hidden="true" tabindex="-1">Get a free estimate <Arrow diagonal /></a>
@@ -91,10 +99,10 @@ const services = [
   }
 
   // Phones: a "Get a free estimate" button once the first screen's buttons are out of view, until the
-  // estimate link at the end of the page (the footer sits behind the page, so it can't be the marker).
+  // closing call to action at the end of the page (the footer sits behind the page, so it can't be the marker).
   const mobileCta = document.querySelector<HTMLElement>('.mobile-cta');
   const heroActions = document.querySelector('.intro-actions');
-  const endMarker = document.querySelector('.services-estimate');
+  const endMarker = document.querySelector('.closing-cta');
   if (mobileCta && heroActions && 'IntersectionObserver' in window) {
     let pastHero = false;
     let atFooter = false;

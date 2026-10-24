@@ -3,7 +3,7 @@ import { jsPDF } from 'jspdf';
 import { formatMoney, phaseTotals, revisionText, scopeRows, type QuoteLine } from '../data/pricing';
 import {
   MILESTONE_WHEN, NEED_DUE, addDays, approvedChanges, balanceDue, billedOption, changeTotals, datedPlan, hoursText, invoiceStatus, milestoneDate, needDate, niceDate, optionKind, optionPlan,
-  optionTimeline, optionTotals, optionWeeks, retainerMonths, today, addMonths, weekdays, PACKAGES, EMERGENCY_EXAMPLES, RETAINER_EXCLUDED as RETAINER_EXCLUDED_PDF, RETAINER_INCLUDED as RETAINER_INCLUDED_PDF, packageHours, packageIncluded, packageOf, planSavings, yearlyPrice, type PackageId, retainerPlan, retainerTermsText, validUntil, warrantyEnd, type ChangeOrder, type Invoice, type Payment, type Profile, type QuoteOption, type QuoteState,
+  AUDIT_AREAS, AUDIT_SCORES, SCORE_BANDS, auditHours, auditOverall, scoreTone, siteHost, optionTimeline, optionTotals, optionWeeks, retainerMonths, today, addMonths, weekdays, PACKAGES, EMERGENCY_EXAMPLES, RETAINER_EXCLUDED as RETAINER_EXCLUDED_PDF, RETAINER_INCLUDED as RETAINER_INCLUDED_PDF, packageHours, packageIncluded, packageOf, planSavings, yearlyPrice, type PackageId, type PackagePrices, retainerPlan, retainerTermsText, validUntil, warrantyEnd, type ChangeOrder, type Invoice, type Payment, type Profile, type QuoteOption, type QuoteState,
 } from '../data/quote-model';
 import { ARCHIVO_400, ARCHIVO_600, BIG_SHOULDERS_800 } from './pdf-fonts';
 
@@ -477,8 +477,9 @@ export async function buildQuotePdf(q: QuoteState, profile: Profile, opts: { hid
     s.y += 16;
   };
   heading(multi ? 'Pricing by option' : 'Pricing', 70);
+  const keepLast = r ? 34 : 44;
   options.forEach((o, i) => {
-    if (multi) { ensure(30); if (i) s.y += 4; font(11.5, 'bold'); color(INK); doc.text(clean(`${o.name}: ${optionKind(o)}`), M, s.y + 3); s.y += 7; }
+    if (multi) { ensure(52); if (i) s.y += 4; font(11.5, 'bold'); color(INK); doc.text(clean(`${o.name}: ${optionKind(o)}`), M, s.y + 3); s.y += 7; }
     tableHead();
     const billable = o.lines.filter((l) => !l.optional);
     const pt = phaseTotals(o.lines);
@@ -489,11 +490,11 @@ export async function buildQuotePdf(q: QuoteState, profile: Profile, opts: { hid
         label(phase === 1 ? 'Phase 1 · launch with the essentials' : 'Phase 2 · after launch', M + 4, s.y + 3.4, INK);
         font(9); color(MUTED); doc.text(money(phase === 1 ? pt.one : pt.two), cols.amount, s.y + 3.4, { align: 'right' });
         s.y += 6.5;
-        billable.filter((l) => (l.phase ?? 1) === phase).forEach((l, i, all) => lineRow(l, phase === 2 && i === all.length - 1 ? 34 : 0));
+        billable.filter((l) => (l.phase ?? 1) === phase).forEach((l, i, all) => lineRow(l, phase === 2 && i === all.length - 1 ? keepLast : 0));
       }
     } else {
-      // The last line stays on the same page as the totals.
-      billable.forEach((l, i) => lineRow(l, i === billable.length - 1 ? 34 : 0));
+      // The last line stays on the same page as the totals (and, on project quotes, the note under them).
+      billable.forEach((l, i) => lineRow(l, i === billable.length - 1 ? keepLast : 0));
     }
     totalsBlock(o);
     const extras = o.lines.filter((l) => l.optional);
@@ -502,7 +503,8 @@ export async function buildQuotePdf(q: QuoteState, profile: Profile, opts: { hid
       extras.forEach((l) => lineRow(l));
     }
   });
-  paragraph(r ? `${r.billing === 'yearly' ? 'Paid yearly in advance.' : 'Billed monthly in advance.'} The monthly hours can be changed with a month’s notice.` : q.monthly ? 'Billed monthly in advance. Hours can be adjusted month to month.' : 'Fixed price for the scope above. Any changes to the scope are quoted and agreed before work starts.', 8.5, MUTED);
+  // Retainers explain billing under "How the retainer works", so the note is for other quotes only.
+  if (!r) paragraph(q.monthly ? 'Billed monthly in advance. Hours can be adjusted month to month.' : 'Fixed price for the scope above. Any changes to the scope are quoted and agreed before work starts.', 8.5, MUTED);
 
   if (r) { heading('How the retainer works', 40); bullets(retainerTermsText(q)); }
 
@@ -739,6 +741,194 @@ export async function buildChangeOrderPdf(q: QuoteState, change: ChangeOrder, pr
   return { doc, filename: `change-order-${number.toLowerCase()}-${slug(q.client.company || q.client.name)}.pdf` };
 }
 
+/* ---------- Website audit ---------- */
+
+const TONE: Record<string, RGB> = { good: GREEN, ok: [184, 116, 0], poor: [196, 43, 43], none: LIGHT };
+const IMPACT: Record<string, { text: string; color: RGB }> = { high: { text: 'HIGH IMPACT', color: [196, 43, 43] }, medium: { text: 'MEDIUM', color: [184, 116, 0] }, low: { text: 'LOW', color: MUTED } };
+/** A lighter version of a colour (for ring tracks and soft fills). */
+const tint = (c: RGB, amount: number): RGB => c.map((v) => Math.round(v + (255 - v) * amount)) as RGB;
+
+export async function buildAuditPdf(q: QuoteState, profile: Profile) {
+  const P = makeDoc(profile);
+  const { doc, s, color, font, ensure, hr, paragraph, heading, label } = P;
+  const a = q.audit!;
+  const money = (n: number) => clean(formatMoney(n, q.settings.currency));
+  const site = siteHost(a.url || q.client.website) || 'Website';
+  const rank = { high: 0, medium: 1, low: 2 };
+  const findings = a.findings.filter((x) => x.issue.trim() || x.fix.trim()).sort((x, y) => rank[x.impact] - rank[y.impact]);
+  const hours = auditHours(a);
+  const overall = auditOverall(a);
+
+  /** A score ring like PageSpeed's: a tinted track and an arc that fills to the score. */
+  const ring = (cx: number, cy: number, r: number, v: number | null, w: number) => {
+    const tone = TONE[scoreTone(v)];
+    doc.setLineWidth(w);
+    doc.setDrawColor(...(v === null ? LINE : tint(tone, 0.8)));
+    doc.circle(cx, cy, r, 'S');
+    if (!v) return;
+    doc.setDrawColor(...tone);
+    doc.setLineCap('round');
+    const steps = Math.max(2, Math.round(v * 0.8));
+    let px = cx, py = cy - r;
+    for (let i = 1; i <= steps; i++) {
+      const t = -Math.PI / 2 + (i / steps) * 2 * Math.PI * (v / 100);
+      const nx = cx + r * Math.cos(t), ny = cy + r * Math.sin(t);
+      doc.line(px, py, nx, ny);
+      px = nx; py = ny;
+    }
+    doc.setLineCap('butt');
+  };
+  /** An outlined pill (impact), returning its width. */
+  const pill = (text: string, c: RGB, x: number, y: number) => {
+    font(6.3, 'bold');
+    const w = doc.getTextWidth(text) + text.length * 0.3 + 6;
+    doc.setDrawColor(...c); doc.setLineWidth(0.35); doc.roundedRect(x, y, w, 5, 2.5, 2.5, 'S');
+    color(c); doc.text(text, x + w / 2, y + 3.45, { align: 'center', charSpace: 0.3 });
+    return w;
+  };
+
+  P.header('WEBSITE AUDIT', site, '');
+  P.blocks([
+    ['Prepared for', P.clientBlock(q)],
+    ['Prepared by', P.fromRows()],
+    ['Details', [`Audited ${niceDate(a.date, 'long')}`, a.url, 'Free, no obligation']],
+  ]);
+
+  // At a glance: the overall score, the verdict in words, the summary, and the counts.
+  const counts = (['high', 'medium', 'low'] as const).map((k) => [k, findings.filter((x) => x.impact === k).length] as const).filter(([, n]) => n);
+  font(9.6);
+  const summary = a.summary.trim() ? doc.splitTextToSize(clean(a.summary), CW - 58) as string[] : [];
+  const boxH = Math.max(46, 24 + summary.length * 4.4 + 12);
+  ensure(boxH + 4);
+  doc.setFillColor(...SURFACE); doc.roundedRect(M, s.y, CW, boxH, 3, 3, 'F');
+  const cx = M + 24, cy = s.y + boxH / 2 - 2;
+  ring(cx, cy, 14, overall, 2.6);
+  font(22, 'display'); color(overall === null ? MUTED : TONE[scoreTone(overall)]); doc.text(overall === null ? '–' : String(overall), cx, cy + 3.2, { align: 'center' });
+  label('Overall', cx, cy + 21, MUTED, 'center');
+  const tx = M + 48;
+  label('At a glance', tx, s.y + 9);
+  font(17, 'display'); color(INK); doc.text(clean(overall === null ? `Website audit for ${site}` : overall >= 90 ? 'In good shape, with a few quick wins' : overall >= 50 ? 'Solid, with clear room to improve' : 'Losing visitors it could keep'), tx, s.y + 17);
+  let yy = s.y + 23.5;
+  if (summary.length) { font(9.6); color(INK); doc.text(summary, tx, yy); yy += summary.length * 4.4 + 2; }
+  if (counts.length || hours) {
+    let px = tx;
+    for (const [k, n] of counts) { px += pill(`${n} ${IMPACT[k].text}`, IMPACT[k].color, px, yy) + 3; }
+    if (hours) { font(8.6); color(MUTED); doc.text(clean(`About ${hoursText(hours)} hrs to fix`), px + 1, yy + 3.6); }
+  }
+  s.y += boxH + 4;
+
+  // Scores: four rings with the number inside and the rating below.
+  if (AUDIT_SCORES.some((x) => a.scores[x.id] !== null)) {
+    heading('Scores', 44);
+    const colW = CW / 4;
+    ensure(36);
+    AUDIT_SCORES.forEach((x, i) => {
+      const v = a.scores[x.id];
+      const ccx = M + colW * i + colW / 2, ccy = s.y + 11;
+      ring(ccx, ccy, 10, v, 2);
+      font(16, 'display'); color(v === null ? LIGHT : TONE[scoreTone(v)]); doc.text(v === null ? '–' : String(v), ccx, ccy + 2.3, { align: 'center' });
+      font(9, 'bold'); color(INK); doc.text(clean(x.label), ccx, ccy + 17, { align: 'center' });
+      font(8.2); color(v === null ? MUTED : TONE[scoreTone(v)]); doc.text(clean(SCORE_BANDS[scoreTone(v)]), ccx, ccy + 21.5, { align: 'center' });
+    });
+    s.y += 36;
+    paragraph('Mobile scores from Google PageSpeed Insights. 90 to 100 is good, 50 to 89 needs work, below 50 is poor.', 8.3, MUTED);
+  }
+
+  // Top priorities: the three findings that matter most, big and numbered.
+  if (findings.length >= 2) {
+    heading('Top priorities', 40);
+    findings.slice(0, 3).forEach((x, i) => {
+      font(10.2, 'bold');
+      const issue = doc.splitTextToSize(clean(x.issue || x.fix), CW - 26) as string[];
+      font(9.2);
+      const fix = x.fix.trim() && x.issue.trim() ? doc.splitTextToSize(clean(x.fix), CW - 26) as string[] : [];
+      const h = issue.length * 4.5 + fix.length * 4.1 + 6;
+      ensure(h + 2);
+      font(22, 'display'); color(INK); doc.text(String(i + 1).padStart(2, '0'), M, s.y + 8);
+      font(10.2, 'bold'); color(INK); doc.text(issue, M + 16, s.y + 4.5);
+      if (fix.length) { font(9.2); color(MUTED); doc.text(fix, M + 16, s.y + 4.5 + issue.length * 4.5); }
+      s.y += h; if (i < Math.min(3, findings.length) - 1) { hr(s.y - 1.5, LINE, 0.1); s.y += 1.5; }
+    });
+  }
+
+  // Every finding, by area, with its screenshot.
+  if (findings.length) {
+    heading('What I found', 30);
+    let n = 0;
+    for (const area of AUDIT_AREAS) {
+      const items = findings.filter((x) => x.area === area.id);
+      if (!items.length) continue;
+      ensure(22);
+      font(11, 'bold'); color(INK); doc.text(clean(area.label), M, s.y + 4);
+      s.y += 6;
+      if (area.why) { paragraph(area.why, 8.6, MUTED); }
+      s.y += 1;
+      for (const x of items) {
+        n += 1;
+        font(10, 'bold');
+        const issue = doc.splitTextToSize(clean(x.issue || 'Finding'), CW - 40) as string[];
+        font(9.2);
+        const fix = x.fix.trim() ? doc.splitTextToSize(clean(`Fix: ${x.fix}`), CW - 40) as string[] : [];
+        let img: { w: number; h: number } | null = null;
+        if (x.image) {
+          try {
+            const pr = doc.getImageProperties(x.image);
+            const w = Math.min(CW - 12, (pr.width / pr.height) * 80);
+            img = { w, h: (w / pr.width) * pr.height };
+          } catch { img = null; }
+        }
+        const textH = 7 + issue.length * 4.6 + fix.length * 4.2 + 2;
+        const h = textH + (img ? img.h + 5 : 0) + 3;
+        ensure(Math.min(h, 200) + 2);
+        doc.setDrawColor(...LINE); doc.setLineWidth(0.2); doc.roundedRect(M, s.y, CW, h, 2.5, 2.5, 'S');
+        font(8, 'bold'); color(MUTED); doc.text(String(n).padStart(2, '0'), M + 6, s.y + 6.8);
+        pill(IMPACT[x.impact].text, IMPACT[x.impact].color, M + 15, s.y + 3.3);
+        if (x.hours) { font(8.4); color(MUTED); doc.text(clean(`~${hoursText(x.hours)} hrs to fix`), W - M - 6, s.y + 6.8, { align: 'right' }); }
+        font(10, 'bold'); color(INK); doc.text(issue, M + 6, s.y + 13.2);
+        if (fix.length) { font(9.2); color(MUTED); doc.text(fix, M + 6, s.y + 13.2 + issue.length * 4.6); }
+        if (img && x.image) {
+          const iy = s.y + textH + 3;
+          doc.addImage(x.image, 'JPEG', M + 6, iy, img.w, img.h);
+          doc.setDrawColor(...LINE); doc.setLineWidth(0.2); doc.rect(M + 6, iy, img.w, img.h, 'S');
+        }
+        s.y += h + 3;
+      }
+      s.y += 2;
+    }
+  }
+
+  // Fixing it: the work in order, the estimate, and an offer to do it.
+  if (hours) {
+    heading('Fixing it', 50);
+    P.tableBar([['Fix', M + 4, 'left'], ['Impact', W - M - 34, 'right'], ['Hours', W - M - 4, 'right']]);
+    for (const x of findings) {
+      font(9.3);
+      const lines = doc.splitTextToSize(clean(x.fix || x.issue), CW - 52) as string[];
+      ensure(lines.length * 4.2 + 4);
+      color(INK); doc.text(lines, M + 4, s.y + 3.6);
+      font(8.2, 'bold'); color(IMPACT[x.impact].color); doc.text(x.impact === 'high' ? 'High' : x.impact === 'medium' ? 'Medium' : 'Low', W - M - 34, s.y + 3.6, { align: 'right' });
+      font(9.3); color(INK); doc.text(hoursText(x.hours), W - M - 4, s.y + 3.6, { align: 'right' });
+      s.y += lines.length * 4.2 + 2.6; hr(s.y, LINE, 0.1); s.y += 1.6;
+    }
+    s.y += 1;
+    P.totalBar('Estimated', `${hoursText(hours)} hrs · ${money(hours * q.settings.rate)}`);
+    // The offer, on an ink panel.
+    font(9.6);
+    const offer = doc.splitTextToSize(clean(`Reply to this email for a fixed quote. The work is done in the order above, so the biggest wins come first. Or share this report with your own team: the findings are yours to keep.`), CW - 16) as string[];
+    const oh = 16 + offer.length * 4.4 + 9;
+    ensure(oh + 2);
+    s.y += 3;
+    doc.setFillColor(...INK); doc.roundedRect(M, s.y, CW, oh, 3, 3, 'F');
+    font(16, 'display'); color(WHITE); doc.text('WANT THESE FIXED?', M + 8, s.y + 11);
+    font(9.6); color(LIGHT); doc.text(offer, M + 8, s.y + 18);
+    font(9.2, 'bold'); color(WHITE); doc.text(clean([profile.email, profile.website].filter(Boolean).join('   ·   ')), M + 8, s.y + oh - 5.5);
+    s.y += oh + 2;
+  }
+  P.footer(`Website audit · ${site}`);
+  doc.setProperties({ title: `Website audit ${site} — ${profile.name}`, subject: `Website audit for ${site}`, author: profile.name });
+  return { doc, filename: `website-audit-${slug(site)}.pdf` };
+}
+
 /* ---------- Kick-off pack ---------- */
 
 export async function buildKickoffPdf(q: QuoteState, profile: Profile) {
@@ -773,6 +963,8 @@ export async function buildKickoffPdf(q: QuoteState, profile: Profile) {
       font(9.5, 'bold'); color(INK); doc.text(money((optionTotals(q, o).total * m.percent) / 100), W - M, s.y + 3.5, { align: 'right' });
       s.y += 7;
     });
+    const changes = approvedChanges(q);
+    if (changes.length) paragraph(`Plus ${changes.length === 1 ? `change order ${changes[0].number}` : `${changes.length} approved change orders`} (${money(changes.reduce((t, c) => t + changeTotals(q, c).total, 0))}), invoiced separately.`, 9, MUTED);
     P.payment();
   }
 
@@ -806,9 +998,11 @@ export async function buildKickoffPdf(q: QuoteState, profile: Profile) {
 
 /* ---------- Handover ---------- */
 
-export async function buildHandoverPdf(q: QuoteState, profile: Profile) {
+/** opts: the retainer made from this project (its plan is described), or your package prices (to suggest one). */
+export async function buildHandoverPdf(q: QuoteState, profile: Profile, opts: { retainer?: QuoteState; prices?: PackagePrices } = {}) {
   const P = makeDoc(profile);
   const { doc, paragraph, heading, bullets } = P;
+  const money = (n: number) => clean(formatMoney(n, q.settings.currency));
   const o = billedOption(q);
   const end = warrantyEnd(q);
   P.header('HANDOVER', q.meta.number);
@@ -839,7 +1033,17 @@ export async function buildHandoverPdf(q: QuoteState, profile: Profile) {
   if (q.delivery.notes.trim()) { heading('Notes'); paragraph(q.delivery.notes.trim(), 9.5, INK); }
 
   heading('Ongoing support');
-  paragraph('If you’d like help after the bug-fix period, for updates, new pages or improvements, a monthly support retainer is available. Just reply to ask.', 9.5, INK);
+  const R = opts.retainer;
+  if (R?.retainer) {
+    const plan = R.retainer.pkg === 'custom' ? 'monthly support' : `${packageOf(R.retainer.pkg).name} support plan`;
+    paragraph(R.status === 'accepted'
+      ? `Your ${plan} (quotation ${R.meta.number}) starts on ${niceDate(R.retainer.start, 'long')}: ${hoursText(retainerPlan(R).hours)} hours a month for updates, fixes and improvements. Send requests any time.`
+      : `The quotation for ongoing support (${R.meta.number}) covers a ${plan} with ${hoursText(retainerPlan(R).hours)} hours a month, starting ${niceDate(R.retainer.start, 'long')}. Reply to start it.`, 9.5, INK);
+  } else if (opts.prices) {
+    paragraph(`For help after the bug-fix period (updates, new pages, improvements), monthly support plans start at ${money(opts.prices.basic)} for 20 hours a month. Medium, with 40 hours for ${money(opts.prices.medium)} a month, is the most popular. Just reply and I’ll send the details.`, 9.5, INK);
+  } else {
+    paragraph('If you’d like help after the bug-fix period, for updates, new pages or improvements, a monthly support retainer is available. Just reply to ask.', 9.5, INK);
+  }
   paragraph(`Thank you for working with ${profile.name}.`, 10, INK);
   P.footer(`Handover ${q.meta.number}`);
   doc.setProperties({ title: `Handover ${q.meta.number} — ${profile.name}`, subject: q.project.title || 'Handover', author: profile.name });
