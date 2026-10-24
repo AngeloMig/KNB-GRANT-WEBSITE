@@ -119,6 +119,9 @@ export interface Delivery {
   /** Accounts and access handed over, one per line (never passwords). */
   access: string;
   notes: string;
+  /** Asking the client for a testimonial after launch. */
+  testimonial: 'none' | 'asked' | 'received' | 'approved';
+  testimonialAsked: string;
 }
 
 export type RolloverMode = 'none' | 'next' | 'bank';
@@ -376,7 +379,7 @@ export interface QuoteState {
 }
 
 /* ---------- Storage ---------- */
-const KEYS = { packageSettings: 'package-settings-v1', quotes: 'quotes-v2', current: 'quote-current-v2', settings: 'quote-settings-v1', profile: 'quote-profile-v1', library: 'quote-library-v1', invoiceNo: 'invoice-counter-v1', receiptNo: 'receipt-counter-v1', oldDraft: 'quote-draft-v1' };
+const KEYS = { lastBackup: 'quotes-last-backup-v1', capacity: 'capacity-hours-v1', packageSettings: 'package-settings-v1', quotes: 'quotes-v2', current: 'quote-current-v2', settings: 'quote-settings-v1', profile: 'quote-profile-v1', library: 'quote-library-v1', invoiceNo: 'invoice-counter-v1', receiptNo: 'receipt-counter-v1', oldDraft: 'quote-draft-v1' };
 export const store = {
   get<T>(key: string): T | null { try { const raw = localStorage.getItem(key); return raw ? (JSON.parse(raw) as T) : null; } catch { return null; } },
   set(key: string, value: unknown) { try { localStorage.setItem(key, JSON.stringify(value)); return true; } catch { return false; } },
@@ -413,7 +416,7 @@ const DEFAULT_SCHEDULE: Milestone[] = [
   { label: 'Designs or staging site approved', percent: 25, when: 'build' },
   { label: 'Launch', percent: 25, when: 'launch' },
 ];
-const DEFAULT_DELIVERY = (): Delivery => ({ kickoff: nextMonday(addDays(today(), 7)), channel: 'Email', updates: 'A short progress update every Friday', launchedOn: '', warrantyDays: 30, liveUrl: '', adminUrl: '', links: '', access: '', notes: '' });
+const DEFAULT_DELIVERY = (): Delivery => ({ kickoff: nextMonday(addDays(today(), 7)), channel: 'Email', updates: 'A short progress update every Friday', launchedOn: '', warrantyDays: 30, liveUrl: '', adminUrl: '', links: '', access: '', notes: '', testimonial: 'none', testimonialAsked: '' });
 export const isDefaultSchedule = (s: Milestone[]) => s.length === 3 && s.every((m, i) => m.label === DEFAULT_SCHEDULE[i].label && m.percent === DEFAULT_SCHEDULE[i].percent);
 
 export const newOption = (name: string, team = 1, essentials = false): QuoteOption => ({ id: uid(), name, team, essentials, lines: [], timeline: '', edited: false });
@@ -489,6 +492,12 @@ export const saveQuotes = (quotes: Record<string, QuoteState>) => store.set(KEYS
 export const currentQuoteId = () => store.get<string>(KEYS.current);
 export const setCurrentQuoteId = (id: string) => store.set(KEYS.current, id);
 export const saveSettings = (s: PricingSettings) => store.set(KEYS.settings, s);
+/** When the last backup file was downloaded (ms), or 0. */
+export const lastBackupAt = () => store.get<number>(KEYS.lastBackup) ?? 0;
+export const markBackedUp = () => store.set(KEYS.lastBackup, Date.now());
+/** Billable hours you can realistically do in a month. */
+export const loadCapacity = () => store.get<number>(KEYS.capacity) ?? 130;
+export const saveCapacity = (hours: number) => store.set(KEYS.capacity, hours);
 
 export function nextInvoiceNumber(prefix: string) {
   const year = today().slice(0, 4);

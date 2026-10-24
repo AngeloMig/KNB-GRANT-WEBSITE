@@ -3,7 +3,9 @@ import type { Answers } from './estimator';
 
 const PREFIX = 'estimator:';
 
-export interface Payload { v: 1; ref: string; date: string; answers: Answers }
+/** Contact details the client typed in the estimator (optional). */
+export interface PayloadClient { name: string; email: string; company: string; website: string }
+export interface Payload { v: 1; ref: string; date: string; answers: Answers; client?: PayloadClient }
 
 /** Base64 (UTF-8 safe) so it survives as plain ASCII inside the PDF's Keywords field. */
 export const encodePayload = (payload: Payload) => PREFIX + btoa(String.fromCharCode(...new TextEncoder().encode(JSON.stringify(payload))));

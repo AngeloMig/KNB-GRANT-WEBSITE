@@ -9,6 +9,8 @@ export interface VideoReview {
   captions?: string;
   /** What the client says, shown under the video ("Read transcript"); use it when captions are burned in. */
   transcript?: string;
+  /** A short line from the video, word for word, shown beside it in the carousel. */
+  pullQuote?: string;
   duration: string;
   canvas: string;
   /** Placeholder entries use a generated, clearly labelled "talking" clip instead of a real video. */
@@ -39,6 +41,7 @@ export const videoReviews: VideoReview[] = [
     src: '/videos/carlos-mdo-digital.mp4',
     poster: '/videos/carlos-mdo-digital.jpg',
     duration: '0:55',
+    pullQuote: 'He’s just an absolute weapon when it comes to Shopify.',
     transcript: "Yeah, so I've been working with Grant for quite a while now. It's been, I believe, more than four years across a range of different industries, especially around Shopify development. He's just an absolute weapon when it comes to Shopify, especially with some of the more curly questions or situations. He's always got a solution ready to go. And if he doesn't, he always tests solutions and actually lets you know which one's going to be the best for the situation. So yeah, I've worked with him quite extensively at Rivyl, and I'm also employing him now with my own business, MDO. So yeah, Grant's just been a phenomenal worker. Yeah, absolute legend.",
     canvas: 'lilac',
   },

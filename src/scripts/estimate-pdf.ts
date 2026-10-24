@@ -12,6 +12,10 @@ interface PdfInput {
   email: string;
   /** The client's raw answers, stored in the PDF so the quote page can import them. */
   answers: Answers;
+  /** The estimate's reference (the same one used when the brief is sent). */
+  ref?: string;
+  /** The client's details from the review step, if they typed them. */
+  contact?: { name: string; email: string; company: string; website: string };
 }
 
 const INK: [number, number, number] = [22, 22, 22];
@@ -56,7 +60,8 @@ export async function downloadEstimatePdf(input: PdfInput) {
   const today = new Date();
   const date = today.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
   const localDate = today.toLocaleDateString('en-CA');
-  const ref = `EST-${localDate.replace(/-/g, '')}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+  const ref = input.ref || `EST-${localDate.replace(/-/g, '')}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+  const contact = input.contact && (input.contact.name || input.contact.email) ? input.contact : undefined;
 
   const color = (c: [number, number, number]) => doc.setTextColor(c[0], c[1], c[2]);
   const font = (size: number, style: 'normal' | 'bold' = 'normal') => { doc.setFont('helvetica', style); doc.setFontSize(size); };
@@ -141,9 +146,10 @@ export async function downloadEstimatePdf(input: PdfInput) {
   doc.text(noticeLines, M + 14, y + 13.8);
   y += boxH + 3;
 
-  // 01 Your project
+  // 01 Your project (with the client's details first, when given)
   heading('Your project');
-  for (const [label, value] of input.rows) {
+  const contactRows: [string, string][] = contact ? ([['Name', contact.name], ['Company', contact.company], ['Email', contact.email], ['Website', contact.website]] as [string, string][]).filter(([, v]) => v) : [];
+  for (const [label, value] of [...contactRows, ...input.rows]) {
     font(9.5);
     const lines = doc.splitTextToSize(clean(value), CW - 48) as string[];
     ensure(lines.length * 4 + 3);
@@ -346,6 +352,6 @@ export async function downloadEstimatePdf(input: PdfInput) {
     doc.text(`Page ${i} of ${pages}`, W - M, H - 9, { align: 'right' });
   }
 
-  doc.setProperties({ title: 'Project estimate summary — Grant Dev14', subject: 'Indicative project timeline (not a quotation)', author: 'Grant Dev14', keywords: encodePayload({ v: 1, ref, date: localDate, answers: input.answers }) });
+  doc.setProperties({ title: 'Project estimate summary — Grant Dev14', subject: 'Indicative project timeline (not a quotation)', author: 'Grant Dev14', keywords: encodePayload({ v: 1, ref, date: localDate, answers: input.answers, ...(contact ? { client: contact } : {}) }) });
   doc.save(`grant-dev14-project-estimate-${localDate}.pdf`);
 }

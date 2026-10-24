@@ -1,13 +1,14 @@
 // Quote builder page: dashboard, editor, options, invoices, business profile.
-import { steps, estimate, type Answers } from '../data/estimator';
+import { steps, estimate, BUDGET_RANGES, type Answers } from '../data/estimator';
 import { readPayload } from '../data/payload';
+import { EMAIL_KINDS, buildEmail, commitments, income, monthTasks, type EmailContext, type EmailKind } from '../data/quote-insights';
 import { quoteLines, teamLines, TEAM_LINE_IDS, parseBrief, formatMoney, projectTitle, LINE_PRESETS, phaseTotals, DEFAULT_EXCLUDED, DEFAULT_INCLUDED, DEFAULT_TERMS, type QuoteLine } from '../data/pricing';
 import {
   STATUSES, MILESTONE_WHEN, NEED_DUE, addDays, approvedChanges, balanceDue, billedOption, changeTotals, currentQuoteId, dashboardStats, datedPlan, defaultNeeds, freshQuote,
   imageToDataUrl, invoiceStatus, isDefaultSchedule, loadLibrary, loadProfile, loadQuotes, milestoneDate, needDate, nextChangeNumber, nextMonday, nextReceiptNumber, paidTotal,
   canPhase, dateFit, margin, migrate, newOption, newQuoteNumber, nextInvoiceNumber, niceDate, optionKind, optionPlan, optionTimeline, optionTotals, quoteEmail, saveLibrary,
-  saveProfile, saveQuotes, saveSettings, setCurrentQuoteId, syncInvoice, today, uid, validUntil, warrantyEnd,
-  RETAINER_EXCLUDED, addMonths, RETAINER_INCLUDED, RETAINER_TERMS, PACKAGES, loadPackageSettings, packageIncluded, packagePrice, packageRate, planSavings, savePackageSettings, yearlyPrice, type PackageId, type PackagePrices, type PackageSettings, bankLine, defaultRetainer, isWeekend, packageTexts, packageHours, packageLine, packageOf, hoursText, monthFor, retainerMonths, retainerPlan, retainerTermsText,
+  saveProfile, saveQuotes, saveSettings, setCurrentQuoteId, lastBackupAt, markBackedUp, loadCapacity, saveCapacity, syncInvoice, today, uid, validUntil, warrantyEnd,
+  RETAINER_EXCLUDED, addMonths, RETAINER_INCLUDED, RETAINER_TERMS, PACKAGES, loadPackageSettings, packagePrice, packageRate, planSavings, savePackageSettings, yearlyPrice, type PackageId, type PackagePrices, type PackageSettings, bankLine, defaultRetainer, isWeekend, packageTexts, packageHours, packageLine, packageOf, hoursText, monthFor, retainerMonths, retainerPlan, retainerTermsText,
   type ChangeOrder, type Invoice, type InvoiceLine, type LibraryItem, type MilestoneWhen, type NeedDue, type Profile, type QuoteOption, type QuoteState, type RetainerMonth, type Status, type SupportPackage,
 } from '../data/quote-model';
 
@@ -128,8 +129,37 @@ function setView(next: 'dashboard' | 'editor') {
 document.querySelectorAll<HTMLButtonElement>('[data-view]').forEach((b) => b.addEventListener('click', () => setView(b.dataset.view as 'dashboard' | 'editor')));
 
 /* ---------- Dashboard ---------- */
+/** Launched projects: how long they really took from kick-off, against the estimate. */
+function renderAccuracy(all: QuoteState[]) {
+  const box = $('#q-accuracy');
+  const rows = all.flatMap((q) => {
+    if (q.retainer || q.status !== 'accepted' || !q.delivery.kickoff || !q.delivery.launchedOn) return [];
+    const plan = optionPlan(q.answers, billedOption(q));
+    if (!plan) return [];
+    const weeks = Math.round(((new Date(`${q.delivery.launchedOn}T00:00:00`).getTime() - new Date(`${q.delivery.kickoff}T00:00:00`).getTime()) / (7 * 86400000)) * 10) / 10;
+    if (weeks <= 0) return [];
+    return [{ q, low: plan.low, high: plan.high, weeks, off: weeks > plan.high ? weeks - plan.high : weeks < plan.low ? weeks - plan.low : 0 }];
+  });
+  box.hidden = !rows.length;
+  if (!rows.length) return;
+  const within = rows.filter((x) => x.off === 0).length;
+  const avg = Math.round((rows.reduce((t, x) => t + x.off, 0) / rows.length) * 10) / 10;
+  box.replaceChildren(el('details', { className: 'q-accuracy' },
+    el('summary', {}, el('strong', { textContent: 'Estimate accuracy' }), el('span', { textContent: `${within} of ${rows.length} launched project${rows.length === 1 ? '' : 's'} within the estimate${avg ? ` · on average ${Math.abs(avg)} wk ${avg > 0 ? 'later' : 'sooner'} than the range` : ''}` })),
+    el('p', { className: 'q-help', textContent: 'Real time from kick-off to launch, against the estimator’s range for each project. If projects keep running over, the estimator needs more time on that kind of work.' }),
+    ...rows.map((x) => el('div', { className: 'q-accuracy-row' },
+      el('span', { textContent: x.q.client.company || x.q.client.name || x.q.meta.number }),
+      el('span', { className: 'q-muted', textContent: `Estimated ${x.low}–${x.high} wk` }),
+      el('span', { textContent: `Took ${x.weeks} wk` }),
+      el('span', { className: `q-chip-status is-${x.off === 0 ? 'accepted' : x.off > 0 ? 'declined' : 'sent'}`, textContent: x.off === 0 ? 'Within' : x.off > 0 ? `${Math.round(x.off * 10) / 10} wk over` : `${Math.round(-x.off * 10) / 10} wk early` })))));
+}
+
 function renderDashboard() {
   const all = Object.values(quotes).sort((a, b) => b.savedAt - a.savedAt);
+  renderAccuracy(all);
+  renderBackupNote(all);
+  renderTodo(all);
+  renderBusiness(all);
   const stats = dashboardStats(all);
   const currency = all[0]?.settings.currency ?? state.settings.currency;
   // Three key numbers, then small alerts (each one filters the list).
@@ -230,7 +260,7 @@ function duplicate(q: QuoteState) {
   const copy = migrate(structuredClone(q));
   Object.assign(copy, { id: uid(), savedAt: Date.now(), status: 'draft', statusDates: {}, followUp: '', invoices: [], acceptedOption: '', changes: [] });
   copy.needs = copy.needs.map((n) => ({ ...n, id: uid(), done: false }));
-  copy.delivery = { ...copy.delivery, kickoff: nextMonday(addDays(today(), 7)), launchedOn: '', liveUrl: '', adminUrl: '', links: '', access: '', notes: '' };
+  copy.delivery = { ...copy.delivery, kickoff: nextMonday(addDays(today(), 7)), launchedOn: '', liveUrl: '', adminUrl: '', links: '', access: '', notes: '', testimonial: 'none', testimonialAsked: '' };
   copy.meta = { ...copy.meta, number: newQuoteNumber(), date: today() };
   if (copy.retainer) copy.retainer = { ...copy.retainer, log: [], endedOn: '' };
   quotes[copy.id] = copy;
@@ -658,6 +688,7 @@ function renderSummary() {
       return [['Timeline', `${plan.low}–${plan.high} weeks${o.team > 1 ? ` · ${o.team} devs` : ''}`], ...(dated ? [['Launch', `≈ ${niceDate(dated.launch)}`]] : [])] as [string, string][];
     })(),
     ...clientDateFact(o),
+    ...budgetFact(t.total),
     ...(state.status === 'accepted' && approvedChanges(state).length ? [['With change orders', money(t.total + approvedChanges(state).reduce((s, c) => s + changeTotals(state, c).total, 0))] as [string, string]] : []),
     [state.schedule[0]?.label || 'Deposit', money((t.total * (state.schedule[0]?.percent ?? 0)) / 100)],
     ['Valid until', niceDate(validUntil(state))],
@@ -673,6 +704,19 @@ function renderSummary() {
   renderSchedule(false);
   renderProgress();
   renderTeam();
+}
+
+/** "Client budget: $2,000–$5,000 · above" for the summary, when they picked a budget in the estimator. */
+function budgetFact(total: number): [string, string][] {
+  const id = String(state.answers.budget ?? '');
+  const range = BUDGET_RANGES[id];
+  const label = steps.find((x) => x.id === 'budget')?.options?.find((x) => x.id === id)?.label;
+  if (!label) return [];
+  // Budgets are in US dollars, so only compare quotes in USD.
+  if (!range || state.settings.currency !== 'USD') return [['Client budget', label]];
+  const [low, high] = range;
+  const verdict = total > high ? `${money(total - high)} above` : total < low ? 'below their range' : 'fits';
+  return [['Client budget', `${label} · ${verdict}`]];
 }
 
 /** "Client wants: Within a month · fits" for the summary, when they picked a date. */
@@ -829,6 +873,7 @@ function renderInvoices() {
       el('div', { className: 'q-invoice' },
         el('div', {}, el('strong', { textContent: inv.number }), el('span', { textContent: `${inv.milestone}${inv.changeId || inv.lines ? '' : ` · ${inv.percent}%`}${inv.payments.length ? ` · paid ${money(paidTotal(inv), inv.currency)}` : ''}` })),
         el('strong', { className: 'q-amount', textContent: money(inv.amount, inv.currency) }), chip, view, pdf, pay,
+        Object.assign(el('button', { type: 'button', className: 'q-btn q-ghost q-small', textContent: 'Email' }), { onclick: () => openEmail(state, st !== 'paid' && inv.due < now ? 'reminder' : 'invoice', { invoice: inv }) }),
         iconButton('×', `Delete ${inv.number}`, () => deleteWithUndo({
           title: `Delete invoice ${inv.number}?`,
           text: `${inv.milestone} · ${money(inv.amount, inv.currency)}.${inv.payments.length ? ' This also deletes:' : ' If you already sent it to the client, keep it and mark it paid or adjust it instead.'}`,
@@ -1520,7 +1565,7 @@ function renderMonths(months: RetainerMonth[]) {
       view.title = 'View the usage report';
       view.addEventListener('click', () => showPdf(view, async (mod) => mod.buildUsageReportPdf(state, m.start, profile)));
       const pdf = iconButton('↓', `Download the usage report for ${m.label}`, () => savePdf(pdf, async (mod) => mod.buildUsageReportPdf(state, m.start, profile)));
-      tools.push(view, pdf);
+      tools.push(view, pdf, Object.assign(el('button', { type: 'button', className: 'q-btn q-ghost q-small', textContent: 'Email' }), { onclick: () => openEmail(state, 'report', { month: m }) }));
     }
     const row = el('div', { className: `q-ret-month${m.start === logMonth ? ' is-current' : ''}` },
       el('div', { className: 'q-ret-month-main' }, el('strong', { textContent: m.label }), el('span', { textContent: usage })),
@@ -1644,20 +1689,52 @@ async function importFile(file: File) {
   const payload = readPayload(await file.arrayBuffer());
   if (!payload) { status('This PDF has no estimator data (it may be older than this tool). Paste the brief from the client’s email instead.', true); return; }
   applyAnswers(payload.answers, payload.ref);
+  // Details the client typed in the estimator, if any.
+  const c = payload.client;
+  if (c && (c.name || c.email)) {
+    state.client = { name: c.name || state.client.name, company: c.company || state.client.company, email: c.email || state.client.email, website: c.website || state.client.website };
+    fillBound();
+    renderSummary();
+    save();
+  }
   const count = Object.values(payload.answers).filter((v) => v !== undefined && v !== '' && !(Array.isArray(v) && !v.length)).length;
-  status(`Imported ${payload.ref} (${niceDate(payload.date, 'long')}): ${count} answers. Add the client’s details next.`);
+  status(`Imported ${payload.ref} (${niceDate(payload.date, 'long')}): ${count} answers${c && (c.name || c.email) ? ` and ${c.name || c.email}’s details` : '. Add the client’s details next'}.`);
 }
 $<HTMLInputElement>('#q-file').addEventListener('change', (e) => { const input = e.target as HTMLInputElement; const file = input.files?.[0]; if (file) importFile(file); input.value = ''; });
 const drop = $('#q-drop');
 drop.addEventListener('dragover', (e) => { e.preventDefault(); drop.classList.add('is-over'); });
 drop.addEventListener('dragleave', () => drop.classList.remove('is-over'));
 drop.addEventListener('drop', (e) => { e.preventDefault(); drop.classList.remove('is-over'); const file = e.dataTransfer?.files[0]; if (file) importFile(file); });
+/**
+ * Client details in a pasted brief: the "From: name · company · email · website" line of the estimator's brief,
+ * or the "name / email / company / website" fields of the emailed form.
+ */
+function briefClient(text: string) {
+  const field = (label: string) => text.match(new RegExp(`^[ \\t]*${label}[ \\t]*[:\\t][ \\t]*(.+)$`, 'im'))?.[1]?.trim().replace(/^—$/, '') ?? '';
+  const client = { name: field('name'), email: field('email'), company: field('company'), website: field('website') };
+  const from = field('From');
+  if (from) {
+    const parts = from.split('·').map((p) => p.trim()).filter(Boolean);
+    const email = parts.find((p) => p.includes('@')) ?? '';
+    const website = parts.find((p) => !p.includes('@') && /\.[a-z]{2,}/i.test(p) && p !== parts[0]) ?? '';
+    const company = parts.slice(1).find((p) => p !== email && p !== website) ?? '';
+    Object.assign(client, { name: client.name || parts[0] || '', email: client.email || email, company: client.company || company, website: client.website || website });
+  }
+  return client;
+}
 $('#q-read').addEventListener('click', () => {
   const text = $<HTMLTextAreaElement>('#q-brief').value;
   const answers = parseBrief(text);
   if (!answers.type) { status('Couldn’t find the project details. Paste the lines that look like “Platform: Shopify”.', true); return; }
   applyAnswers(answers, text.match(/EST-\d{8}-[A-Z0-9]+/)?.[0] ?? '');
-  status(`Read the brief: ${Object.keys(answers).length} answers. Add the client’s details next.`);
+  const c = briefClient(text);
+  if (c.name || c.email) {
+    state.client = { name: c.name || state.client.name, company: c.company || state.client.company, email: c.email || state.client.email, website: c.website || state.client.website };
+    fillBound();
+    renderSummary();
+    save();
+  }
+  status(`Read the brief: ${Object.keys(answers).length} answers${c.name || c.email ? ` and ${c.name || c.email}’s details` : '. Add the client’s details next'}.`);
 });
 
 /* ---------- PDFs ---------- */
@@ -1778,28 +1855,185 @@ profileDialog.addEventListener('close', () => {
 });
 
 /* ---------- Backup & restore ---------- */
-$('#q-export').addEventListener('click', () => {
+function backup() {
   const blob = new Blob([JSON.stringify({ v: 3, exported: new Date().toISOString(), profile, library, quotes }, null, 2)], { type: 'application/json' });
-  const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: `quotes-backup-${today()}.json` });
+  const time = new Date().toTimeString().slice(0, 5).replace(':', '');
+  const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: `quotes-backup-${today()}-${time}.json` });
   a.click();
   URL.revokeObjectURL(a.href);
-});
+  markBackedUp();
+  toast('Backup downloaded. Keep it somewhere safe, like iCloud, Drive or Dropbox.');
+  if (view === 'dashboard') renderDashboard();
+}
+$('#q-export').addEventListener('click', backup);
 $<HTMLInputElement>('#q-restore').addEventListener('change', async (e) => {
   const input = e.target as HTMLInputElement;
   const file = input.files?.[0];
   input.value = '';
   if (!file) return;
+  let data: any;
+  let incoming: QuoteState[];
   try {
-    const data = JSON.parse(await file.text());
-    const incoming = Object.values<unknown>(data?.quotes ?? {}).map(migrate);
+    data = JSON.parse(await file.text());
+    incoming = Object.values<unknown>(data?.quotes ?? {}).map(migrate);
     if (!incoming.length) throw new Error('empty');
-    for (const q of incoming) quotes[q.id] = q;
+  } catch { toast('That file isn’t a quotes backup.', true); return; }
+  // Check what the backup holds first, and never replace a quote that's newer in this browser.
+  const added = incoming.filter((q) => !quotes[q.id]);
+  const newer = incoming.filter((q) => quotes[q.id] && q.savedAt > quotes[q.id].savedAt);
+  const kept = incoming.length - added.length - newer.length;
+  const invoiceCount = incoming.reduce((t, q) => t + q.invoices.length, 0);
+  const ok = await confirmDialog({
+    title: 'Restore this backup?',
+    text: `Backup from ${data.exported ? new Date(data.exported).toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'an unknown date'}: ${incoming.length} quote${incoming.length === 1 ? '' : 's'} and ${invoiceCount} invoice${invoiceCount === 1 ? '' : 's'}.`,
+    list: [`${added.length} new quote${added.length === 1 ? '' : 's'} will be added`, `${newer.length} will be updated (the backup’s version is newer)`, `${kept} kept as they are (this browser’s version is the same or newer)`],
+    confirm: 'Restore', danger: false,
+  });
+  if (!ok) return;
+  try {
+    for (const q of [...added, ...newer]) quotes[q.id] = q;
     saveQuotes(quotes);
     if (data.library?.length) { library = [...library, ...data.library.filter((i: LibraryItem) => !library.some((x) => x.title === i.title))]; saveLibrary(library); }
     if (data.profile && !profile.payment && !profile.logo) { profile = { ...profile, ...data.profile }; saveProfile(profile); }
     renderDashboard();
-    toast(`Restored ${incoming.length} quote${incoming.length > 1 ? 's' : ''}`);
-  } catch { toast('That file isn’t a quotes backup.', true); }
+    toast(`Restored: ${added.length} added, ${newer.length} updated`);
+  } catch { toast('Couldn’t restore that backup.', true); }
+});
+
+/* ---------- Backup reminder ---------- */
+function renderBackupNote(all: QuoteState[]) {
+  const box = $('#q-backup');
+  const last = lastBackupAt();
+  const daysSince = last ? Math.floor((Date.now() - last) / 86400000) : -1;
+  $('.q-dash-note').textContent = last ? `Last backup ${daysSince === 0 ? 'today' : `${daysSince} day${daysSince === 1 ? '' : 's'} ago`}. Quotes are saved in this browser only.` : 'Quotes are saved in this browser only. Back up now and then.';
+  const due = all.length > 0 && (daysSince < 0 || daysSince >= 7);
+  box.hidden = !due;
+  if (!due) return;
+  const button = el('button', { type: 'button', className: 'q-btn q-small', textContent: 'Back up now' });
+  button.addEventListener('click', backup);
+  box.replaceChildren(
+    el('span', {}, el('strong', { textContent: daysSince < 0 ? 'You haven’t backed up yet.' : `Last backup ${daysSince} days ago.` }), ` Everything (${all.length} quote${all.length === 1 ? '' : 's'}, invoices and hours) lives only in this browser.`),
+    button);
+}
+
+/* ---------- This month ---------- */
+function renderTodo(all: QuoteState[]) {
+  const tasks = monthTasks(all);
+  $('#q-todo').hidden = !tasks.length;
+  $('#q-todo-title').textContent = `This month · ${tasks.length}`;
+  $('#q-todo-list').replaceChildren(...tasks.map((t) => {
+    const q = quotes[t.quoteId];
+    const open = el('button', { type: 'button', className: 'q-btn q-ghost q-small', textContent: 'Open' });
+    open.addEventListener('click', () => openQuote(q));
+    const actions: HTMLElement[] = [open];
+    if (t.email) {
+      const ctx: EmailContext = { invoice: q.invoices.find((i) => i.id === t.invoiceId), month: t.monthStart ? retainerMonths(q, addDays(today(), 7)).find((m) => m.start === t.monthStart) : undefined };
+      const email = el('button', { type: 'button', className: 'q-btn q-small', textContent: 'Email' });
+      email.addEventListener('click', () => openEmail(q, t.email!, ctx));
+      actions.push(email);
+    }
+    return el('div', { className: `q-task is-${t.tone}` },
+      el('i', { className: 'q-task-dot' }),
+      el('div', { className: 'q-task-main' }, el('strong', { textContent: t.title }), el('span', { textContent: `${t.client} · ${t.detail}` })),
+      el('div', { className: 'q-task-actions' }, ...actions));
+  }));
+}
+
+/* ---------- Capacity and income ---------- */
+function renderBusiness(all: QuoteState[]) {
+  const box = $('#q-business');
+  if (!all.length) { box.replaceChildren(); return; }
+  const currency = all[0]?.settings.currency ?? state.settings.currency;
+  // Capacity: hours committed this month against what you can do.
+  const cap = loadCapacity();
+  const items = commitments(all);
+  const used = items.reduce((t, x) => t + x.hours, 0);
+  const pct = cap ? used / cap : 0;
+  const tone = pct > 1 ? 'is-over' : pct >= 0.85 ? 'is-warn' : '';
+  const capInput = el('input', { type: 'number', min: '10', step: '5', value: String(cap), ariaLabel: 'Hours you can do a month' });
+  capInput.addEventListener('change', () => { saveCapacity(Math.max(10, Number(capInput.value) || 130)); renderDashboard(); });
+  const meter = el('span', { className: `q-meter ${tone}` }, el('i'));
+  (meter.firstChild as HTMLElement).style.width = `${Math.min(100, Math.round(pct * 100))}%`;
+  const free = Math.round(cap - used);
+  const capCard = el('div', { className: 'q-biz-card' },
+    el('div', { className: 'q-biz-head' }, el('span', { className: 'q-biz-label', textContent: 'Capacity this month' }), el('label', { className: 'q-biz-cap' }, capInput, 'hrs a month')),
+    el('strong', { className: 'q-biz-figure', textContent: `${Math.round(used)} of ${cap} hrs` }),
+    meter,
+    el('p', { className: `q-biz-note ${tone}`, textContent: pct > 1 ? `Over capacity by ${-free} hrs: you’ll need help (or later start dates) before taking on more.` : pct >= 0.85 ? `Nearly full: ${free} hrs free. A Large or VIP plan would need a second developer.` : free >= 40 ? `${free} hrs free: room for about ${Math.floor(free / 40)} more Medium plan${Math.floor(free / 40) === 1 ? '' : 's'}.` : `${free} hrs free: enough for a Basic plan, not a Medium one.` }),
+    el('ul', { className: 'q-biz-list' }, ...items.slice(0, 6).map((x) => el('li', {}, el('span', { textContent: x.client }), el('span', { className: 'q-muted', textContent: `${x.kind} · ${x.hours} hrs` })))));
+  // Income: recurring, paid this year, what you keep, and the last 12 months.
+  const inc = income(all);
+  const max = Math.max(1, ...inc.months.map((m) => Math.max(m.invoiced, m.paid)));
+  const chart = el('div', { className: 'q-chart', role: 'img', ariaLabel: 'Invoiced and paid over the last 12 months' },
+    ...inc.months.map((m) => {
+      const a = el('i', { className: 'is-invoiced' });
+      const b = el('i', { className: 'is-paid' });
+      a.style.height = `${(m.invoiced / max) * 100}%`;
+      b.style.height = `${(m.paid / max) * 100}%`;
+      return el('div', { className: 'q-chart-col', title: `${m.label}: invoiced ${money(m.invoiced, currency)}, paid ${money(m.paid, currency)}` }, el('div', { className: 'q-chart-bars' }, a, b), el('span', { textContent: m.label }));
+    }));
+  const figure = (value: string, label: string) => el('div', {}, el('strong', { className: 'q-biz-figure', textContent: value }), el('span', { textContent: label }));
+  const incCard = el('div', { className: 'q-biz-card' },
+    el('div', { className: 'q-biz-head' }, el('span', { className: 'q-biz-label', textContent: 'Income' }), el('span', { className: 'q-chart-key' }, el('i', { className: 'is-invoiced' }), 'Invoiced', el('i', { className: 'is-paid' }), 'Paid')),
+    el('div', { className: 'q-biz-figures' }, figure(money(inc.recurring, currency), 'Recurring each month'), figure(money(inc.paidYear, currency), `Paid in ${today().slice(0, 4)}`), figure(money(inc.keptYear, currency), 'Yours after helpers (est.)')),
+    chart);
+  box.replaceChildren(capCard, incCard);
+}
+
+/* ---------- Emails ---------- */
+const emailDialog = $<HTMLDialogElement>('#q-emails');
+let emailFor: { q: QuoteState; ctx: EmailContext } | null = null;
+/** Opens the email window for a quote, ready to copy or open in the mail app. */
+function openEmail(q: QuoteState, kind: EmailKind, ctx: EmailContext = {}) {
+  emailFor = { q, ctx };
+  const retainer = Boolean(q.retainer && q.monthly);
+  const sel = $<HTMLSelectElement>('#q-email-kind');
+  sel.replaceChildren(...EMAIL_KINDS.filter((k) => k.for === 'any' || (k.for === 'retainer') === retainer).map((k) => new Option(k.label, k.id)));
+  sel.value = kind;
+  fillEmail();
+  $('#q-emails-title').textContent = `Email · ${q.client.company || q.client.name || q.meta.number}`;
+  emailDialog.showModal();
+}
+function fillEmail() {
+  if (!emailFor) return;
+  const kind = $<HTMLSelectElement>('#q-email-kind').value as EmailKind;
+  const e = buildEmail(emailFor.q, kind, profile, { ...emailFor.ctx, prices: pkgSettings.prices });
+  $<HTMLInputElement>('#q-email-to').value = emailFor.q.client.email || '(no email saved for this client)';
+  $<HTMLInputElement>('#q-email-subject').value = e.subject;
+  $<HTMLTextAreaElement>('#q-email-text').value = e.body;
+  $('#q-email-note').textContent = ['invoice', 'reminder', 'report'].includes(kind) ? 'Attach the PDF before sending.' : kind === 'testimonial' ? 'Copying or opening it marks the testimonial as asked, with today’s date.' : '';
+  syncEmailLink();
+}
+function syncEmailLink() {
+  if (!emailFor) return;
+  const subject = $<HTMLInputElement>('#q-email-subject').value;
+  const body = $<HTMLTextAreaElement>('#q-email-text').value;
+  $<HTMLAnchorElement>('#q-email-open').href = `mailto:${encodeURIComponent(emailFor.q.client.email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+}
+/** After an email is copied or opened: a testimonial request marks the quote as asked. */
+function emailSent() {
+  if (!emailFor) return;
+  const kind = $<HTMLSelectElement>('#q-email-kind').value as EmailKind;
+  const q = emailFor.q;
+  if (kind === 'testimonial' && q.delivery.testimonial === 'none') {
+    q.delivery.testimonial = 'asked';
+    q.delivery.testimonialAsked = today();
+    if (q === state) { fillBound(); save(); } else { quotes[q.id] = q; saveQuotes(quotes); }
+    if (view === 'dashboard') renderDashboard();
+  }
+}
+$('#q-email-kind').addEventListener('change', fillEmail);
+['#q-email-subject', '#q-email-text'].forEach((sel) => $(sel).addEventListener('input', syncEmailLink));
+$('#q-email-copy').addEventListener('click', async () => {
+  const text = `Subject: ${$<HTMLInputElement>('#q-email-subject').value}\n\n${$<HTMLTextAreaElement>('#q-email-text').value}`;
+  try { await navigator.clipboard.writeText(text); toast('Email copied'); emailSent(); } catch { toast('Couldn’t copy. Use “Open in email app”.', true); }
+});
+$('#q-email-open').addEventListener('click', () => emailSent());
+document.querySelectorAll<HTMLButtonElement>('[data-email-kind]').forEach((b) => b.addEventListener('click', () => openEmail(state, b.dataset.emailKind as EmailKind)));
+$('#q-more-emails').addEventListener('click', () => {
+  const retainer = Boolean(state.retainer && state.monthly);
+  const unpaid = state.invoices.find((i) => balanceDue(i) > 0);
+  openEmail(state, unpaid ? (unpaid.due < today() ? 'reminder' : 'invoice') : retainer ? 'report' : state.status === 'sent' ? 'followup' : state.delivery.launchedOn ? 'testimonial' : 'followup', unpaid ? { invoice: unpaid } : {});
 });
 
 /* ---------- Render ---------- */

@@ -67,6 +67,14 @@ const person = { '@context': 'https://schema.org', '@type': 'Person', name: prof
   const root = document.documentElement;
   root.dataset.motionReady = 'true';
 
+  // Headings marked data-lines reveal one line at a time (lines are split at <br>).
+  if (root.classList.contains('motion')) {
+    document.querySelectorAll<HTMLElement>('[data-lines]').forEach((el) => {
+      const parts = el.innerHTML.split(/<br\s*\/?>/i);
+      el.innerHTML = parts.map((part, i) => `<span class="line" style="--i:${i}"><span>${part.trim()}</span></span>`).join('');
+    });
+  }
+
   // Scroll reveals: [data-reveal] elements rise in once as they enter the viewport.
   const startReveals = () => {
     if (!root.classList.contains('motion')) return;

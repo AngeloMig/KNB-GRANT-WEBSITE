@@ -387,8 +387,8 @@ export async function buildQuotePdf(q: QuoteState, profile: Profile, opts: { hid
   }
 
   // Project details
-  // Retainers show their hours in pricing and terms, so skip the estimator's "Support" answer.
-  const rows = scopeRows(q.answers).filter(([name]) => name !== 'Notes' && name !== 'Hitting your date' && !(r && name === 'Support'));
+  // Retainers show their hours in pricing and terms, so skip the estimator's "Support" answer. The client's budget stays private.
+  const rows = scopeRows(q.answers).filter(([name]) => name !== 'Notes' && name !== 'Hitting your date' && !(r && name === 'Support') && name !== 'Budget');
   if (rows.length) {
     heading('Project details', 30);
     for (const [name, value] of rows) {

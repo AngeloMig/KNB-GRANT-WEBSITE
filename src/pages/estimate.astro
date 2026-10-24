@@ -4,14 +4,20 @@ import SectionTitle from '../components/SectionTitle.astro';
 import Arrow from '../components/Arrow.astro';
 import { profile } from '../data/profile';
 import { steps } from '../data/estimator';
+import { PACKAGES, packageOf } from '../data/quote-model';
+const plans = PACKAGES.filter((p) => p.id !== 'custom');
+// Where briefs are sent: Grant, with a copy to the second inbox.
+const briefCc = 'angelobmig@gmail.com';
 ---
 <BaseLayout title="Project Estimator — Plan Your Website | Grant Dev14" description="Plan a Shopify, Webflow or WordPress project in about a minute. Answer a few questions to get a realistic timeline, what drives it, and a ready-to-send brief.">
   <div class="wrap estimate-page">
     <SectionTitle title="ESTIMATE" detail="Plan your project in about a minute" as="h1" />
     <section class="intro-split estimate-intro">
-      <div class="intro-aside is-in" data-reveal="load" style="--reveal-index:0"><span class="tiny-heading">Project estimator</span><p>A realistic guide, not a quote.<br />Grant confirms after a quick chat.</p></div>
-      <div><p class="lead is-in" data-reveal="load" style="--reveal-index:1">What are you building?</p><p class="intro-support is-in" data-reveal="load" style="--reveal-index:2">Answer a few quick questions. The timeline updates as you go, shows what’s driving it, and turns into a brief you can send in one click.</p></div>
+      <div class="intro-aside is-in" data-reveal="load" style="--reveal-index:0"><span class="tiny-heading">Project estimator</span><p>A realistic guide, not a quote.<br />Grant confirms after a quick chat.</p><p class="estimate-promise">About 2 minutes · No sign-up</p></div>
+      <div><p class="lead is-in" data-reveal="load" style="--reveal-index:1">What are you building?</p><p class="intro-support is-in" data-reveal="load" style="--reveal-index:2">Answer 8–10 quick questions. The timeline updates as you go, shows what’s driving it, and turns into a brief you can send to Grant in one click. Your answers are saved on this device, so you can come back to them.</p></div>
     </section>
+
+    <p class="wiz-restored" hidden><span></span> <button type="button" class="wiz-reset">Start over</button></p>
 
     <noscript><p class="wiz-noscript">The estimator needs JavaScript. You can still <a href={`mailto:${profile.email}`}>email Grant about your project</a>.</p></noscript>
 
@@ -42,6 +48,21 @@ import { steps } from '../data/estimator';
                 </div>
               )}
               {step.noteFor && <div class="wiz-note" aria-live="polite" hidden><strong></strong><p></p></div>}
+              {step.id === 'hours' && (
+                <details class="wiz-plans">
+                  <summary>Compare what each plan includes</summary>
+                  <div class="wiz-plans-grid">
+                    {plans.map((plan) => (
+                      <div class="wiz-plan">
+                        <strong>{plan.name}{plan.popular && <span> · Most popular</span>}</strong>
+                        <small>{plan.daily ? `${plan.daily} hours a day, Mon–Fri` : `${plan.hours} hours a month`}</small>
+                        {plan.builds && <p>Everything in {packageOf(plan.builds).name}, plus:</p>}
+                        <ul>{plan.can.map((item) => <li>{item}</li>)}</ul>
+                      </div>
+                    ))}
+                  </div>
+                </details>
+              )}
               {step.kind === 'range' && step.range && (
                 <div class="wiz-range">
                   <p class="wiz-range-readout"><output class="wiz-range-value" for={`range-${step.id}`}>{step.range.initial}</output><span>{step.range.unit}</span></p>
@@ -57,6 +78,33 @@ import { steps } from '../data/estimator';
             <h2 class="wiz-question" tabindex="-1">Here’s your project at a glance.</h2>
             <p class="wiz-help">Check it over, change anything, then send it to Grant.</p>
             <dl class="wiz-review-list"></dl>
+            <div class="wiz-contact" data-email={profile.email} data-cc={briefCc}>
+              <p class="wiz-contact-title">Send it to Grant</p>
+              <div class="wiz-contact-grid">
+                <label><span>Your name <i aria-hidden="true">*</i></span><input name="c-name" autocomplete="name" required /></label>
+                <label><span>Email <i aria-hidden="true">*</i></span><input type="email" name="c-email" autocomplete="email" required /></label>
+                <label>Company<input name="c-company" autocomplete="organization" /></label>
+                <label>Current website<input name="c-website" autocomplete="url" placeholder="example.com" /></label>
+              </div>
+              <input type="text" name="_honey" class="wiz-honey" tabindex="-1" autocomplete="off" aria-hidden="true" />
+              <button type="button" class="wiz-submit">Send to Grant <Arrow diagonal /></button>
+              <p class="wiz-send-status" role="status" aria-live="polite"></p>
+              <p class="wiz-send-alt">Your details go only to Grant. Prefer something else? <a class="wiz-send" href={`mailto:${profile.email}`} data-email={profile.email}>Email it instead</a> · <button type="button" class="wiz-copy">Copy brief</button> · <button type="button" class="wiz-share">Copy share link</button></p>
+            </div>
+            <div class="wiz-after">
+              <div class="wiz-next-steps">
+                <h3>What happens next</h3>
+                <ol>
+                  <li><strong>Grant reads your brief</strong><span>And replies within 1 business day.</span></li>
+                  <li><strong>A short call</strong><span>About 15 minutes to confirm goals and details.</span></li>
+                  <li><strong>A fixed-price proposal</strong><span>Scope, timeline and price, usually within 48 hours.</span></li>
+                </ol>
+              </div>
+              <figure class="wiz-quote">
+                <blockquote>“He’s just an absolute weapon when it comes to Shopify.”</blockquote>
+                <figcaption>Carlos · CEO & Owner, MDO Digital</figcaption>
+              </figure>
+            </div>
           </section>
         </form>
 
@@ -83,9 +131,8 @@ import { steps } from '../data/estimator';
         </div>
         <ul class="wiz-notes"></ul>
         <div class="wiz-actions">
-          <a class="wiz-send" href={`mailto:${profile.email}`} data-email={profile.email}>Email this brief to Grant <Arrow diagonal /></a>
+          <button class="wiz-to-send" type="button">Send this brief to Grant <Arrow diagonal /></button>
           <button class="wiz-pdf" type="button" disabled>Download summary (PDF)</button>
-          <button class="wiz-copy" type="button">Copy brief</button>
         </div>
         <p class="wiz-disclaimer">Calendar time for one developer, assuming feedback within a couple of days.</p>
       </aside>
@@ -117,17 +164,29 @@ import { steps } from '../data/estimator';
     const legend = summary.querySelector('.wiz-legend')!;
     const driversBox = summary.querySelector<HTMLElement>('.wiz-drivers')!;
     const notesList = summary.querySelector('.wiz-notes')!;
-    const send = summary.querySelector<HTMLAnchorElement>('.wiz-send')!;
-    const copy = summary.querySelector<HTMLButtonElement>('.wiz-copy')!;
+    const send = wizard.querySelector<HTMLAnchorElement>('.wiz-send')!;
+    const copy = wizard.querySelector<HTMLButtonElement>('.wiz-copy')!;
+    const share = wizard.querySelector<HTMLButtonElement>('.wiz-share')!;
+    const toSend = summary.querySelector<HTMLButtonElement>('.wiz-to-send')!;
+    const contactBox = wizard.querySelector<HTMLElement>('.wiz-contact')!;
+    const submit = contactBox.querySelector<HTMLButtonElement>('.wiz-submit')!;
+    const sendStatus = contactBox.querySelector<HTMLElement>('.wiz-send-status')!;
+    const field = (name: string) => contactBox.querySelector<HTMLInputElement>(`[name="${name}"]`)!;
+    const restored = document.querySelector<HTMLElement>('.wiz-restored')!;
     const pdfButton = summary.querySelector<HTMLButtonElement>('.wiz-pdf')!;
     const monthsLine = summary.querySelector('.wiz-months')!;
     const barValue = document.querySelector('.bar-value');
     const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-    const answers: Answers = {};
+    let answers: Answers = {};
     let at = 'type';
+    // Contact details (review step), and one reference per brief.
+    let contact = { name: '', email: '', company: '', website: '' };
+    const ref = `EST-${new Date().toLocaleDateString('en-CA').replace(/-/g, '')}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+    let sent = false;
     let brief = '';
     let shown = { low: 0, high: 0 };
+    let estimateSummary = '';
     let lastResult: Estimate | null = null;
     // The first step is server-rendered visible, so it doesn't animate in or shift the layout on load.
     let lastShownStep = steps[0].id;
@@ -252,7 +311,9 @@ import { steps } from '../data/estimator';
       const lines = visibleSteps().filter((s) => s.kind !== 'text' && answerText(s.id)).map((s) => `${s.label}: ${answerText(s.id)}`);
       const estimateLine = result.mode === 'weeks' ? `Rough estimate: ${result.low}–${result.high} weeks${result.scenario ? `, ${result.scenario.toLowerCase()}` : ''} (${result.phases.map((p) => `${p.label} ~${p.display}`).join(', ')})${result.baseline ? `\nOne developer, full scope: ${result.baseline.low}–${result.baseline.high} weeks` : ''}` : result.mode === 'monthly' ? `Support plan: ${result.support?.name}${result.support?.daily ? `, ${result.support.daily} hours a day, Monday to Friday` : `, about ${result.hours} hours a month`}` : '';
       const notes = String(live.notes || '');
-      brief = ['Hi Grant,', '', 'I used the estimator on your site. Here’s my project:', '', ...lines, estimateLine, ...(notes ? ['', `Notes: ${notes}`] : []), '', 'Thanks,'].filter((l, i, all) => !(l === '' && all[i - 1] === '')).join('\n');
+      const who = [contact.name, contact.company, contact.email, contact.website].filter(Boolean);
+      brief = ['Hi Grant,', '', 'I used the estimator on your site. Here’s my project:', '', ...lines, estimateLine, ...(notes ? ['', `Notes: ${notes}`] : []), '', `Reference: ${ref}`, ...(who.length ? ['', `From: ${who.join(' · ')}`] : []), '', 'Thanks,'].filter((l, i, all) => !(l === '' && all[i - 1] === '')).join('\n');
+      estimateSummary = estimateLine;
       const subject = `Project brief${answers.platform ? `: ${answerText('platform')}` : ''}${answers.type ? ` – ${answerText('type')}` : ''}`;
       send.href = `mailto:${send.dataset.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(brief)}`;
     };
@@ -313,6 +374,7 @@ import { steps } from '../data/estimator';
       wizard.classList.toggle('is-review', isReview);
       lastShownStep = at;
       renderSummary();
+      saveProgress();
     };
 
     const go = (id: string, direction: number) => {
@@ -374,10 +436,10 @@ import { steps } from '../data/estimator';
       if (target && !target.disabled) go(target.dataset.go!, -1);
     });
 
-    // Keyboard: 1–9 pick an option, Enter continues (not while typing in the notes).
+    // Keyboard: 1–9 pick an option, Enter continues (not while typing in the notes or contact fields).
     document.addEventListener('keydown', (event) => {
       if (event.metaKey || event.ctrlKey || event.altKey) return;
-      const typing = (event.target as HTMLElement).closest('textarea, input[type="range"]');
+      const typing = (event.target as HTMLElement).closest('textarea, input[type="range"], input[type="text"], input[type="email"], input:not([type])');
       if (/^[1-9]$/.test(event.key) && !typing) {
         const options = [...section(at).querySelectorAll<HTMLElement>('.wiz-option')].filter((o) => !o.hidden);
         const input = options[Number(event.key) - 1]?.querySelector('input');
@@ -404,6 +466,8 @@ import { steps } from '../data/estimator';
           notes: String(effective().notes || ''),
           email: send.dataset.email || '',
           answers: effective(),
+          ref,
+          contact,
         });
         pdfButton.textContent = 'Downloaded';
       } catch {
@@ -414,13 +478,135 @@ import { steps } from '../data/estimator';
 
     copy.addEventListener('click', async () => {
       try { await navigator.clipboard.writeText(brief); copy.textContent = 'Brief copied'; }
-      catch { copy.textContent = 'Couldn’t copy, use the email button'; }
+      catch { copy.textContent = 'Couldn’t copy, use the email link'; }
       window.setTimeout(() => { copy.textContent = 'Copy brief'; }, 2200);
     });
+
+    /* ---------- Contact details and sending ---------- */
+    const readContact = () => {
+      contact = { name: field('c-name').value.trim(), email: field('c-email').value.trim(), company: field('c-company').value.trim(), website: field('c-website').value.trim() };
+    };
+    contactBox.addEventListener('input', () => { readContact(); renderSummary(); saveProgress(); sendStatus.textContent = ''; sendStatus.dataset.tone = ''; });
+    // The summary's button takes people to the review step, ready to type their details.
+    toSend.addEventListener('click', () => {
+      if (at !== 'review') { const ids = order(); const missing = ids.slice(0, -1).find((id) => !answered(id)); go(missing ?? 'review', 1); if (missing) return; }
+      window.setTimeout(() => { contactBox.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' }); field(contact.name ? 'c-email' : 'c-name').focus({ preventScroll: true }); }, 60);
+    });
+    submit.addEventListener('click', async () => {
+      readContact();
+      const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contact.email);
+      if (!contact.name || !emailOk) {
+        sendStatus.dataset.tone = 'error';
+        sendStatus.textContent = !contact.name ? 'Please add your name.' : 'Please add a valid email, so Grant can reply.';
+        field(!contact.name ? 'c-name' : 'c-email').focus();
+        return;
+      }
+      if (sent) { sendStatus.dataset.tone = 'ok'; sendStatus.textContent = 'Already sent. Grant will be in touch soon.'; return; }
+      const label = submit.innerHTML;
+      submit.disabled = true;
+      submit.textContent = 'Sending…';
+      sendStatus.textContent = '';
+      try {
+        // FormSubmit forwards the brief to Grant's inbox, with a copy to the second address.
+        const response = await fetch(`https://formsubmit.co/ajax/${contactBox.dataset.email}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+          body: JSON.stringify({
+            _subject: `New project brief ${ref}: ${contact.name}${contact.company ? `, ${contact.company}` : ''}`,
+            _cc: contactBox.dataset.cc,
+            _template: 'box',
+            _captcha: 'false',
+            _honey: field('_honey').value,
+            name: contact.name,
+            email: contact.email,
+            company: contact.company || '—',
+            website: contact.website || '—',
+            reference: ref,
+            estimate: estimateSummary || '—',
+            brief,
+          }),
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok || String(data.success) !== 'true') throw new Error(data.message || 'Not sent');
+        sent = true;
+        sendStatus.dataset.tone = 'ok';
+        sendStatus.textContent = `Sent. Thanks, ${contact.name.split(' ')[0]}! Grant will reply within 1 business day. Your reference is ${ref}.`;
+        submit.textContent = 'Sent ✓';
+        return;
+      } catch {
+        sendStatus.dataset.tone = 'error';
+        sendStatus.textContent = 'That didn’t go through. Please use “Email it instead” below, or copy the brief.';
+      }
+      submit.disabled = false;
+      submit.innerHTML = label;
+    });
+
+    /* ---------- Saved progress and share links ---------- */
+    const STORE = 'estimate-progress-v1';
+    const saveProgress = () => {
+      try { localStorage.setItem(STORE, JSON.stringify({ answers: effective(), at, contact, savedAt: Date.now() })); } catch { /* storage unavailable */ }
+    };
+    /** Puts saved answers back into the form. */
+    const applyAnswers = (saved: Answers) => {
+      for (const s of steps) {
+        const value = saved[s.id];
+        if (value === undefined) continue;
+        const el = section(s.id);
+        if (s.kind === 'single') el.querySelectorAll<HTMLInputElement>('input').forEach((input) => { input.checked = input.value === value; });
+        if (s.kind === 'multi') el.querySelectorAll<HTMLInputElement>('input').forEach((input) => { input.checked = Array.isArray(value) && value.includes(input.value); });
+        if (s.kind === 'range') { const input = el.querySelector<HTMLInputElement>('input')!; input.value = String(value); input.dispatchEvent(new Event('input', { bubbles: true })); }
+        if (s.kind === 'text') el.querySelector('textarea')!.value = String(value);
+        answers[s.id] = value;
+      }
+    };
+    const encodeShare = (data: Answers) => btoa(String.fromCharCode(...new TextEncoder().encode(JSON.stringify(data)))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    const decodeShare = (text: string): Answers | null => {
+      try { return JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(text.replace(/-/g, '+').replace(/_/g, '/')), (c) => c.charCodeAt(0)))); } catch { return null; }
+    };
+    share.addEventListener('click', async () => {
+      // Answers only: contact details never go into the link.
+      const url = `${location.origin}${location.pathname}?brief=${encodeShare(effective())}`;
+      try { await navigator.clipboard.writeText(url); share.textContent = 'Link copied'; }
+      catch { window.prompt('Copy this link:', url); }
+      window.setTimeout(() => { share.textContent = 'Copy share link'; }, 2200);
+    });
+    wizard.ownerDocument.querySelector('.wiz-reset')?.addEventListener('click', () => {
+      try { localStorage.removeItem(STORE); } catch { /* storage unavailable */ }
+      form.querySelectorAll<HTMLInputElement>('input[type="radio"], input[type="checkbox"]').forEach((input) => { input.checked = false; });
+      form.querySelectorAll('textarea').forEach((t) => { t.value = ''; });
+      ['c-name', 'c-email', 'c-company', 'c-website'].forEach((n) => { field(n).value = ''; });
+      answers = {};
+      contact = { name: '', email: '', company: '', website: '' };
+      steps.forEach((s) => { if (s.kind === 'range' && s.range) { const input = section(s.id).querySelector<HTMLInputElement>('input')!; input.value = String(s.range.initial); input.dispatchEvent(new Event('input', { bubbles: true })); } });
+      restored.hidden = true;
+      history.replaceState(null, '', location.pathname);
+      go('type', -1);
+    });
+    /** A shared link wins; otherwise answers saved on this device. */
+    const restore = () => {
+      const shared = new URLSearchParams(location.search).get('brief');
+      const fromLink = shared ? decodeShare(shared) : null;
+      let saved: { answers?: Answers; at?: string; contact?: typeof contact } | null = null;
+      try { saved = JSON.parse(localStorage.getItem(STORE) || 'null'); } catch { saved = null; }
+      const data = fromLink ? { answers: fromLink, at: 'review' } : saved;
+      if (!data?.answers || !Object.keys(data.answers).length) return;
+      applyAnswers(data.answers);
+      if (!fromLink && saved?.contact) {
+        contact = { ...contact, ...saved.contact };
+        field('c-name').value = contact.name; field('c-email').value = contact.email; field('c-company').value = contact.company; field('c-website').value = contact.website;
+      }
+      syncOptions();
+      const ids = order();
+      at = data.at && ids.includes(data.at) ? data.at : ids.find((id) => !answered(id)) ?? 'review';
+      lastShownStep = at;
+      restored.querySelector('span')!.textContent = fromLink ? 'You opened a shared estimate. Change anything you like.' : 'Welcome back: your answers were saved on this device.';
+      restored.hidden = false;
+    };
 
     // Initial range fill + first render.
     form.querySelectorAll<HTMLInputElement>('input[type="range"]').forEach((el) => el.style.setProperty('--fill', `${((Number(el.value) - Number(el.min)) / (Number(el.max) - Number(el.min))) * 100}%`));
     steps.forEach((s) => { if (s.kind === 'range') read(s.id); });
+    restore();
     render(0);
 
     // Phones: a slim bar keeps the estimate in view until the summary is on screen.

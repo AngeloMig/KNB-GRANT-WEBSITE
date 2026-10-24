@@ -260,11 +260,27 @@ export const steps: Step[] = [
     ],
   },
   {
+    id: 'budget', kind: 'single', label: 'Budget', optional: true,
+    question: 'Roughly what budget do you have in mind?',
+    help: 'Optional, and only shared with Grant. It helps suggest the right scope from the start.',
+    when: (a) => type(a) !== 'support',
+    options: [
+      { id: 'under2', label: 'Under $2,000', hint: 'A focused first version' },
+      { id: '2to5', label: '$2,000–$5,000' },
+      { id: '5to10', label: '$5,000–$10,000' },
+      { id: '10plus', label: '$10,000+' },
+      { id: 'unsure', label: 'Not sure yet', hint: 'Grant will suggest options' },
+    ],
+  },
+  {
     id: 'notes', kind: 'text', label: 'Notes', optional: true,
     question: 'Anything else Grant should know?',
-    help: 'Links to your current site, goals, budget range… anything that helps. Optional.',
+    help: 'Goals, links to sites you like, important dates… anything that helps. Optional.',
   },
 ];
+
+/** Budget answers as a range in USD (for the quote builder's budget check). */
+export const BUDGET_RANGES: Record<string, [number, number]> = { under2: [0, 2000], '2to5': [2000, 5000], '5to10': [5000, 10000], '10plus': [10000, Infinity] };
 
 /* ---------- Timing model ---------- */
 
@@ -416,7 +432,7 @@ interface Model extends Range {
 let cacheKey = '';
 let cacheValue: Model | null = null;
 function model(a: Answers): Model | null {
-  const key = JSON.stringify(a, (k, v) => (k === 'speedup' || k === 'notes' ? undefined : v));
+  const key = JSON.stringify(a, (k, v) => (k === 'speedup' || k === 'notes' || k === 'budget' ? undefined : v));
   if (key !== cacheKey) { cacheKey = key; cacheValue = buildModel(a); }
   return cacheValue;
 }

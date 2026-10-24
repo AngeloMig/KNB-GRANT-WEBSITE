@@ -17,14 +17,16 @@ const devClips = [
   { src: talking3, poster: talking3Poster },
 ];
 const initials = (name: string) => name.split(/\s+/).map((part) => part[0]).join('').slice(0, 2).toUpperCase();
+const total = reviews.length + quotes.length;
 ---
-{reviews.length + quotes.length > 0 && (
-  <section class="video-section" aria-labelledby="video-heading">
+{total > 0 && (
+  <section class="video-section" id="reviews" aria-labelledby="video-heading">
     <div class="video-intro" data-reveal>
-      <h2 id="video-heading">Hear it from<br />clients.</h2>
+      <h2 id="video-heading" data-lines>Hear it from<br />clients.</h2>
       <p>In their own words: brands and agencies Grant has worked with.</p>
     </div>
-    <div class="video-grid">
+    <!-- A grid on larger screens; on phones the same cards become a swipeable carousel. -->
+    <div class="video-grid" aria-label="Client testimonials">
       {reviews.map((review, index) => {
         const clip = review.placeholder ? devClips[index % devClips.length] : undefined;
         const src = clip?.src ?? (review.src && withBase(review.src));
@@ -53,11 +55,22 @@ const initials = (name: string) => name.split(/\s+/).map((part) => part[0]).join
         </figure>
       ))}
     </div>
+    {total > 1 && (
+      <div class="video-dots" aria-label="Choose a testimonial">
+        {Array.from({ length: total }, (_, i) => <button type="button" data-index={i} aria-label={`Testimonial ${i + 1} of ${total}`} aria-current={i === 0 ? 'true' : undefined}></button>)}
+      </div>
+    )}
   </section>
 )}
 <script>
   // Videos play one by one: starting one pauses the others, and when one ends the next begins.
+  const grid = document.querySelector<HTMLElement>('.video-grid');
+  const cards = [...document.querySelectorAll<HTMLElement>('.video-grid > .video-review')];
   const frames = [...document.querySelectorAll<HTMLElement>('.video-frame')];
+  const dots = [...document.querySelectorAll<HTMLButtonElement>('.video-dots button')];
+  const isCarousel = () => grid ? getComputedStyle(grid).overflowX === 'auto' : false;
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
   // Posters load when the section gets close, so they don't compete with the first screen.
   const posterObserver = new IntersectionObserver((entries) => {
     entries.forEach((entry) => {
@@ -66,17 +79,18 @@ const initials = (name: string) => name.split(/\s+/).map((part) => part[0]).join
       if (video?.dataset.poster) video.poster = video.dataset.poster;
       posterObserver.unobserve(entry.target);
     });
-  }, { rootMargin: '600px 0px' });
+  }, { rootMargin: '600px 600px' });
   frames.forEach((frame) => posterObserver.observe(frame));
+
+  const stop = (frame: HTMLElement) => {
+    const video = frame.querySelector('video');
+    if (!video) return;
+    video.pause();
+    video.controls = false;
+    frame.classList.remove('is-playing');
+  };
   const start = (index: number) => {
-    frames.forEach((frame, other) => {
-      const video = frame.querySelector('video');
-      if (!video) return;
-      if (other === index) return;
-      video.pause();
-      video.controls = false;
-      frame.classList.remove('is-playing');
-    });
+    frames.forEach((frame, other) => { if (other !== index) stop(frame); });
     const frame = frames[index];
     const video = frame?.querySelector('video');
     if (!frame || !video) return;
@@ -84,17 +98,41 @@ const initials = (name: string) => name.split(/\s+/).map((part) => part[0]).join
     frame.classList.add('is-playing');
     video.play().catch(() => {});
   };
+  /** Phones: slide a card into view. */
+  const goTo = (index: number) => {
+    const card = cards[index];
+    if (!grid || !card) return;
+    grid.scrollTo({ left: card.offsetLeft - (grid.clientWidth - card.offsetWidth) / 2, behavior: reduce ? 'auto' : 'smooth' });
+  };
   frames.forEach((frame, index) => {
     const video = frame.querySelector('video');
     const button = frame.querySelector<HTMLButtonElement>('.video-play');
     if (!video || !button) return;
     button.addEventListener('click', () => { start(index); video.focus(); });
     video.addEventListener('ended', () => {
-      video.controls = false;
-      frame.classList.remove('is-playing');
+      stop(frame);
       // Reloading puts the poster back in place of the last frame.
       video.load();
-      if (index + 1 < frames.length) start(index + 1);
+      if (index + 1 < frames.length) {
+        if (isCarousel()) goTo(cards.indexOf(frames[index + 1].closest('.video-review') as HTMLElement));
+        start(index + 1);
+      }
     });
   });
+
+  // Carousel dots follow the swipe; a video swiped out of view pauses.
+  if (grid && dots.length) {
+    let ticking = false;
+    const sync = () => {
+      ticking = false;
+      if (!isCarousel()) return;
+      const center = grid.scrollLeft + grid.clientWidth / 2;
+      let active = 0;
+      cards.forEach((card, i) => { if (Math.abs(card.offsetLeft + card.offsetWidth / 2 - center) < Math.abs(cards[active].offsetLeft + cards[active].offsetWidth / 2 - center)) active = i; });
+      dots.forEach((dot, i) => { if (i === active) dot.setAttribute('aria-current', 'true'); else dot.removeAttribute('aria-current'); });
+      frames.forEach((frame) => { if (frame.closest('.video-review') !== cards[active]) stop(frame); });
+    };
+    grid.addEventListener('scroll', () => { if (!ticking) { ticking = true; requestAnimationFrame(sync); } }, { passive: true });
+    dots.forEach((dot, i) => dot.addEventListener('click', () => goTo(i)));
+  }
 </script>
