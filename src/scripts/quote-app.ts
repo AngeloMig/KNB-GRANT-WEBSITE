@@ -1,7 +1,7 @@
 // Quote builder page: dashboard, editor, options, invoices, business profile.
 import { steps, estimate, BUDGET_RANGES, type Answers } from '../data/estimator';
 import { readPayload } from '../data/payload';
-import { EMAIL_KINDS, buildEmail, commitments, income, monthTasks, type EmailContext, type EmailKind } from '../data/quote-insights';
+import { EMAIL_KINDS, buildEmail, commitments, income, monthTasks, type EmailContext, type EmailKind, type Task } from '../data/quote-insights';
 import { quoteLines, teamLines, TEAM_LINE_IDS, parseBrief, formatMoney, projectTitle, LINE_PRESETS, phaseTotals, DEFAULT_EXCLUDED, DEFAULT_INCLUDED, DEFAULT_TERMS, type QuoteLine } from '../data/pricing';
 import {
   STATUSES, MILESTONE_WHEN, NEED_DUE, addDays, approvedChanges, balanceDue, billedOption, changeTotals, currentQuoteId, dashboardStats, datedPlan, defaultNeeds, freshQuote,
@@ -125,6 +125,7 @@ function setView(next: 'dashboard' | 'editor') {
   $('#q-mobile-bar').hidden = next !== 'editor';
   if (next === 'dashboard') renderDashboard(); else renderEditor();
   window.scrollTo({ top: 0 });
+  maybeTour();
 }
 document.querySelectorAll<HTMLButtonElement>('[data-view]').forEach((b) => b.addEventListener('click', () => setView(b.dataset.view as 'dashboard' | 'editor')));
 
@@ -191,7 +192,7 @@ function renderDashboard() {
   const shown = all.filter((q) => (filter === 'all' || (filter === 'retainer' ? Boolean(q.retainer) : q.status === filter)) && (!term || [q.client.name, q.client.company, q.project.title, q.meta.number].join(' ').toLowerCase().includes(term)));
   const list = $('#q-list');
   if (!all.length) {
-    list.replaceChildren(el('div', { className: 'q-dash-empty' }, el('strong', { textContent: 'No quotes yet' }), el('span', { textContent: 'Start one from a client’s estimate PDF.' }), Object.assign(el('button', { type: 'button', className: 'q-btn', textContent: 'New quote' }), { onclick: () => newQuote() })));
+    list.replaceChildren(el('div', { className: 'q-dash-empty' }, el('strong', { textContent: 'No quotes yet' }), el('span', { textContent: 'Start one from a client’s estimate PDF.' }), el('div', { className: 'q-dash-empty-actions' }, Object.assign(el('button', { type: 'button', className: 'q-btn', textContent: 'New quote' }), { onclick: () => newQuote() }), Object.assign(el('button', { type: 'button', className: 'q-btn q-ghost', textContent: 'Try a sample quote' }), { onclick: () => sampleQuote() }))));
     return;
   }
   if (!shown.length) { list.replaceChildren(el('p', { className: 'q-empty', textContent: 'No quotes match.' })); return; }
@@ -704,6 +705,8 @@ function renderSummary() {
   renderSchedule(false);
   renderProgress();
   renderTeam();
+  renderSendState();
+  renderNext();
 }
 
 /** "Client budget: $2,000–$5,000 · above" for the summary, when they picked a budget in the estimator. */
@@ -817,6 +820,7 @@ function createInvoice(milestone: string, percent: number, fixed?: { amount: num
 const paymentMethods = () => profile.payment.split(/\r?\n/).map((l) => l.split(':')[0].trim()).filter(Boolean);
 
 function renderInvoices() {
+  closePop('payment');
   const box = $('#q-invoices');
   if (!state.invoices.length) { box.replaceChildren(); return; }
   const now = today();
@@ -866,7 +870,7 @@ function renderInvoices() {
         }), 'is-danger'));
     }));
     panel.append(...(st === 'paid' ? [] : [el('div', { className: 'q-pay-form' }, amount, date, method, note, add)]), list);
-    pay.addEventListener('click', () => { panel.hidden = !panel.hidden; });
+    pay.addEventListener('click', () => { if (guided()) popNode(panel, `${inv.number} · payments`, 'payment', st === 'paid' ? `Paid in full. Receipts for each payment are below.` : `${money(balanceDue(inv), inv.currency)} still due. Enter the amount received, the date, and how they paid.`); else panel.hidden = !panel.hidden; });
     if (inv.payments.length && st !== 'paid') panel.hidden = false;
 
     return el('div', { className: 'q-invoice-wrap' },
@@ -1014,6 +1018,7 @@ function renderChangeSummary() {
     : '';
 }
 $('#q-add-change').addEventListener('click', () => {
+  if (guided()) { openChangeOrder(); return; }
   state.changes.push({ id: uid(), number: nextChangeNumber(state), date: today(), title: '', detail: '', lines: [{ id: `co-${uid()}`, title: '', detail: '', hours: 4, rate: state.settings.rate, unit: 'hours' }], days: 2, status: 'draft' });
   renderChanges();
   save();
@@ -1114,6 +1119,7 @@ function renderJump() {
 }
 // Highlights the section being read.
 const sectionObserver = new IntersectionObserver((entries) => {
+  if (guided()) return;
   for (const e of entries) if (e.isIntersecting) document.querySelectorAll<HTMLElement>('#q-jump a').forEach((a) => a.classList.toggle('is-active', a.dataset.section === e.target.id));
 }, { rootMargin: '-30% 0px -60% 0px' });
 
@@ -1263,10 +1269,11 @@ function renderMode() {
   $('#s-retainer').hidden = !ret;
   document.querySelectorAll<HTMLElement>('[data-project-only]').forEach((e) => { e.hidden = ret; });
   document.querySelectorAll<HTMLElement>('[data-retainer-only]').forEach((e) => { e.hidden = !ret; });
+  $('#s-send').hidden = !guided();
   let n = 0;
   document.querySelectorAll<HTMLElement>('#v-editor .q-main > .q-card').forEach((sec) => { if (sec.hidden) return; n += 1; const step = sec.querySelector('.q-step'); if (step) step.textContent = String(n).padStart(2, '0'); });
   if (ret) renderRetainer();
-  renderJump();
+  if (guided()) renderGuided(); else renderJump();
 }
 
 /** Delivery → Ongoing support: create a retainer quote that follows this project. */
@@ -1373,8 +1380,9 @@ $('#q-ret-create').addEventListener('click', () => {
   r.costRate = p.costRate;
   quotes[r.id] = r;
   saveQuotes(quotes);
+  closePop();
   openQuote(r);
-  requestAnimationFrame(() => $('#s-retainer').scrollIntoView({ behavior: 'smooth', block: 'start' }));
+  requestAnimationFrame(() => goTo('s-retainer:setup'));
   toast(`Created retainer quote ${r.meta.number}. Check the terms, then send it.`);
 });
 
@@ -1645,18 +1653,8 @@ $<HTMLFormElement>('#q-ret-add').addEventListener('submit', (e) => {
 
 /* ---------- Progress checklist ---------- */
 function renderProgress() {
-  const checks: Record<string, boolean> = {
-    import: Boolean(state.answers.type),
-    client: Boolean((state.client.name || state.client.company) && state.client.email),
-    scope: Boolean(state.answers.type) && $('#q-dirty').hidden,
-    pricing: state.options.some((o) => o.lines.some((l) => !l.optional)),
-    payment: state.schedule.reduce((s, m) => s + m.percent, 0) === 100,
-    terms: Boolean(state.text.terms.trim()),
-    dates: Boolean(state.delivery.kickoff),
-    needs: state.needs.length > 0 && state.needs.every((n) => n.done),
-    retainer: Boolean(state.retainer?.start) && (state.retainer?.overageRate ?? 0) > 0,
-  };
-  document.querySelectorAll<HTMLElement>('#q-jump a').forEach((a) => { const k = SECTION_CHECK[a.dataset.section!]; a.classList.toggle('is-done', Boolean(k && checks[k])); });
+  const checks = progressChecks();
+  if (!guided()) document.querySelectorAll<HTMLElement>('#q-jump a').forEach((a) => { const k = SECTION_CHECK[a.dataset.section!]; a.classList.toggle('is-done', Boolean(k && checks[k])); });
   const anchors = [...document.querySelectorAll<HTMLElement>('[data-check]')];
   anchors.forEach((a) => a.classList.toggle('is-done', checks[a.dataset.check!]));
   // Only the steps that apply to this kind of quote (project or retainer) count.
@@ -1682,7 +1680,7 @@ function applyAnswers(answers: Answers, ref = '') {
   state.project.title = projectTitle(answers);
   fillBound();
   renderEditor();
-  document.querySelector('#s-client')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  goTo('s-client');
 }
 async function importFile(file: File) {
   if (!/\.pdf$/i.test(file.name) && file.type !== 'application/pdf') { status('That isn’t a PDF. Upload the estimate PDF from the estimator.', true); return; }
@@ -2036,6 +2034,423 @@ $('#q-more-emails').addEventListener('click', () => {
   openEmail(state, unpaid ? (unpaid.due < today() ? 'reminder' : 'invoice') : retainer ? 'report' : state.status === 'sent' ? 'followup' : state.delivery.launchedOn ? 'testimonial' : 'followup', unpaid ? { invoice: unpaid } : {});
 });
 
+/* ---------- Layout: guided (stages and steps) or classic (one long page) ---------- */
+// Both layouts use the same quotes and the same sections; switching only changes what's shown.
+const LAYOUT_KEY = 'quote-layout-v1';
+const TOUR_KEY = 'quote-tour-v1';
+const readKey = (key: string) => { try { return localStorage.getItem(key); } catch { return null; } };
+const writeKey = (key: string, value: string) => { try { localStorage.setItem(key, value); } catch { /* storage unavailable */ } };
+let layout: 'guided' | 'classic' = (new URLSearchParams(location.search).get('layout') ?? readKey(LAYOUT_KEY)) === 'classic' ? 'classic' : 'guided';
+const guided = () => layout === 'guided';
+function applyLayout() {
+  $('.quote-page').classList.toggle('q-guided', guided());
+  // Folded extras: closed in the guided layout, always open in the classic one.
+  document.querySelectorAll<HTMLDetailsElement>('details.q-more').forEach((d) => { d.open = !guided(); });
+  $('#q-layout-toggle').textContent = guided() ? 'Classic layout' : 'Guided layout';
+  jumpKey = '';
+  closePop();
+  if (view === 'editor') renderEditor();
+}
+$('#q-layout-toggle').addEventListener('click', () => {
+  layout = guided() ? 'classic' : 'guided';
+  writeKey(LAYOUT_KEY, layout);
+  applyLayout();
+  toast(guided() ? 'Guided layout: one step at a time.' : 'Classic layout: every section on one page.');
+});
+
+type StageId = 'build' | 'send' | 'run' | 'deliver';
+interface Stage { id: StageId; label: string; steps: string[] }
+const STEP_LABEL: Record<string, string> = { ...SECTION_SHORT, 's-send': 'Send', 's-payment:plan': 'Payment plan', 's-payment': 'Invoices', 's-retainer:setup': 'Retainer terms', 's-retainer:run': 'Hours & months' };
+const sectionShown = (step: string) => !document.getElementById(step.split(':')[0])?.hidden;
+/** The stages for this quote, each with the steps (sections, or part of one) that apply to it. */
+function stagesFor(): Stage[] {
+  const ret = Boolean(state.monthly && state.retainer);
+  const stages: Stage[] = ret ? [
+    { id: 'build', label: 'Build the quote', steps: ['s-import', 's-client', 's-scope', 's-pricing', 's-retainer:setup', 's-terms'] },
+    { id: 'send', label: 'Send it', steps: ['s-send'] },
+    { id: 'run', label: 'Monthly work', steps: ['s-retainer:run', 's-payment', 's-needs'] },
+  ] : [
+    { id: 'build', label: 'Build the quote', steps: ['s-import', 's-client', 's-scope', 's-pricing', 's-dates', 's-payment:plan', 's-terms'] },
+    { id: 'send', label: 'Send it', steps: ['s-send'] },
+    { id: 'run', label: 'Run the project', steps: ['s-payment', 's-needs', 's-changes'] },
+    { id: 'deliver', label: 'Deliver', steps: ['s-delivery'] },
+  ];
+  return stages.map((s) => ({ ...s, steps: s.steps.filter(sectionShown) }));
+}
+function progressChecks(): Record<string, boolean> {
+  return {
+    import: Boolean(state.answers.type),
+    client: Boolean((state.client.name || state.client.company) && state.client.email),
+    scope: Boolean(state.answers.type) && $('#q-dirty').hidden,
+    pricing: state.options.some((o) => o.lines.some((l) => !l.optional)),
+    payment: state.schedule.reduce((s, m) => s + m.percent, 0) === 100,
+    terms: Boolean(state.text.terms.trim()),
+    dates: Boolean(state.delivery.kickoff),
+    needs: state.needs.length > 0 && state.needs.every((n) => n.done),
+    retainer: Boolean(state.retainer?.start) && (state.retainer?.overageRate ?? 0) > 0,
+  };
+}
+function stepDone(step: string, c: Record<string, boolean>) {
+  const [sid, part] = step.split(':');
+  if (sid === 's-send') return state.status !== 'draft';
+  if (sid === 's-payment' && !part) return state.invoices.length > 0 && state.invoices.every((i) => invoiceStatus(i) === 'paid');
+  if (sid === 's-delivery') return Boolean(state.delivery.launchedOn);
+  if (sid === 's-changes' || part === 'run') return false;
+  if (!c.pricing && sid !== 's-client') return false;
+  const k = SECTION_CHECK[sid];
+  return Boolean(k && c[k]);
+}
+/** Where a quote opens: the stage that matches its status, at the first step not done yet. */
+function defaultStage(): StageId {
+  if (state.status === 'accepted') return state.monthly && state.retainer ? 'run' : state.delivery.launchedOn ? 'deliver' : 'run';
+  return state.status === 'draft' ? 'build' : 'send';
+}
+let stage: StageId = 'build';
+let stepOf: Partial<Record<StageId, number>> = {};
+let guidedFor = '';
+/** Shows one step at a time: the stage tabs, the steps in this stage, and Back / Next. */
+function renderGuided() {
+  const stages = stagesFor();
+  const c = progressChecks();
+  if (guidedFor !== state.id) {
+    guidedFor = state.id;
+    stage = defaultStage();
+    stepOf = {};
+    const first = stages.find((s) => s.id === stage)?.steps.findIndex((st) => !stepDone(st, c)) ?? 0;
+    stepOf[stage] = Math.max(0, first);
+  }
+  if (!stages.some((s) => s.id === stage)) stage = 'build';
+  const si = stages.findIndex((s) => s.id === stage);
+  const cur = stages[si];
+  const i = Math.min(Math.max(0, stepOf[stage] ?? 0), cur.steps.length - 1);
+  stepOf[stage] = i;
+  const [sid, part] = cur.steps[i].split(':');
+  document.querySelectorAll<HTMLElement>('#v-editor .q-main > .q-card').forEach((card) => {
+    const on = card.id === sid;
+    card.classList.toggle('is-current', on);
+    if (on && part) card.dataset.showPart = part; else delete card.dataset.showPart;
+    if (on) {
+      const n = card.querySelector('.q-step');
+      if (n) n.textContent = String(i + 1).padStart(2, '0');
+      card.querySelector('.q-head')?.setAttribute('data-eyebrow', `Stage ${si + 1} · ${cur.label}`);
+    }
+  });
+  // Stages after the client says yes stay quiet until then (still clickable).
+  const later = (s: Stage) => (s.id === 'run' || s.id === 'deliver') && state.status !== 'accepted';
+  $('#q-stages').replaceChildren(...stages.map((s, n) => {
+    const done = s.steps.filter((st) => stepDone(st, c)).length;
+    const hint = later(s) ? 'After they accept'
+      : s.id === 'send' ? (STATUSES.find((x) => x.id === state.status)?.label ?? '') + (state.status === 'draft' ? ' · not sent yet' : '')
+      : `${done} of ${s.steps.length} done`;
+    const b = el('button', { type: 'button', className: `q-stage${s.id === stage ? ' is-current' : ''}${later(s) ? ' is-later' : ''}${done === s.steps.length && !later(s) ? ' is-done' : ''}` },
+      el('i', { textContent: String(n + 1) }),
+      el('span', { className: 'q-stage-text' }, el('strong', { textContent: s.label }), el('small', { textContent: hint })));
+    b.setAttribute('aria-current', String(s.id === stage));
+    b.addEventListener('click', () => { if (stage === s.id) return; stage = s.id; renderGuided(); scrollToEditor(); });
+    return b;
+  }));
+  jumpKey = '';
+  $('#q-jump').replaceChildren(...cur.steps.map((st, n) => {
+    const a = el('a', { href: `#${st.split(':')[0]}`, className: `${n === i ? 'is-active' : ''}${stepDone(st, c) ? ' is-done' : ''}` }, el('i', { textContent: String(n + 1).padStart(2, '0') }), STEP_LABEL[st] ?? STEP_LABEL[st.split(':')[0]] ?? '');
+    a.dataset.section = st.split(':')[0];
+    a.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); stepOf[stage] = n; renderGuided(); scrollToEditor(); });
+    return a;
+  }));
+  $('#q-jump').hidden = cur.steps.length < 2;
+  // Back / Next, crossing into the next stage at the end of one.
+  const first = si === 0 && i === 0;
+  const lastStep = i === cur.steps.length - 1;
+  const nextStage = stages[si + 1];
+  $<HTMLButtonElement>('#q-step-back').disabled = first;
+  const next = $<HTMLButtonElement>('#q-step-next');
+  next.textContent = lastStep ? (nextStage ? `Next: ${nextStage.label} →` : 'All steps done') : `Next: ${STEP_LABEL[cur.steps[i + 1]] ?? STEP_LABEL[cur.steps[i + 1].split(':')[0]]} →`;
+  next.disabled = lastStep && !nextStage;
+  $('#q-step-count').textContent = `${cur.label} · step ${i + 1} of ${cur.steps.length}`;
+  $<HTMLButtonElement>('#q-mobile-next').disabled = next.disabled;
+}
+function moveStep(delta: number) {
+  const stages = stagesFor();
+  const si = stages.findIndex((s) => s.id === stage);
+  const i = (stepOf[stage] ?? 0) + delta;
+  if (i >= stages[si].steps.length) { if (!stages[si + 1]) return; stage = stages[si + 1].id; stepOf[stage] = 0; }
+  else if (i < 0) { if (!stages[si - 1]) return; stage = stages[si - 1].id; stepOf[stage] = stages[si - 1].steps.length - 1; }
+  else stepOf[stage] = i;
+  renderGuided();
+  scrollToEditor();
+}
+$('#q-step-next').addEventListener('click', () => moveStep(1));
+$('#q-step-back').addEventListener('click', () => moveStep(-1));
+$('#q-mobile-next').addEventListener('click', () => moveStep(1));
+function scrollToEditor() {
+  const top = $('#q-context').getBoundingClientRect().top + window.scrollY - 16;
+  if (window.scrollY > top) window.scrollTo({ top, behavior: 'smooth' });
+}
+/** Opens a section (or part of one, "s-payment:plan"): scrolls to it in the classic layout, opens its step in the guided one. */
+function goTo(target: string) {
+  const sid = target.split(':')[0];
+  if (!guided()) { document.getElementById(sid)?.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
+  if (guidedFor !== state.id) renderGuided();
+  const stages = stagesFor();
+  const find = (match: (st: string) => boolean): [StageId, number] | null => {
+    const cur = stages.find((s) => s.id === stage);
+    const here = cur ? cur.steps.findIndex(match) : -1;
+    if (cur && here >= 0) return [cur.id, here];
+    for (const s of stages) { const j = s.steps.findIndex(match); if (j >= 0) return [s.id, j]; }
+    return null;
+  };
+  const hit = find((st) => st === target) ?? find((st) => st.split(':')[0] === sid);
+  if (!hit) return;
+  [stage] = hit;
+  stepOf[stage] = hit[1];
+  renderGuided();
+  scrollToEditor();
+}
+// Links to sections (progress list, "Upload the estimate") open the step instead of scrolling.
+document.addEventListener('click', (e) => {
+  const a = (e.target as HTMLElement).closest<HTMLAnchorElement>('a[href^="#s-"]');
+  if (!a || !guided() || a.closest('#q-jump')) return;
+  e.preventDefault();
+  goTo(a.getAttribute('href')!.slice(1));
+});
+
+/* ---------- Send step ---------- */
+document.querySelectorAll<HTMLButtonElement>('[data-proxy]').forEach((b) => b.addEventListener('click', () => $<HTMLElement>(b.dataset.proxy!).click()));
+document.querySelectorAll<HTMLButtonElement>('[data-set-status]').forEach((b) => b.addEventListener('click', () => {
+  const sel = $<HTMLSelectElement>('#q-status-select');
+  sel.value = b.dataset.setStatus!;
+  sel.dispatchEvent(new Event('change'));
+  const s = b.dataset.setStatus;
+  toast(s === 'sent' ? `Marked as sent. Follow up on ${niceDate(state.followUp)}.` : s === 'accepted' ? 'Accepted. Next: invoices and kick-off.' : 'Marked as declined.');
+  if (s === 'accepted') goTo(state.monthly && state.retainer ? 's-retainer:run' : 's-payment');
+}));
+function renderSendState() {
+  const when = (s: Status) => (state.statusDates[s] ? ` on ${niceDate(state.statusDates[s]!)}` : '');
+  $('#q-send-state').textContent = state.status === 'draft' ? 'Not sent yet.'
+    : state.status === 'sent' ? `Sent${when('sent')}.${state.followUp ? ` Follow up on ${niceDate(state.followUp)}.` : ''}`
+    : state.status === 'accepted' ? `Accepted${when('accepted')}.` : `Declined${when('declined')}.`;
+  document.querySelectorAll<HTMLButtonElement>('[data-set-status]').forEach((b) => { b.classList.toggle('is-on', b.dataset.setStatus === state.status); });
+}
+
+/* ---------- Next step ---------- */
+/** Email details for a to-do task: its invoice or its retainer month. */
+function taskContext(q: QuoteState, t: Task): EmailContext {
+  return { invoice: q.invoices.find((i) => i.id === t.invoiceId), month: t.monthStart ? retainerMonths(q, addDays(today(), 7)).find((m) => m.start === t.monthStart) : undefined };
+}
+interface NextStep { title: string; detail: string; label: string; run: () => void }
+function nextStep(): NextStep {
+  const c = progressChecks();
+  const ret = Boolean(state.monthly && state.retainer);
+  const go = (target: string, label: string) => ({ label, run: () => goTo(target) });
+  if (!c.pricing) return { title: 'Upload the client’s estimate', detail: 'Their answers fill in the scope and the price for you.', ...go('s-import', 'Upload estimate') };
+  if (!c.client) return { title: 'Add the client’s name and email', detail: 'They go on the quote and in the emails.', ...go('s-client', 'Add details') };
+  if (!$('#q-dirty').hidden) return { title: 'Recalculate the price', detail: 'The scope changed since the price was worked out.', ...go('s-scope', 'Open scope') };
+  if (state.status === 'draft') {
+    if (!ret && !c.dates) return { title: 'Pick a kick-off date', detail: 'The quote then shows real dates for each phase.', ...go('s-dates', 'Set the date') };
+    if (!ret && !c.payment) return { title: 'Make the payments add up to 100%', detail: 'The payment plan prints on the quote.', ...go('s-payment:plan', 'Fix payments') };
+    if (ret && !c.retainer) return { title: 'Finish the retainer terms', detail: 'A start date and the rate for extra hours.', ...go('s-retainer:setup', 'Open terms') };
+    return { title: 'Send the quote', detail: 'Check the PDF, email it, then mark it as sent.', ...go('s-send', 'Send it') };
+  }
+  if (state.status === 'sent') {
+    if (state.followUp && state.followUp <= today()) return { title: 'Follow up with the client', detail: `The follow-up was due ${niceDate(state.followUp)}.`, label: 'Write the email', run: () => openEmail(state, 'followup') };
+    return { title: 'Wait for their reply', detail: state.followUp ? `Follow up on ${niceDate(state.followUp)} if it’s quiet. Mark it accepted when they say yes.` : 'Mark it accepted when they say yes.', ...go('s-send', 'Open') };
+  }
+  if (state.status === 'declined') return { title: 'Declined', detail: 'Nothing to do. Duplicate it from the list to try a new version.', label: 'All quotes', run: () => setView('dashboard') };
+  const task = monthTasks([state])[0];
+  if (task) {
+    if (/^(inv|yearly)-/.test(task.id)) return { title: task.title, detail: task.detail, ...go('s-retainer:run', 'Open months') };
+    if (task.email) return { title: task.title, detail: task.detail, label: 'Write the email', run: () => openEmail(state, task.email!, taskContext(state, task)) };
+  }
+  if (ret) return { title: 'Log hours as you work', detail: 'The month’s usage and the client’s report build from the log.', label: 'Log hours', run: () => { goTo('s-retainer:run'); openLogHours(); } };
+  if (!state.invoices.length) return { title: `Invoice the ${(state.schedule[0]?.label || 'deposit').toLowerCase()}`, detail: 'Create it from the payment plan, then email it.', ...go('s-payment', 'Open invoices') };
+  if (!c.needs) return { title: 'Collect what you need from the client', detail: `${state.needs.filter((n) => n.done).length} of ${state.needs.length} received so far.`, ...go('s-needs', 'Open checklist') };
+  if (!state.delivery.launchedOn) return { title: 'Build it, then mark it launched', detail: 'Send the kick-off pack first if you haven’t.', ...go('s-delivery', 'Open delivery') };
+  if (!Object.values(quotes).some((q) => q.retainer?.fromQuote === state.id)) return { title: 'Offer ongoing support', detail: 'A monthly plan for when the bug-fix period ends.', label: 'Set it up', run: () => { goTo('s-delivery'); openRetainerSetup(); } };
+  return { title: 'All up to date', detail: 'Nothing is waiting on you for this quote.', label: '', run: () => {} };
+}
+let nextRun: () => void = () => {};
+function renderNext() {
+  if (!guided()) return;
+  const n = nextStep();
+  $('#q-next-title').textContent = n.title;
+  $('#q-next-detail').textContent = n.detail;
+  const b = $<HTMLButtonElement>('#q-next-go');
+  b.textContent = n.label;
+  b.hidden = !n.label;
+  nextRun = n.run;
+}
+$('#q-next-go').addEventListener('click', () => nextRun());
+
+/* ---------- Popups for small jobs ---------- */
+const pop = $<HTMLDialogElement>('#q-pop');
+let popped: { node: HTMLElement; home: Comment | null; hidden: boolean; kind: string } | null = null;
+/** Shows part of the page (or a new form) in a popup; it goes back to its place when the popup closes. */
+function popNode(node: HTMLElement, title: string, kind: string, intro = '') {
+  if (pop.open) pop.close();
+  pop.classList.toggle('is-wide', kind === 'retainer');
+  $('#q-pop-intro').textContent = intro;
+  $('#q-pop-intro').hidden = !intro;
+  let home: Comment | null = null;
+  if (node.isConnected) { home = document.createComment('popup'); node.before(home); }
+  popped = { node, home, hidden: node.hidden, kind };
+  node.hidden = false;
+  $('#q-pop-title').textContent = title;
+  $('#q-pop-body').replaceChildren(node);
+  pop.showModal();
+  node.querySelector<HTMLElement>('input:not([type=hidden]):not([type=date]), textarea')?.focus();
+}
+function closePop(kind?: string) { if (pop.open && (!kind || popped?.kind === kind)) pop.close(); }
+pop.addEventListener('close', () => {
+  if (!popped) return;
+  const { node, home, hidden } = popped;
+  popped = null;
+  if (home?.isConnected) { home.replaceWith(node); node.hidden = hidden; } else node.remove();
+});
+$('#q-pop-close').addEventListener('click', () => pop.close());
+function openLogHours() {
+  const date = $<HTMLInputElement>('#q-log-date');
+  if (!date.value) date.value = today();
+  popNode($('#q-ret-add'), 'Log hours', 'log', 'The date, the hours and what you did. The task shows on the client’s monthly report.');
+  $<HTMLInputElement>('#q-log-hours').focus();
+}
+$('#q-log-open').addEventListener('click', openLogHours);
+// After time is added (the form clears), the popup closes; the toast says what happened.
+$('#q-ret-add').addEventListener('submit', () => { if (popped?.kind === 'log' && !$<HTMLInputElement>('#q-log-hours').value) closePop('log'); });
+function openRetainerSetup() { popNode($('#q-ret-setup'), 'Ongoing support', 'retainer', 'Pick a package and a start date. This creates a separate retainer quote for the same client, ready to send.'); }
+$('#q-ret-setup-open').addEventListener('click', openRetainerSetup);
+/** New change order: the essentials in a popup; the full card (more items, PDF, invoice) is on the page. */
+function openChangeOrder() {
+  const field = (label: string, input: HTMLElement) => el('label', {}, label, input);
+  const title = el('input', { placeholder: 'e.g. Add a wholesale page', required: true });
+  const detail = el('textarea', { rows: 3, placeholder: 'What’s included and why' });
+  const hours = el('input', { type: 'number', min: '0', step: 'any', value: '4' });
+  const rate = el('input', { type: 'number', min: '0', step: 'any', value: String(state.settings.rate) });
+  const days = el('input', { type: 'number', min: '0', step: '1', value: '2' });
+  const total = el('strong', { className: 'q-pop-total' });
+  const sync = () => { total.textContent = `${money((Number(hours.value) || 0) * (Number(rate.value) || 0))} · adds ${Number(days.value) || 0} working days`; };
+  [hours, rate, days].forEach((x) => x.addEventListener('input', sync));
+  sync();
+  const form = el('form', { className: 'q-pop-form' },
+    field('What’s changing', title), field('Details (optional)', detail),
+    el('div', { className: 'q-grid q-grid-3' }, field('Hours', hours), field('Hourly rate', rate), field('Extra working days', days)),
+    total,
+    el('div', { className: 'q-doc-actions' }, el('button', { type: 'submit', className: 'q-btn', textContent: 'Add change order' })));
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    state.changes.push({ id: uid(), number: nextChangeNumber(state), date: today(), title: title.value.trim(), detail: detail.value.trim(), lines: [{ id: `co-${uid()}`, title: title.value.trim(), detail: '', hours: Math.max(0, Number(hours.value) || 0), rate: Math.max(0, Number(rate.value) || 0), unit: 'hours' }], days: Math.max(0, Number(days.value) || 0), status: 'draft' });
+    renderChanges();
+    save();
+    closePop();
+    toast(`Added ${state.changes[state.changes.length - 1].number}. Download the PDF and send it for approval.`);
+  });
+  popNode(form, 'New change order', 'change');
+}
+
+/* ---------- "What's this?" notes ---------- */
+const tipBox = el('div', { className: 'q-tip-pop', role: 'tooltip', id: 'q-tip-pop' });
+tipBox.hidden = true;
+document.body.append(tipBox);
+let tipFor: HTMLElement | null = null;
+function showTip(t: HTMLElement) {
+  if (tipFor === t && !tipBox.hidden) { hideTip(); return; }
+  tipFor = t;
+  tipBox.textContent = t.dataset.tip ?? '';
+  tipBox.hidden = false;
+  t.setAttribute('aria-describedby', 'q-tip-pop');
+  const r = t.getBoundingClientRect();
+  const w = Math.min(280, window.innerWidth - 24);
+  tipBox.style.width = `${w}px`;
+  tipBox.style.left = `${Math.max(12, Math.min(window.innerWidth - w - 12, r.left + r.width / 2 - w / 2))}px`;
+  tipBox.style.top = `${r.bottom + 8}px`;
+}
+function hideTip() { tipBox.hidden = true; tipFor?.removeAttribute('aria-describedby'); tipFor = null; }
+document.addEventListener('click', (e) => {
+  const t = (e.target as HTMLElement).closest<HTMLElement>('.q-tip');
+  if (t) { e.preventDefault(); showTip(t); } else hideTip();
+});
+document.addEventListener('keydown', (e) => {
+  const t = (e.target as HTMLElement).closest?.<HTMLElement>('.q-tip');
+  if (t && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); showTip(t); }
+  if (e.key === 'Escape') hideTip();
+});
+window.addEventListener('scroll', hideTip, { passive: true });
+
+/* ---------- First-time tour ---------- */
+const TOUR: { target: string; title: string; text: string }[] = [
+  { target: '#q-stages', title: 'Stages', text: 'Every quote moves through these, from building it to delivering. Click any stage to jump there.' },
+  { target: '#q-jump', title: 'Steps', text: 'Each stage has a few steps. A green dot means the step is done.' },
+  { target: '#q-stepper', title: 'Back and Next', text: 'Work through one step at a time. Everything saves as you type, so you can move around freely.' },
+  { target: '#q-next', title: 'Next step', text: 'Not sure what to do? This card always shows the next thing to do, with a button that does it.' },
+  { target: '.q-side-total', title: 'Total and PDF', text: 'The price, the PDF and the email to the client are always here.' },
+  { target: '#q-layout-toggle', title: 'Prefer one page?', text: 'Switch to the classic layout any time. Your quotes stay exactly the same. The ? button replays this tour.' },
+];
+const tourBox = el('div', { className: 'q-tour', role: 'dialog', ariaLabel: 'Tour' });
+tourBox.hidden = true;
+document.body.append(tourBox);
+let tourAt = -1;
+function tourStep(n: number) {
+  document.querySelectorAll('.q-tour-target').forEach((x) => x.classList.remove('q-tour-target'));
+  const stops = TOUR.filter((s) => { const t = document.querySelector<HTMLElement>(s.target); return t && t.getClientRects().length > 0; });
+  if (n < 0 || n >= stops.length) { endTour(); return; }
+  tourAt = n;
+  const stop = stops[n];
+  const target = document.querySelector<HTMLElement>(stop.target)!;
+  target.classList.add('q-tour-target');
+  target.scrollIntoView({ block: 'center' });
+  const back = el('button', { type: 'button', className: 'q-btn q-ghost q-small', textContent: 'Back' });
+  back.disabled = n === 0;
+  back.addEventListener('click', () => tourStep(n - 1));
+  const next = el('button', { type: 'button', className: 'q-btn q-small', textContent: n === stops.length - 1 ? 'Got it' : 'Next' });
+  next.addEventListener('click', () => tourStep(n + 1));
+  const skip = el('button', { type: 'button', className: 'q-link', textContent: 'Skip tour' });
+  skip.addEventListener('click', endTour);
+  tourBox.replaceChildren(
+    el('span', { className: 'q-tour-count', textContent: `${n + 1} of ${stops.length}` }),
+    el('strong', { textContent: stop.title }), el('p', { textContent: stop.text }),
+    el('div', { className: 'q-tour-actions' }, skip, back, next));
+  tourBox.hidden = false;
+  placeTour();
+  next.focus();
+}
+function placeTour() {
+  const target = document.querySelector<HTMLElement>('.q-tour-target');
+  if (!target || tourBox.hidden) return;
+  const r = target.getBoundingClientRect();
+  const w = Math.min(320, window.innerWidth - 24);
+  tourBox.style.width = `${w}px`;
+  const h = tourBox.offsetHeight;
+  const below = r.bottom + 14 + h < window.innerHeight;
+  tourBox.style.top = `${below ? r.bottom + 14 : Math.max(12, r.top - h - 14)}px`;
+  tourBox.style.left = `${Math.max(12, Math.min(window.innerWidth - w - 12, r.left))}px`;
+}
+function startTour() { if (view !== 'editor') setView('editor'); requestAnimationFrame(() => tourStep(0)); }
+function endTour() {
+  tourBox.hidden = true;
+  tourAt = -1;
+  document.querySelectorAll('.q-tour-target').forEach((x) => x.classList.remove('q-tour-target'));
+  writeKey(TOUR_KEY, 'done');
+}
+window.addEventListener('resize', placeTour);
+window.addEventListener('scroll', () => { if (tourAt >= 0) placeTour(); }, { passive: true });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && tourAt >= 0) endTour(); });
+$('#q-tour-start').addEventListener('click', startTour);
+/** The first time the guided editor opens, show the tour once. */
+function maybeTour() { if (guided() && view === 'editor' && !readKey(TOUR_KEY) && tourAt < 0) setTimeout(() => { if (view === 'editor' && tourAt < 0) startTour(); }, 500); }
+
+/* ---------- Sample quote ---------- */
+const SAMPLE_BRIEF = ['Project: A new website or store', 'Platform: Shopify', 'Catalog: 50–500', 'Page layouts: 8', 'Store features: Advanced filters & search, Reviews & loyalty', 'Notes: A sample quote to explore the builder. Delete it when you’re done.'].join('\n');
+function sampleQuote() {
+  state = freshQuote();
+  applyAnswers(parseBrief(SAMPLE_BRIEF), 'EST-SAMPLE');
+  state.client = { name: 'Alex Example', company: 'Sample Co. (example)', email: 'alex@example.com', website: 'example.com' };
+  state.project.title = `Sample: ${state.project.title}`;
+  fillBound();
+  renderSummary();
+  save();
+  setView('editor');
+  toast('Sample quote created. Try anything; delete it from the list when you’re done.');
+}
+$('#q-sample').addEventListener('click', sampleQuote);
+
 /* ---------- Render ---------- */
 function renderPricing() { renderOptionTabs(); renderTeam(); renderLines(); renderSummary(); renderInvoices(); renderTimeline(); }
 function renderEditor() {
@@ -2050,4 +2465,14 @@ function renderEditor() {
   renderDelivery();
 }
 renderPackageRates();
+// The monthly-work part of the Retainer section (shown in its own step in the guided layout).
+{
+  let part = 'setup';
+  for (const child of $('#s-retainer').children as HTMLCollectionOf<HTMLElement>) {
+    if (child.tagName === 'HEADER') continue;
+    if (child.id === 'q-ret-run-start') part = 'run';
+    child.dataset.part = part;
+  }
+}
+applyLayout();
 setView(view);

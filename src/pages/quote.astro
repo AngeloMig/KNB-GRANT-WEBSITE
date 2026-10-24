@@ -15,6 +15,8 @@ import { ROLLOVER_MODES, STATUSES } from '../data/quote-model';
         <button type="button" data-view="editor">Editor</button>
       </nav>
       <div class="q-top-actions">
+        <button type="button" class="q-icon-btn q-tour-btn" id="q-tour-start" data-guided-only title="Show me around" aria-label="Show me around">?</button>
+        <button type="button" class="q-btn q-ghost" id="q-layout-toggle" title="Switch between the guided layout and the classic single page">Classic layout</button>
         <button type="button" class="q-btn q-ghost" id="q-lock" title="Forget the saved password on this device">Lock</button>
         <button type="button" class="q-btn q-ghost" id="q-open-profile">Business profile</button>
         <button type="button" class="q-btn" id="q-new">New quote</button>
@@ -42,6 +44,7 @@ import { ROLLOVER_MODES, STATUSES } from '../data/quote-model';
       <div class="q-business" id="q-business"></div>
       <div id="q-accuracy" hidden></div>
       <div class="q-dash-foot">
+        <button type="button" class="q-link" id="q-sample">Try a sample quote</button>
         <button type="button" class="q-link" id="q-export">Back up all quotes</button>
         <label class="q-link">Restore a backup<input type="file" accept="application/json,.json" id="q-restore" hidden /></label>
         <span class="q-dash-note">Quotes are saved in this browser only. Back up now and then.</span>
@@ -58,6 +61,7 @@ import { ROLLOVER_MODES, STATUSES } from '../data/quote-model';
     </div>
     <div class="q-layout" id="v-editor" hidden>
       <div class="q-main">
+        <nav class="q-stages" id="q-stages" aria-label="Stages" data-guided-only></nav>
         <nav class="q-jump" id="q-jump" aria-label="Sections"></nav>
         <section class="q-card" id="s-import" aria-labelledby="q-h-import">
           <header class="q-head"><span class="q-step">01</span><h2 id="q-h-import">Start from the client’s estimate</h2></header>
@@ -86,8 +90,8 @@ import { ROLLOVER_MODES, STATUSES } from '../data/quote-model';
           <div class="q-grid q-grid-4 q-gap-top">
             <label>Quote number<input data-bind="meta.number" /></label>
             <label>Date<input type="date" data-bind="meta.date" /></label>
-            <label>Valid for (days)<input type="number" min="1" data-bind="meta.validDays" /></label>
-            <label>Estimate ref<input data-bind="meta.ref" placeholder="EST-…" /></label>
+            <label><span class="q-label-text">Valid for (days)<span class="q-tip" role="button" tabindex="0" aria-label="What’s this?" data-tip="How long the price holds. After that the quote shows as expired.">?</span></span><input type="number" min="1" data-bind="meta.validDays" /></label>
+            <label><span class="q-label-text">Estimate ref<span class="q-tip" role="button" tabindex="0" aria-label="What’s this?" data-tip="The reference on the client’s estimate (EST-…). It links this quote to their brief.">?</span></span><input data-bind="meta.ref" placeholder="EST-…" /></label>
           </div>
           <div class="q-stack q-gap-top">
             <label>Project title<input data-bind="project.title" placeholder="e.g. New Shopify store" /></label>
@@ -105,13 +109,16 @@ import { ROLLOVER_MODES, STATUSES } from '../data/quote-model';
 
         <section class="q-card" id="s-pricing" aria-labelledby="q-h-pricing">
           <header class="q-head"><span class="q-step">04</span><h2 id="q-h-pricing">Pricing</h2></header>
+          <details class="q-more" open>
+          <summary>Currency, rate and working hours</summary>
           <div class="q-grid q-grid-4">
             <label>Currency<select data-bind="settings.currency">{CURRENCIES.map((c) => <option value={c}>{c}</option>)}</select></label>
             <label>Your hourly rate<input type="number" min="0" step="1" data-bind="settings.rate" /></label>
-            <label>Billable hours / week<input type="number" min="1" data-bind="settings.hoursPerWeek" /></label>
-            <label>Project management %<input type="number" min="0" data-bind="settings.pmPercent" /></label>
+            <label><span class="q-label-text">Billable hours / week<span class="q-tip" role="button" tabindex="0" aria-label="What’s this?" data-tip="Hours a week you bill to this project. Fewer hours means a longer timeline.">?</span></span><input type="number" min="1" data-bind="settings.hoursPerWeek" /></label>
+            <label><span class="q-label-text">Project management %<span class="q-tip" role="button" tabindex="0" aria-label="What’s this?" data-tip="Time for calls, emails and planning, added on top of the build hours.">?</span></span><input type="number" min="0" data-bind="settings.pmPercent" /></label>
           </div>
           <p class="q-help">Changing your rate updates every line still on the old rate. Hours per week and project management apply when you recalculate.</p>
+          </details>
 
           <div class="q-options">
             <div class="q-option-tabs" id="q-option-tabs" role="tablist" aria-label="Options"></div>
@@ -137,7 +144,7 @@ import { ROLLOVER_MODES, STATUSES } from '../data/quote-model';
             <div class="q-team-head">
               <p class="q-team-title">Team size</p>
               <div class="q-team-fields">
-                <label class="q-team-rate">Faster delivery premium<span class="q-suffix"><input type="number" min="0" step="1" data-bind="teamPremium" />% per extra dev</span></label>
+                <label class="q-team-rate"><span class="q-label-text">Faster delivery premium<span class="q-tip" role="button" tabindex="0" aria-label="What’s this?" data-tip="Charged per added developer, because a bigger team finishes sooner.">?</span></span><span class="q-suffix"><input type="number" min="0" step="1" data-bind="teamPremium" />% per extra dev</span></label>
                 <label class="q-team-rate">Extra developers’ rate<input type="number" min="0" step="1" data-bind="teamRate" /></label>
               </div>
             </div>
@@ -159,12 +166,15 @@ import { ROLLOVER_MODES, STATUSES } from '../data/quote-model';
             <span class="q-legend">Tick <b>Phase 2</b> for work after launch, <b>At cost</b> for things you pay on (e.g. licences), <b>Optional</b> for extras outside the total. ☆ saves an item to Your items.</span>
           </div>
 
+          <details class="q-more" open>
+          <summary>Discount and tax</summary>
           <div class="q-grid q-grid-4 q-adjust">
             <label>Discount<input type="number" min="0" step="any" data-bind="pricing.discount" /></label>
             <label>Discount type<select data-bind="pricing.discountType"><option value="percent">Percent (%)</option><option value="amount">Fixed amount</option></select></label>
             <label>Tax label<input data-bind="pricing.taxLabel" /></label>
             <label>Tax %<input type="number" min="0" step="any" data-bind="pricing.tax" /></label>
           </div>
+          </details>
           <dl class="q-totals" id="q-totals"></dl>
         </section>
 
@@ -183,28 +193,33 @@ import { ROLLOVER_MODES, STATUSES } from '../data/quote-model';
           </div>
 
           <h3 class="q-sub-head">Price & billing</h3>
+          <details class="q-more" open>
+          <summary>Discount and yearly billing</summary>
           <div class="q-ret-discount">
             <label>Discount<input type="number" min="0" step="any" data-bind="pricing.discount" /></label>
             <label>Discount type<select data-bind="pricing.discountType"><option value="percent">Percent (%)</option><option value="amount">Fixed amount / month</option></select></label>
             <p class="q-ret-rollover-note" id="q-ret-discount-summary"></p>
           </div>
           <div class="q-ret-discount q-gap-top">
-            <label>Billing<select data-bind="retainer.billing"><option value="monthly">Monthly in advance</option><option value="yearly">Yearly in advance (prepay)</option></select></label>
+            <label><span class="q-label-text">Billing<span class="q-tip" role="button" tabindex="0" aria-label="What’s this?" data-tip="Monthly in advance, or one yearly payment with free months as the reward.">?</span></span><select data-bind="retainer.billing"><option value="monthly">Monthly in advance</option><option value="yearly">Yearly in advance (prepay)</option></select></label>
             <label>Months free if paid yearly<input type="number" min="0" max="11" step="1" data-bind="retainer.freeMonths" /></label>
-            <label>Compare with pay-as-you-go ($/hr)<input type="number" min="0" step="any" data-bind="retainer.paygRate" /></label>
+            <label><span class="q-label-text">Compare with pay-as-you-go ($/hr)<span class="q-tip" role="button" tabindex="0" aria-label="What’s this?" data-tip="Used to show the client how much the plan saves against paying by the hour.">?</span></span><input type="number" min="0" step="any" data-bind="retainer.paygRate" /></label>
           </div>
           <p class="q-help q-gap-top" id="q-ret-billing-summary"></p>
+          </details>
 
           <h3 class="q-sub-head">Terms</h3>
           <p class="q-help">The monthly hours and fee come from the pricing above. These terms print on the quote under “How the retainer works”.</p>
           <div class="q-grid q-grid-4">
             <label>Starts on<input type="date" data-bind="retainer.start" /></label>
-            <label>Extra hours rate<input type="number" min="0" step="any" data-bind="retainer.overageRate" /></label>
-            <label>Warn me at (% used)<input type="number" min="10" max="100" step="5" data-bind="retainer.warnAt" /></label>
-            <label>Minimum term (months)<input type="number" min="0" step="1" data-bind="retainer.minMonths" /></label>
+            <label><span class="q-label-text">Extra hours rate<span class="q-tip" role="button" tabindex="0" aria-label="What’s this?" data-tip="The rate for hours used beyond the plan in a month. They’re added to the next invoice.">?</span></span><input type="number" min="0" step="any" data-bind="retainer.overageRate" /></label>
+            <label><span class="q-label-text">Warn me at (% used)<span class="q-tip" role="button" tabindex="0" aria-label="What’s this?" data-tip="You get a reminder when this share of the month’s hours is used, so you can tell the client.">?</span></span><input type="number" min="10" max="100" step="5" data-bind="retainer.warnAt" /></label>
+            <label><span class="q-label-text">Minimum term (months)<span class="q-tip" role="button" tabindex="0" aria-label="What’s this?" data-tip="The fewest months the client signs up for before they can cancel.">?</span></span><input type="number" min="0" step="1" data-bind="retainer.minMonths" /></label>
           </div>
+          <details class="q-more" open>
+          <summary>Unused hours, notice and response time</summary>
           <div class="q-ret-rollover q-gap-top">
-            <label>Unused hours<select data-bind="retainer.rolloverMode">{ROLLOVER_MODES.map((m) => <option value={m.id}>{m.label}</option>)}</select></label>
+            <label><span class="q-label-text">Unused hours<span class="q-tip" role="button" tabindex="0" aria-label="What’s this?" data-tip="What happens to hours not used in a month: they expire, carry into next month up to a limit, or build up in a bank for a few months at a higher price.">?</span></span><select data-bind="retainer.rolloverMode">{ROLLOVER_MODES.map((m) => <option value={m.id}>{m.label}</option>)}</select></label>
             <label data-rollover="next">Carry up to (hours)<input type="number" min="0" step="any" data-bind="retainer.rollover" /></label>
             <label data-rollover="bank">Bank length (months)<input type="number" min="2" max="12" step="1" data-bind="retainer.bankMonths" /></label>
             <label data-rollover="bank">Bank premium (% of fee)<input type="number" min="0" step="1" data-bind="retainer.rolloverPremium" /></label>
@@ -213,17 +228,19 @@ import { ROLLOVER_MODES, STATUSES } from '../data/quote-model';
             <p class="q-ret-rollover-note" data-rollover="bank">Unused hours build up through each bank period and expire at its end. The premium is added to the price as its own line.</p>
           </div>
           <div class="q-grid q-grid-4 q-gap-top">
-            <label>Notice to end (days)<input type="number" min="0" step="1" data-bind="retainer.noticeDays" /></label>
+            <label><span class="q-label-text">Notice to end (days)<span class="q-tip" role="button" tabindex="0" aria-label="What’s this?" data-tip="How many days’ notice the client gives to stop the retainer.">?</span></span><input type="number" min="0" step="1" data-bind="retainer.noticeDays" /></label>
             <label class="q-span-3">Response time<input data-bind="retainer.response" /></label>
           </div>
+          </details>
           <ul class="q-ret-terms" id="q-ret-terms"></ul>
 
-          <h3 class="q-sub-head">This month</h3>
+          <h3 class="q-sub-head" id="q-ret-run-start">This month</h3>
           <div class="q-ret-now" id="q-ret-now"></div>
 
           <h3 class="q-sub-head">Hours log</h3>
           <p class="q-help">Add time as you work. Hours carried from last month are used first.</p>
-          <form class="q-ret-add" id="q-ret-add">
+          <button type="button" class="q-btn q-small q-pop-open" id="q-log-open" data-guided-only>+ Log hours</button>
+          <form class="q-ret-add" id="q-ret-add" data-pop>
             <input type="date" class="q-in" id="q-log-date" aria-label="Date" required />
             <input type="number" class="q-in q-num" id="q-log-hours" min="0.25" step="0.25" placeholder="Hrs" aria-label="Hours" required />
             <input class="q-in" id="q-log-task" placeholder="What you did (shown on the client’s report)" aria-label="Task" required />
@@ -254,7 +271,7 @@ import { ROLLOVER_MODES, STATUSES } from '../data/quote-model';
           <p class="q-help" data-retainer-only>Monthly invoices are created from the Retainer section below. Record full or partial payments here, each with its own receipt.</p>
           <div class="q-schedule" id="q-schedule" data-project-only></div>
           <div class="q-schedule-foot" data-project-only><button type="button" class="q-btn q-ghost" id="q-add-milestone">+ Add milestone</button><p class="q-status" id="q-schedule-status" role="status"></p></div>
-          <div class="q-invoices" id="q-invoices"></div>
+          <div class="q-invoices" id="q-invoices" data-part="invoices"></div>
         </section>
 
         <section class="q-card" id="s-needs" aria-labelledby="q-h-needs">
@@ -275,6 +292,18 @@ import { ROLLOVER_MODES, STATUSES } from '../data/quote-model';
             <label>Terms<textarea rows="8" data-bind="text.terms"></textarea></label>
             <label>Note to the client (optional)<textarea rows="3" data-bind="text.note" placeholder="e.g. Thanks for the call on Tuesday. Here’s the quote we discussed…"></textarea></label>
           </div>
+        </section>
+
+        <section class="q-card" id="s-send" aria-labelledby="q-h-send" data-guided-only>
+          <header class="q-head"><span class="q-step">01</span><h2 id="q-h-send">Send the quote</h2></header>
+          <p class="q-help">Four steps. The dashboard reminds you to follow up.</p>
+          <ol class="q-send-steps">
+            <li><span class="q-send-num">1</span><div class="q-send-text"><strong>Check the PDF</strong><span>See exactly what the client gets.</span></div><div class="q-send-actions"><button type="button" class="q-btn q-ghost q-small" data-proxy="#q-preview">Preview</button><button type="button" class="q-btn q-small" data-proxy="#q-download">Download PDF</button></div></li>
+            <li><span class="q-send-num">2</span><div class="q-send-text"><strong>Email it, with the PDF attached</strong><span>A ready-written email to the client.</span></div><div class="q-send-actions"><button type="button" class="q-btn q-ghost q-small" data-proxy="#q-copy-email">Copy email</button><button type="button" class="q-btn q-small" data-proxy="#q-mail">Open in email app</button></div></li>
+            <li><span class="q-send-num">3</span><div class="q-send-text"><strong>Mark it as sent</strong><span>Pick when to follow up if they go quiet.</span></div><div class="q-send-actions"><button type="button" class="q-btn q-small" data-set-status="sent">Mark as sent</button><label class="q-send-follow">Follow up<input type="date" data-bind="followUp" /></label></div></li>
+            <li><span class="q-send-num">4</span><div class="q-send-text"><strong>When they reply</strong><span>Accepted moves you on to invoices and kick-off.</span></div><div class="q-send-actions"><button type="button" class="q-btn q-small" data-set-status="accepted">Client accepted</button><button type="button" class="q-btn q-ghost q-small" data-set-status="declined">Declined</button></div></li>
+          </ol>
+          <p class="q-send-state" id="q-send-state" role="status"></p>
         </section>
 
         <section class="q-card" id="s-changes" aria-labelledby="q-h-changes">
@@ -298,17 +327,20 @@ import { ROLLOVER_MODES, STATUSES } from '../data/quote-model';
           <h3 class="q-sub-head">Launch, warranty & handover</h3>
           <div class="q-grid q-grid-4">
             <label>Launched on<input type="date" data-bind="delivery.launchedOn" /></label>
-            <label>Bug-fix period (days)<input type="number" min="0" data-bind="delivery.warrantyDays" /></label>
+            <label><span class="q-label-text">Bug-fix period (days)<span class="q-tip" role="button" tabindex="0" aria-label="What’s this?" data-tip="Days after launch when you fix bugs for free. The dashboard shows when it ends.">?</span></span><input type="number" min="0" data-bind="delivery.warrantyDays" /></label>
             <label>Live website<input data-bind="delivery.liveUrl" placeholder="https://…" /></label>
             <label>Admin login page<input data-bind="delivery.adminUrl" placeholder="https://…/admin" /></label>
           </div>
           <div class="q-warranty-row"><p class="q-warranty" id="q-warranty"></p><button type="button" class="q-link" id="q-launched-today">Launched today</button></div>
+          <details class="q-more" open>
+          <summary>Links, accounts and notes for the client</summary>
           <div class="q-grid q-gap-top">
             <label>Useful links (one per line, “Label: link”)<textarea rows="4" data-bind="delivery.links" placeholder="Training video: https://…&#10;How to add products: https://…"></textarea></label>
             <label>Accounts & access handed over (one per line)<textarea rows="4" data-bind="delivery.access" placeholder="Shopify: store owner is you; Grant’s collaborator access removed&#10;Domain: stays in your registrar account"></textarea></label>
           </div>
           <p class="q-help q-warn-text">Never write passwords here. List who owns each account and how access was handed over.</p>
           <label class="q-gap-top q-block">Notes for the client<textarea rows="3" data-bind="delivery.notes" placeholder="e.g. Back up your theme before installing new apps."></textarea></label>
+          </details>
           <div class="q-doc-actions"><button type="button" class="q-btn q-ghost" id="q-handover-view">View handover document</button><button type="button" class="q-btn" id="q-handover-pdf">Download handover document</button><button type="button" class="q-btn q-ghost" data-email-kind="launch">Launch email</button></div>
 
           <h3 class="q-sub-head">Testimonial</h3>
@@ -322,6 +354,8 @@ import { ROLLOVER_MODES, STATUSES } from '../data/quote-model';
           <h3 class="q-sub-head">Ongoing support</h3>
           <p class="q-help">Offer monthly help once the bug-fix period ends. This creates a separate retainer quote for the same client, with the retainer terms filled in, ready to send.</p>
           <div class="q-ret-existing" id="q-ret-existing"></div>
+          <div class="q-doc-actions" data-guided-only><button type="button" class="q-btn" id="q-ret-setup-open">Set up ongoing support</button></div>
+          <div class="q-ret-setup" id="q-ret-setup" data-pop>
           <div class="q-pkgs" id="q-ret-pkgs" role="radiogroup" aria-label="Support package"></div>
           <div class="q-pkg-rates" data-pkg-rates></div>
           <div class="q-ret-start q-gap-top">
@@ -337,6 +371,7 @@ import { ROLLOVER_MODES, STATUSES } from '../data/quote-model';
             <p class="q-ret-rollover-note" id="q-ret-discount-note">Optional. Applies to every month of the retainer.</p>
           </div>
           <div class="q-doc-actions"><button type="button" class="q-btn" id="q-ret-create">Create retainer quote</button></div>
+          </div>
           <div class="q-pdf-row">
             <span class="q-pdf-row-label"><strong id="q-ret-pkg-name">Basic</strong> package PDF</span>
             <button type="button" class="q-btn q-ghost q-small" data-package-pdf="view">View</button><button type="button" class="q-btn q-small" data-package-pdf="download">Download</button>
@@ -346,6 +381,11 @@ import { ROLLOVER_MODES, STATUSES } from '../data/quote-model';
           <p class="q-help q-gap-top">Send the chosen package on its own, or all packages so the client can compare. Each package is priced at its own rate.</p>
         </section>
 
+        <div class="q-stepper" id="q-stepper" data-guided-only>
+          <button type="button" class="q-btn q-ghost" id="q-step-back">← Back</button>
+          <span class="q-stepper-count" id="q-step-count"></span>
+          <button type="button" class="q-btn" id="q-step-next">Next</button>
+        </div>
       </div>
 
       <aside class="q-summary" aria-label="Quotation summary">
@@ -361,6 +401,12 @@ import { ROLLOVER_MODES, STATUSES } from '../data/quote-model';
             <p class="q-total" id="q-total"></p>
             <p class="q-sub" id="q-sub"></p>
             <a class="q-btn q-start" id="q-start" href="#s-import">Upload the estimate</a>
+          </div>
+          <div class="q-next" id="q-next" data-guided-only aria-live="polite">
+            <span class="q-side-label">Next step</span>
+            <strong id="q-next-title"></strong>
+            <span class="q-next-detail" id="q-next-detail"></span>
+            <button type="button" class="q-btn q-small" id="q-next-go"></button>
           </div>
           <dl class="q-facts" id="q-facts"></dl>
 
@@ -403,7 +449,7 @@ import { ROLLOVER_MODES, STATUSES } from '../data/quote-model';
     </div>
   </div>
 
-  <div class="q-mobile-bar" id="q-mobile-bar" hidden><span id="q-mobile-total"></span><button type="button" class="q-btn" id="q-mobile-download">Download PDF</button></div>
+  <div class="q-mobile-bar" id="q-mobile-bar" hidden><span id="q-mobile-total"></span><button type="button" class="q-btn q-ghost" id="q-mobile-next" data-guided-only>Next →</button><button type="button" class="q-btn" id="q-mobile-download">Download PDF</button></div>
 
   <dialog class="q-dialog" id="q-dialog" aria-label="PDF preview">
     <div class="q-dialog-bar">
@@ -411,6 +457,14 @@ import { ROLLOVER_MODES, STATUSES } from '../data/quote-model';
       <div><button type="button" class="q-btn" id="q-dialog-download">Download PDF</button><button type="button" class="q-btn q-ghost" id="q-dialog-close">Close</button></div>
     </div>
     <iframe id="q-frame" title="PDF preview"></iframe>
+  </dialog>
+
+  <dialog class="q-dialog q-pop" id="q-pop" aria-labelledby="q-pop-title">
+    <div class="q-dialog-bar"><strong id="q-pop-title"></strong><div><button type="button" class="q-btn q-ghost" id="q-pop-close">Close</button></div></div>
+    <div class="q-pop-wrap">
+      <p class="q-help q-pop-intro" id="q-pop-intro" hidden></p>
+      <div class="q-pop-body q-card" id="q-pop-body"></div>
+    </div>
   </dialog>
 
   <dialog class="q-dialog q-email-dialog" id="q-emails" aria-labelledby="q-emails-title">
