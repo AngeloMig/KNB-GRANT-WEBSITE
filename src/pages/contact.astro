@@ -185,7 +185,7 @@ const faqSchema = { '@context': 'https://schema.org', '@type': 'FAQPage', mainEn
         const response = await fetch(formEndpoint(form.dataset.email!), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-          body: JSON.stringify({ _subject: subject, _cc: form.dataset.cc, _template: 'table', _captcha: 'false', _honey: value('_honey'), ...fields, ...sourceFields() }),
+          body: JSON.stringify({ _subject: subject, _cc: form.dataset.cc || undefined, _template: 'table', _captcha: 'false', _honey: value('_honey'), ...fields, ...sourceFields() }),
         });
         const data = await response.json().catch(() => ({}));
         if (!response.ok || String(data.success) !== 'true') throw new Error(data.message || 'Not sent');

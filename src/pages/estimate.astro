@@ -514,7 +514,7 @@ const plans = PACKAGES.filter((p) => p.id !== 'custom');
           headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
           body: JSON.stringify({
             _subject: `New project brief ${ref}: ${contact.name}${contact.company ? `, ${contact.company}` : ''}`,
-            _cc: contactBox.dataset.cc,
+            _cc: contactBox.dataset.cc || undefined,
             _template: 'box',
             _captcha: 'false',
             _honey: field('_honey').value,
