@@ -10,3 +10,9 @@ export const FORM_INBOX = 'angelobmig@gmail.com';
 /** A copy of every form goes here too (empty: no copy). */
 export const FORM_CC = '';
 export const formEndpoint = (inbox: string) => `https://formsubmit.co/ajax/${inbox}`;
+
+/**
+ * The tracker's Inquiries inbox. Every form also posts its lead here, so audits, enquiries and estimates (with the PDF)
+ * show up in the tracker. Override with PUBLIC_LEADS_ENDPOINT in .env (e.g. a local tracker while testing).
+ */
+export const LEADS_ENDPOINT: string = import.meta.env.PUBLIC_LEADS_ENDPOINT || 'https://knb-attendance-tracker.vercel.app/api/leads';

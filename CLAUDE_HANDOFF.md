@@ -6,6 +6,16 @@ The user approved implementation on October 17, 2026. Codex has built the portfo
 
 The user subsequently requested a plain `index.html` version for GitHub Pages. `npm run build:github` exports the static website to `docs/`, starting at `docs/index.html`. The target is `https://angelomig.github.io/KNB-GRANT-WEBSITE/`; publish branch `main` from `/docs`. Internal links and assets use `src/utils/paths.ts`; font files are bundled from `src/assets/fonts` to support both root hosting and repository subdirectories. Do not hand-edit the generated HTML; regenerate after source changes. The root-hosted Sites build still uses `npm run build`.
 
+## Tracker connection (October 25, 2026)
+
+The site now feeds the KNB Attendance Tracker (`/Users/angelomiguel/Documents/GitHub/KNB-ATTENDANCE-TRACKER`, Inquiries page). FormSubmit email stays as the backup for every form.
+
+- **Forms → `/api/leads`** (`src/scripts/leads.ts`, endpoint in `src/data/forms.ts` / `PUBLIC_LEADS_ENDPOINT`): the free audit and project enquiry (`src/pages/contact.astro`), the estimator's early "started" lead and its full brief with answers and the PDF (`src/pages/estimate.astro`; `buildEstimatePdf`/`estimatePdfBase64` in `src/scripts/estimate-pdf.ts`). The tracker merges the two estimator posts by reference + email. Best effort, never blocks the email path.
+- **Quote builder → tracker** (`src/scripts/tracker-sync.ts`, panel `#q-tracker` on the quotes dashboard): sign in with the tracker account (session only, or "Remember on this device"); every `saveQuotes`/`saveProfile` emits `quotes-saved` and the panel syncs changed items 4 s later. Synced: quotes, support plans, invoices (amount + paid so far), receipts, change orders (non-draft) and audits, each with its PDF, attached to the client's lead by email (the tracker creates a "Direct" lead when there's none). Accepted → lead Won, sent → Quoted. Items are matched by the builder's ids (`quote:<id>`, `invoice:<quote>:<invoice>`…); a PDF is rebuilt only when its content changed. Deleted quotes stay in the tracker. Clients without an email are skipped.
+- **Config** (`.env`, see `.env.example`): `PUBLIC_TRACKER_SUPABASE_URL` and `PUBLIC_TRACKER_SUPABASE_ANON_KEY` — the tracker's public Supabase URL and anon key (the tracker's RLS protects the data). Never the service role key. Without them the panel stays hidden.
+- **Needs on the tracker side:** migration 059 run, and the tracker deployed. With a custom domain, add it to the tracker's `LEADS_ALLOWED_ORIGINS`.
+- Caveat: on `angelomig.github.io` the sign-in shares an origin with any other GitHub Pages project on the account; a custom domain removes that.
+
 ## Stack and commands
 
 Astro 7, TypeScript, custom CSS, static output. Use Node 22.22+; `.nvmrc` selects Node 24. In Codex, the bundled executable is `/Users/angelomiguel/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node`. Ensure its directory is first on PATH when invoking npm.

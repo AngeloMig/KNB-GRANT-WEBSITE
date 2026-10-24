@@ -460,7 +460,12 @@ export const DEFAULT_PROFILE: Profile = {
   payment: '', paymentDays: 7, invoicePrefix: 'INV', logo: '', signature: '',
 };
 export const loadProfile = (): Profile => ({ ...DEFAULT_PROFILE, ...(store.get<Profile>(KEYS.profile) ?? {}) });
-export const saveProfile = (p: Profile) => store.set(KEYS.profile, p);
+export const saveProfile = (p: Profile) => {
+  const ok = store.set(KEYS.profile, p);
+  // The profile is on every PDF, so the tracker sync re-checks them.
+  if (ok && typeof window !== 'undefined') window.dispatchEvent(new Event('quotes-saved'));
+  return ok;
+};
 
 /* ---------- Item library ---------- */
 export type LibraryItem = Omit<QuoteLine, 'id'> & { key: string };
@@ -546,7 +551,12 @@ export function loadQuotes(): Record<string, QuoteState> {
   if (old) { const q = migrate(old); quotes[q.id] = q; store.remove(KEYS.oldDraft); store.set(KEYS.current, q.id); }
   return quotes;
 }
-export const saveQuotes = (quotes: Record<string, QuoteState>) => store.set(KEYS.quotes, quotes);
+/** Saves every quote, and tells listeners (the tracker sync) that something changed. */
+export const saveQuotes = (quotes: Record<string, QuoteState>) => {
+  const ok = store.set(KEYS.quotes, quotes);
+  if (ok && typeof window !== 'undefined') window.dispatchEvent(new Event('quotes-saved'));
+  return ok;
+};
 export const currentQuoteId = () => store.get<string>(KEYS.current);
 export const setCurrentQuoteId = (id: string) => store.set(KEYS.current, id);
 export const saveSettings = (s: PricingSettings) => store.set(KEYS.settings, s);

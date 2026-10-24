@@ -152,6 +152,7 @@ const plans = PACKAGES.filter((p) => p.id !== 'custom');
   import { steps, estimate, type Answers, type Estimate } from '../data/estimator';
   import { formEndpoint } from '../data/forms';
   import { sourceFields } from '../scripts/lead-source';
+  import { sendLead } from '../scripts/leads';
 
   const wizard = document.querySelector<HTMLElement>('[data-wizard]');
   if (wizard) {
@@ -533,6 +534,27 @@ const plans = PACKAGES.filter((p) => p.id !== 'custom');
     });
     contactBox.querySelector('.wiz-as-edit')!.addEventListener('click', () => { go('contact', -1); focusContact(); });
 
+    /** The full brief to the tracker's Inquiries inbox: answers, estimate and the PDF. Best effort, in parallel with the email. */
+    async function sendBriefToTracker() {
+      const live = effective();
+      const answersByLabel: Record<string, string> = {};
+      for (const s of visibleSteps()) { const text = answerText(s.id); if (text && s.kind !== 'text') answersByLabel[s.label] = text; }
+      let pdf_base64: string | undefined;
+      try {
+        if (lastResult && lastResult.mode !== 'none') {
+          const { estimatePdfBase64 } = await import('../scripts/estimate-pdf');
+          const rows = visibleSteps().filter((s) => s.kind !== 'text' && answerText(s.id)).map((s) => [s.label, answerText(s.id)] as [string, string]);
+          pdf_base64 = await estimatePdfBase64({ rows, result: lastResult, months: lastResult.mode === 'weeks' ? monthsText(lastResult.low, lastResult.high) : '', notes: String(live.notes || ''), email: send.dataset.email || '', answers: live, ref, contact });
+        }
+      } catch { pdf_base64 = undefined; }
+      await sendLead({
+        kind: 'estimate', _honey: field('_honey').value,
+        name: contact.name, email: contact.email, company: contact.company, website: contact.website,
+        reference: ref, estimate: estimateSummary, brief, budget: live.budget ? answerText('budget') : undefined,
+        estimate_answers: answersByLabel, pdf_base64, ...sourceFields(),
+      });
+    }
+
     /**
      * Tells Grant someone started, so the lead isn't lost if they leave halfway.
      * Once per email; the full brief follows with the same reference if they finish.
@@ -558,6 +580,8 @@ const plans = PACKAGES.filter((p) => p.id !== 'custom');
           ...sourceFields(),
         }),
       }).catch(() => { captured = ''; });
+      // The tracker gets it too; the full brief later merges into this lead (same reference and email).
+      void sendLead({ kind: 'estimate', _honey: field('_honey').value, name: contact.name, email: contact.email, reference: ref, ...sourceFields() });
     }
 
     // The summary's button takes people to the review step (or to their name and email first).
@@ -574,6 +598,7 @@ const plans = PACKAGES.filter((p) => p.id !== 'custom');
         return;
       }
       if (sent) { sendStatus.dataset.tone = 'ok'; sendStatus.textContent = 'Already sent. Grant will be in touch soon.'; return; }
+      void sendBriefToTracker();
       const label = submit.innerHTML;
       submit.disabled = true;
       submit.textContent = 'Sending…';

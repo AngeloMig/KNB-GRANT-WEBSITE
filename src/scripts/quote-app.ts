@@ -1,5 +1,6 @@
 // Quote builder page: dashboard, editor, options, invoices, business profile.
 import { steps, estimate, BUDGET_RANGES, type Answers } from '../data/estimator';
+import { initTrackerPanel } from './tracker-sync';
 import { readPayload } from '../data/payload';
 import { EMAIL_KINDS, buildEmail, commitments, income, monthTasks, type EmailContext, type EmailKind, type Task } from '../data/quote-insights';
 import { quoteLines, teamLines, TEAM_LINE_IDS, parseBrief, formatMoney, projectTitle, LINE_PRESETS, phaseTotals, DEFAULT_EXCLUDED, DEFAULT_INCLUDED, DEFAULT_TERMS, type QuoteLine } from '../data/pricing';
@@ -255,6 +256,8 @@ function setFilter(next: typeof filter) {
 }
 document.querySelectorAll<HTMLButtonElement>('[data-filter]').forEach((b) => b.addEventListener('click', () => setFilter(b.dataset.filter as typeof filter)));
 $('#q-search').addEventListener('input', renderDashboard);
+// Quotes, invoices and PDFs → the tracker, when connected (src/scripts/tracker-sync.ts).
+initTrackerPanel(document.getElementById('q-tracker'));
 
 function newQuote() { state = freshQuote(); status(''); setView('editor'); }
 function openQuote(q: QuoteState) { state = q; setCurrentQuoteId(q.id); logMonth = ''; status(''); setView('editor'); }

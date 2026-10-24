@@ -1,1 +1,0 @@
-var e=e=>`https://formsubmit.co/ajax/${e}`;export{e as t};

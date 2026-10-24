@@ -52,6 +52,17 @@ const AUDIT_TEXT: Record<string, string> = {
 const clean = (text: string) => text.replace(/[‘’]/g, "'").replace(/[“”]/g, '"').replace(/→/g, '->').replace(/(\d)½/g, '$1.5').replace(/½/g, '0.5').replace(/[^\x20-\x7E–—…· -ÿ]/g, '');
 
 export async function downloadEstimatePdf(input: PdfInput) {
+  const { doc, filename } = await buildEstimatePdf(input);
+  doc.save(filename);
+}
+
+/** The same PDF as base64, to attach to the lead sent to the tracker. */
+export async function estimatePdfBase64(input: PdfInput): Promise<string> {
+  const { doc } = await buildEstimatePdf(input);
+  return doc.output('datauristring').replace(/^data:application\/pdf;[^,]*,/, '');
+}
+
+export async function buildEstimatePdf(input: PdfInput) {
   const doc = new jsPDF({ unit: 'mm', format: 'a4' });
   // The same brand fonts as the quote builder's documents.
   doc.addFileToVFS('Archivo-400.ttf', ARCHIVO_400); doc.addFont('Archivo-400.ttf', 'Archivo', 'normal');
@@ -360,5 +371,5 @@ export async function downloadEstimatePdf(input: PdfInput) {
   }
 
   doc.setProperties({ title: 'Project estimate summary — Grant Dev14', subject: 'Indicative project timeline (not a quotation)', author: 'Grant Dev14', keywords: encodePayload({ v: 1, ref, date: localDate, answers: input.answers, ...(contact ? { client: contact } : {}) }) });
-  doc.save(`grant-dev14-project-estimate-${localDate}.pdf`);
+  return { doc, filename: `grant-dev14-project-estimate-${localDate}.pdf` };
 }

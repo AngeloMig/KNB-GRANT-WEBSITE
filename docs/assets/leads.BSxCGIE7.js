@@ -1,0 +1,1 @@
+var e=e=>`https://formsubmit.co/ajax/${e}`,t=`https://knb-attendance-tracker.vercel.app/api/leads`;async function n(e){try{let n=JSON.stringify(e);return(await fetch(t,{method:`POST`,headers:{"Content-Type":`application/json`},body:n,credentials:`omit`,keepalive:n.length<6e4})).ok}catch{return!1}}export{e as n,n as t};

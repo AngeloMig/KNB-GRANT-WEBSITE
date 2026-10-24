@@ -100,6 +100,7 @@ const faqSchema = { '@context': 'https://schema.org', '@type': 'FAQPage', mainEn
 <script>
   import { formEndpoint } from '../data/forms';
   import { sourceFields } from '../scripts/lead-source';
+  import { sendLead } from '../scripts/leads';
 
   /* ---------- Free audit and project enquiry ---------- */
   // Bots fill and send forms within moments of loading; people take longer. Sends quicker than this are dropped quietly.
@@ -181,6 +182,8 @@ const faqSchema = { '@context': 'https://schema.org', '@type': 'FAQPage', mainEn
         ? { company: value('company'), email: value('email'), website: value('website') }
         : { name: value('name'), email: value('email'), company: value('company') || '—', website: value('website') || '—', need: value('need') || (form.querySelector<HTMLInputElement>('input[name="need"]:checked')?.value ?? '—'), budget: value('budget'), timing: value('timing'), message: value('message') };
       const subject = kind === 'audit' ? `Free audit request: ${value('company')} (${value('website')})` : `New enquiry: ${value('name')}${value('company') ? `, ${value('company')}` : ''}`;
+      // Also into the tracker's Inquiries inbox, in parallel; email below stays the backup either way.
+      void sendLead({ kind, _honey: value('_honey'), ...fields, ...sourceFields() });
       try {
         const response = await fetch(formEndpoint(form.dataset.email!), {
           method: 'POST',
