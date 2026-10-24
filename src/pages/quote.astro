@@ -15,10 +15,13 @@ import { ROLLOVER_MODES, STATUSES } from '../data/quote-model';
         <button type="button" data-view="editor">Editor</button>
       </nav>
       <div class="q-top-actions">
-        <button type="button" class="q-icon-btn q-tour-btn" id="q-tour-start" data-guided-only title="Show me around" aria-label="Show me around">?</button>
-        <button type="button" class="q-btn q-ghost" id="q-layout-toggle" title="Switch between the guided layout and the classic single page">Classic layout</button>
-        <button type="button" class="q-btn q-ghost" id="q-lock" title="Forget the saved password on this device">Lock</button>
-        <button type="button" class="q-btn q-ghost" id="q-open-profile">Business profile</button>
+        <button type="button" class="q-btn q-ghost q-top-more-btn" id="q-top-more-btn" aria-expanded="false" aria-controls="q-top-more">More<span aria-hidden="true">⋯</span></button>
+        <div class="q-top-more" id="q-top-more">
+          <button type="button" class="q-icon-btn q-tour-btn" id="q-tour-start" data-guided-only title="Show me around" aria-label="Show me around"><span class="q-tour-icon" aria-hidden="true">?</span><span class="q-menu-label">Show me around</span></button>
+          <button type="button" class="q-btn q-ghost" id="q-layout-toggle" title="Switch between the guided layout and the classic single page">Classic layout</button>
+          <button type="button" class="q-btn q-ghost" id="q-lock" title="Forget the saved password on this device">Lock</button>
+          <button type="button" class="q-btn q-ghost" id="q-open-profile">Business profile</button>
+        </div>
         <button type="button" class="q-btn" id="q-new">New quote</button>
       </div>
     </header>
@@ -61,6 +64,10 @@ import { ROLLOVER_MODES, STATUSES } from '../data/quote-model';
     </div>
     <div class="q-layout" id="v-editor" hidden>
       <div class="q-main">
+        <div class="q-next-m" id="q-next-m" data-guided-only aria-live="polite">
+          <div><span class="q-side-label">Next step</span><strong id="q-next-m-title"></strong></div>
+          <button type="button" class="q-btn q-small" id="q-next-m-go"></button>
+        </div>
         <nav class="q-stages" id="q-stages" aria-label="Stages" data-guided-only></nav>
         <nav class="q-jump" id="q-jump" aria-label="Sections"></nav>
         <section class="q-card" id="s-import" aria-labelledby="q-h-import">

@@ -543,7 +543,7 @@ function renderLines() {
       Object.assign(iconButton('↓', `Move ${line.title} down`, () => { if (index < o.lines.length - 1) { [o.lines[index + 1], o.lines[index]] = [o.lines[index], o.lines[index + 1]]; changed(); } }), { disabled: index === o.lines.length - 1 }));
     const title = el('input', { value: line.title, className: 'q-in q-in-title', ariaLabel: 'Item' });
     const detail = el('textarea', { value: line.detail, className: 'q-in q-in-detail', placeholder: 'Details (optional)', rows: 1, ariaLabel: 'Details' });
-    const grow = () => { detail.style.height = 'auto'; detail.style.height = `${detail.scrollHeight}px`; };
+    const grow = () => { detail.style.height = 'auto'; if (detail.scrollHeight) detail.style.height = `${detail.scrollHeight}px`; };
     requestAnimationFrame(grow);
     const flag = (label: string, checked: boolean, onChange: (v: boolean) => void) => {
       const box2 = el('input', { type: 'checkbox', checked });
@@ -2105,6 +2105,7 @@ function defaultStage(): StageId {
   if (state.status === 'accepted') return state.monthly && state.retainer ? 'run' : state.delivery.launchedOn ? 'deliver' : 'run';
   return state.status === 'draft' ? 'build' : 'send';
 }
+const STAGE_SHORT: Record<StageId, string> = { build: 'Build', send: 'Send', run: 'Run', deliver: 'Deliver' };
 let stage: StageId = 'build';
 let stepOf: Partial<Record<StageId, number>> = {};
 let guidedFor = '';
@@ -2133,6 +2134,7 @@ function renderGuided() {
       const n = card.querySelector('.q-step');
       if (n) n.textContent = String(i + 1).padStart(2, '0');
       card.querySelector('.q-head')?.setAttribute('data-eyebrow', `Stage ${si + 1} · ${cur.label}`);
+      requestAnimationFrame(() => card.querySelectorAll<HTMLTextAreaElement>('textarea.q-in-detail').forEach((t) => { t.style.height = 'auto'; if (t.scrollHeight) t.style.height = `${t.scrollHeight}px`; }));
     }
   });
   // Stages after the client says yes stay quiet until then (still clickable).
@@ -2144,7 +2146,7 @@ function renderGuided() {
       : `${done} of ${s.steps.length} done`;
     const b = el('button', { type: 'button', className: `q-stage${s.id === stage ? ' is-current' : ''}${later(s) ? ' is-later' : ''}${done === s.steps.length && !later(s) ? ' is-done' : ''}` },
       el('i', { textContent: String(n + 1) }),
-      el('span', { className: 'q-stage-text' }, el('strong', { textContent: s.label }), el('small', { textContent: hint })));
+      el('span', { className: 'q-stage-text' }, el('strong', { textContent: s.label }), el('b', { className: 'q-stage-short', textContent: STAGE_SHORT[s.id] === 'Run' && state.monthly && state.retainer ? 'Monthly' : STAGE_SHORT[s.id] }), el('small', { textContent: hint })));
     b.setAttribute('aria-current', String(s.id === stage));
     b.addEventListener('click', () => { if (stage === s.id) return; stage = s.id; renderGuided(); scrollToEditor(); });
     return b;
@@ -2157,6 +2159,9 @@ function renderGuided() {
     return a;
   }));
   $('#q-jump').hidden = cur.steps.length < 2;
+  const jump = $('#q-jump');
+  const active = jump.querySelector<HTMLElement>('a.is-active');
+  if (active) jump.scrollLeft = Math.max(0, active.offsetLeft - (jump.clientWidth - active.offsetWidth) / 2);
   // Back / Next, crossing into the next stage at the end of one.
   const first = si === 0 && i === 0;
   const lastStep = i === cur.steps.length - 1;
@@ -2276,8 +2281,20 @@ function renderNext() {
   const b = $<HTMLButtonElement>('#q-next-go');
   b.textContent = n.label;
   b.hidden = !n.label;
+  $('#q-next-m-title').textContent = n.title;
+  const m = $<HTMLButtonElement>('#q-next-m-go');
+  m.textContent = n.label;
+  m.hidden = !n.label;
   nextRun = n.run;
 }
+$('#q-next-m-go').addEventListener('click', () => nextRun());
+
+/* ---------- Header "More" menu (phones) ---------- */
+const moreBtn = $<HTMLButtonElement>('#q-top-more-btn');
+const setMore = (open: boolean) => { $('#q-top-more').classList.toggle('is-open', open); moreBtn.setAttribute('aria-expanded', String(open)); };
+moreBtn.addEventListener('click', (e) => { e.stopPropagation(); setMore(moreBtn.getAttribute('aria-expanded') !== 'true'); });
+document.addEventListener('click', (e) => { if (!(e.target as HTMLElement).closest('#q-top-more')) setMore(false); else if ((e.target as HTMLElement).closest('button')) setMore(false); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') setMore(false); });
 $('#q-next-go').addEventListener('click', () => nextRun());
 
 /* ---------- Popups for small jobs ---------- */
@@ -2379,9 +2396,9 @@ const TOUR: { target: string; title: string; text: string }[] = [
   { target: '#q-stages', title: 'Stages', text: 'Every quote moves through these, from building it to delivering. Click any stage to jump there.' },
   { target: '#q-jump', title: 'Steps', text: 'Each stage has a few steps. A green dot means the step is done.' },
   { target: '#q-stepper', title: 'Back and Next', text: 'Work through one step at a time. Everything saves as you type, so you can move around freely.' },
-  { target: '#q-next', title: 'Next step', text: 'Not sure what to do? This card always shows the next thing to do, with a button that does it.' },
+  { target: '#q-next, #q-next-m', title: 'Next step', text: 'Not sure what to do? This card always shows the next thing to do, with a button that does it.' },
   { target: '.q-side-total', title: 'Total and PDF', text: 'The price, the PDF and the email to the client are always here.' },
-  { target: '#q-layout-toggle', title: 'Prefer one page?', text: 'Switch to the classic layout any time. Your quotes stay exactly the same. The ? button replays this tour.' },
+  { target: '#q-layout-toggle, #q-top-more-btn', title: 'Prefer one page?', text: 'Switch to the classic layout any time (on a phone it’s under More). Your quotes stay exactly the same. “Show me around” replays this tour.' },
 ];
 const tourBox = el('div', { className: 'q-tour', role: 'dialog', ariaLabel: 'Tour' });
 tourBox.hidden = true;
@@ -2389,11 +2406,12 @@ document.body.append(tourBox);
 let tourAt = -1;
 function tourStep(n: number) {
   document.querySelectorAll('.q-tour-target').forEach((x) => x.classList.remove('q-tour-target'));
-  const stops = TOUR.filter((s) => { const t = document.querySelector<HTMLElement>(s.target); return t && t.getClientRects().length > 0; });
+  const visible = (sel: string) => sel.split(',').map((x) => document.querySelector<HTMLElement>(x.trim())).find((t) => t && t.getClientRects().length > 0) ?? null;
+  const stops = TOUR.filter((s) => visible(s.target));
   if (n < 0 || n >= stops.length) { endTour(); return; }
   tourAt = n;
   const stop = stops[n];
-  const target = document.querySelector<HTMLElement>(stop.target)!;
+  const target = visible(stop.target)!;
   target.classList.add('q-tour-target');
   target.scrollIntoView({ block: 'center' });
   const back = el('button', { type: 'button', className: 'q-btn q-ghost q-small', textContent: 'Back' });
