@@ -2,6 +2,7 @@
 import { jsPDF } from 'jspdf';
 import type { Answers, Estimate } from '../data/estimator';
 import { encodePayload } from '../data/payload';
+import { PACKAGES, RETAINER_EXCLUDED, RETAINER_INCLUDED, packageIncluded } from '../data/quote-model';
 
 interface PdfInput {
   rows: [string, string][];
@@ -158,12 +159,16 @@ export async function downloadEstimatePdf(input: PdfInput) {
   heading(r.mode === 'monthly' ? 'Ongoing support' : 'Estimated timeline');
   ensure(26);
   font(30, 'bold'); color(INK);
-  const big = r.mode === 'monthly' ? `${r.hours} hours / month` : `${r.low}–${r.high} weeks`;
+  const plan = r.support;
+  const big = r.mode === 'monthly' && plan ? `${plan.name} · ${plan.daily ? `${plan.daily} hours a day` : `${plan.hours} hours / month`}` : `${r.low}–${r.high} weeks`;
   doc.text(clean(big), M, y + 11);
   if (input.months) { font(11); color(MUTED); doc.text(clean(input.months), M, y + 18); }
   y += input.months ? 23 : 16;
   if (r.mode === 'monthly') {
-    paragraph('Support runs as a monthly retainer with a set number of hours for updates, fixes and improvements. You can adjust the hours as your needs change. Unused time does not usually roll over, so it is best to start small and adjust.');
+    paragraph(plan?.daily
+      ? 'A dedicated developer for 8 hours every working day, Monday to Friday, with weekend emergencies included. Billed monthly, with the price confirmed in a short proposal.'
+      : `A set number of hours each month for updates, fixes and improvements${plan?.recommended ? ' (Medium is a good place to start; Grant will confirm the right plan with you)' : ''}. You can move up or down a plan with a month’s notice.`);
+    if (plan) paragraph(`${plan.reply}.`, 9.5, MUTED);
   } else {
     if (r.scenario) {
       font(10.5, 'bold'); color(INK);
@@ -267,6 +272,22 @@ export async function downloadEstimatePdf(input: PdfInput) {
     bullets(r.notes);
   }
 
+  // Support: what the plan includes and how it works, instead of the project assumptions.
+  if (r.mode === 'monthly') {
+    const pkg = PACKAGES.find((p) => p.id === plan?.id && p.id !== 'custom');
+    heading('What the plan includes');
+    bullets(pkg ? packageIncluded(pkg) : RETAINER_INCLUDED);
+    heading('Not included');
+    bullets([...(pkg ? pkg.cant : RETAINER_EXCLUDED), 'Pricing. The monthly price is confirmed in a short proposal.']);
+    heading('How support works');
+    bullets([
+      'Billed monthly in advance. Paying yearly in advance gets 2 months free.',
+      'Unused hours don’t roll over to the next month. An hour bank that keeps them for 3 months is available.',
+      'You hear when about 80% of the month’s hours are used. Extra hours are only worked after you approve them.',
+      'A short report every month: what was done and the hours used.',
+      'Minimum term of 3 months, then month to month, with 30 days’ notice to end it.',
+    ]);
+  } else {
   // 05 Assumptions
   heading('Assumptions behind this estimate');
   bullets([
@@ -289,6 +310,7 @@ export async function downloadEstimatePdf(input: PdfInput) {
     'Copywriting, photography and design work, unless a design phase is shown above.',
     'Support after launch. This is available separately as a monthly retainer.',
   ]);
+  }
 
   // Next steps: kept together on one page.
   ensure(62);
@@ -296,8 +318,9 @@ export async function downloadEstimatePdf(input: PdfInput) {
   const nextSteps = [
     ['Send this summary', `Email it to Grant at ${input.email}, or reply to any of Grant’s messages.`],
     ['Short call', 'A quick chat to go through your goals, details and any questions.'],
-    ['Written proposal', 'A clear proposal with fixed scope, timeline and price.'],
-    ['Kick-off', 'Once you are happy with the proposal, the project starts.'],
+    ...(r.mode === 'monthly'
+      ? [['Short proposal', 'The plan, start date and monthly price.'], ['Support starts', 'Once the first payment is received, requests can start straight away.']]
+      : [['Written proposal', 'A clear proposal with fixed scope, timeline and price.'], ['Kick-off', 'Once you are happy with the proposal, the project starts.']]),
   ];
   nextSteps.forEach(([title, text], i) => {
     ensure(10);

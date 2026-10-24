@@ -1,5 +1,5 @@
 ---
-import { videoReviews, showPlaceholdersLive } from '../data/videoReviews';
+import { videoReviews, textReviews, showPlaceholdersLive } from '../data/videoReviews';
 import talking1 from '../assets/placeholder/talking-1.webm?url';
 import talking1Poster from '../assets/placeholder/talking-1.webp?url';
 import talking2 from '../assets/placeholder/talking-2.webm?url';
@@ -9,6 +9,8 @@ import talking3Poster from '../assets/placeholder/talking-3.webp?url';
 import { withBase } from '../utils/paths';
 // Placeholders always show in dev; on the published site only while showPlaceholdersLive is on.
 const reviews = videoReviews.filter((review) => !review.placeholder || import.meta.env.DEV || showPlaceholdersLive);
+// Written testimonials appear live only once the client has approved the wording; drafts show in dev.
+const quotes = textReviews.filter((review) => review.approved || import.meta.env.DEV);
 const devClips = [
   { src: talking1, poster: talking1Poster },
   { src: talking2, poster: talking2Poster },
@@ -16,11 +18,11 @@ const devClips = [
 ];
 const initials = (name: string) => name.split(/\s+/).map((part) => part[0]).join('').slice(0, 2).toUpperCase();
 ---
-{reviews.length > 0 && (
+{reviews.length + quotes.length > 0 && (
   <section class="video-section" aria-labelledby="video-heading">
     <div class="video-intro" data-reveal>
       <h2 id="video-heading">Hear it from<br />clients.</h2>
-      <p>Short videos from brands and agencies Grant has worked with.</p>
+      <p>In their own words: brands and agencies Grant has worked with.</p>
     </div>
     <div class="video-grid">
       {reviews.map((review, index) => {
@@ -37,9 +39,19 @@ const initials = (name: string) => name.split(/\s+/).map((part) => part[0]).join
               <span class="video-length">{review.duration}</span>
             </div>
             <figcaption><span class="review-avatar" aria-hidden="true">{initials(review.name)}</span><span><strong>{review.name}</strong><span>{review.role}</span></span>{review.placeholder && <span class="video-badge">Placeholder</span>}</figcaption>
+            {review.transcript && <details class="video-transcript"><summary>Read transcript</summary><p>{review.transcript}</p></details>}
           </figure>
         );
       })}
+      {quotes.map((review, index) => (
+        <figure class="video-review text-review" data-reveal style={`--reveal-index:${reviews.length + index}`}>
+          <div class:list={['quote-frame', `canvas-${review.canvas}`]}>
+            <span class="quote-mark" aria-hidden="true">“</span>
+            <blockquote><p>{review.quote}</p></blockquote>
+          </div>
+          <figcaption><span class="review-avatar" aria-hidden="true">{initials(review.name)}</span><span><strong>{review.name}</strong><span>{review.role}</span></span>{!review.approved && <span class="video-badge">Draft · needs approval</span>}</figcaption>
+        </figure>
+      ))}
     </div>
   </section>
 )}

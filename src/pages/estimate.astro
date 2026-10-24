@@ -222,8 +222,9 @@ import { steps } from '../data/estimator';
         num.textContent = '—'; unit.textContent = ''; shown = { low: 0, high: 0 };
         caption.textContent = 'Answer a few questions to see a realistic timeline.';
       } else if (result.mode === 'monthly') {
-        num.textContent = `${result.hours}`; unit.textContent = 'hrs / month'; shown = { low: 0, high: 0 };
-        caption.textContent = 'A monthly retainer you can adjust as you go.';
+        const plan = result.support!;
+        num.textContent = `${plan.daily || result.hours}`; unit.textContent = plan.daily ? 'hrs / day' : 'hrs / month'; shown = { low: 0, high: 0 };
+        caption.textContent = `${plan.name} plan${plan.recommended ? ', a good place to start' : ''}${plan.daily ? ', Monday to Friday' : ''}. ${plan.reply}. Move up or down with a month’s notice.`;
       } else {
         animateNumbers(result.low, result.high);
         unit.textContent = 'weeks';
@@ -232,8 +233,10 @@ import { steps } from '../data/estimator';
         caption.textContent = [scenario, fit || (scenario ? '' : 'Typical calendar time from kick-off to launch.')].filter(Boolean).join(' ');
       }
       summary.classList.toggle('is-tight', result.tight);
-      disclaimer.textContent = `Calendar time for ${result.team > 1 ? `a team of ${result.team} developers` : 'one developer'}, assuming feedback within a couple of days.`;
-      if (barValue) barValue.textContent = result.mode === 'weeks' ? `${result.low}–${result.high} weeks` : result.mode === 'monthly' ? `${result.hours} hrs / month` : '—';
+      disclaimer.textContent = result.mode === 'monthly'
+        ? 'A set number of hours each month. Grant confirms the plan and price with you before anything starts.'
+        : `Calendar time for ${result.team > 1 ? `a team of ${result.team} developers` : 'one developer'}, assuming feedback within a couple of days.`;
+      if (barValue) barValue.textContent = result.mode === 'weeks' ? `${result.low}–${result.high} weeks` : result.mode === 'monthly' ? `${result.support?.name} · ${result.support?.daily ? `${result.support.daily} hrs / day` : `${result.hours} hrs / month`}` : '—';
 
       phasesBox.hidden = result.phases.length === 0;
       const sum = result.phases.reduce((s, p) => s + p.weeks, 0) || 1;
@@ -247,7 +250,7 @@ import { steps } from '../data/estimator';
 
       // Brief text for email / copy.
       const lines = visibleSteps().filter((s) => s.kind !== 'text' && answerText(s.id)).map((s) => `${s.label}: ${answerText(s.id)}`);
-      const estimateLine = result.mode === 'weeks' ? `Rough estimate: ${result.low}–${result.high} weeks${result.scenario ? `, ${result.scenario.toLowerCase()}` : ''} (${result.phases.map((p) => `${p.label} ~${p.display}`).join(', ')})${result.baseline ? `\nOne developer, full scope: ${result.baseline.low}–${result.baseline.high} weeks` : ''}` : result.mode === 'monthly' ? `Support: about ${result.hours} hours a month` : '';
+      const estimateLine = result.mode === 'weeks' ? `Rough estimate: ${result.low}–${result.high} weeks${result.scenario ? `, ${result.scenario.toLowerCase()}` : ''} (${result.phases.map((p) => `${p.label} ~${p.display}`).join(', ')})${result.baseline ? `\nOne developer, full scope: ${result.baseline.low}–${result.baseline.high} weeks` : ''}` : result.mode === 'monthly' ? `Support plan: ${result.support?.name}${result.support?.daily ? `, ${result.support.daily} hours a day, Monday to Friday` : `, about ${result.hours} hours a month`}` : '';
       const notes = String(live.notes || '');
       brief = ['Hi Grant,', '', 'I used the estimator on your site. Here’s my project:', '', ...lines, estimateLine, ...(notes ? ['', `Notes: ${notes}`] : []), '', 'Thanks,'].filter((l, i, all) => !(l === '' && all[i - 1] === '')).join('\n');
       const subject = `Project brief${answers.platform ? `: ${answerText('platform')}` : ''}${answers.type ? ` – ${answerText('type')}` : ''}`;

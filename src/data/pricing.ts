@@ -19,7 +19,12 @@ export interface QuoteLine {
   phase?: 1 | 2;
   /** Paid on to someone else at cost (e.g. a theme licence): not your income. */
   passThrough?: boolean;
+  /** Rounds of revisions included (shown on the quote); 0 or unset means not stated. */
+  revisions?: number;
 }
+
+/** "Includes 2 rounds of revisions." for a line, or '' if not stated. */
+export const revisionText = (l: QuoteLine) => (l.revisions ? `Includes ${l.revisions} round${l.revisions === 1 ? '' : 's'} of revisions.` : '');
 
 /** Quick-add items on the quote page. Hours use the current hourly rate; fixed items start at 0 for you to price. */
 export const LINE_PRESETS: { label: string; line: Omit<QuoteLine, 'id' | 'rate'> & { price?: number } }[] = [
@@ -167,12 +172,14 @@ export function quoteLines(answers: Answers, settings: PricingSettings, options:
     add('qa', 'Final check & summary', 'Testing that everything works, plus a short report of what changed.', hoursOf(weeks('qa'), settings));
   } else {
     add('discovery', 'Discovery & technical planning', 'Kick-off call, goals, sitemap, technical plan and account setup.', hoursOf(weeks('discovery'), settings));
-    if (weeks('design')) add('design', 'Design (with design partner)', `Page designs for ${layouts} layouts, prepared and approved before the build.`, hoursOf(weeks('design'), settings));
+    if (weeks('design')) { add('design', 'Design (with design partner)', `Page designs for ${layouts} layouts, prepared and approved before the build.`, hoursOf(weeks('design'), settings)); lines[lines.length - 1].revisions = 2; }
 
     const features = result.allDrivers.filter((d) => BUILD_DRIVER(d.label));
     const featureWeeks = features.reduce((sum, d) => sum + d.weeks, 0);
     const designSource = themed || answers.design === 'theme' ? 'built on a premium theme' : answers.design === 'ready' ? 'built from your Figma designs' : 'built from the approved designs';
     add('build', `${platform} development`, `${layouts} responsive page layouts, ${designSource}, with previews for your feedback.`, hoursOf(Math.max(0.5, weeks('build') - featureWeeks), settings));
+    const buildLine = lines.find((l) => l.id === 'build');
+    if (buildLine) buildLine.revisions = 2;
     for (const d of features) add(`feature-${d.label}`, d.label, 'Set up, configured and tested.', hoursOf(d.weeks, settings));
 
     if (weeks('data')) {
@@ -227,7 +234,9 @@ export function lineTotals(lines: QuoteLine[], pricing: { discount: number; disc
   return { subtotal, discount, tax, total: subtotal - discount + tax, hours, optional };
 }
 
-export const formatMoney = (amount: number, currency: string) => {
+export const formatMoney = (value: number, currency: string) => {
+  // Round to cents first, so 2,499.0000001 shows as $2,499 rather than $2,499.00.
+  const amount = Math.round(value * 100) / 100;
   try {
     return new Intl.NumberFormat('en', { style: 'currency', currency, maximumFractionDigits: amount % 1 ? 2 : 0 }).format(amount);
   } catch {
@@ -238,7 +247,7 @@ export const formatMoney = (amount: number, currency: string) => {
 export const DEFAULT_INCLUDED = [
   'Development as described in the scope above, responsive on mobile, tablet and desktop.',
   'Speed, SEO basics and accessibility checks before launch.',
-  'Up to 2 rounds of revisions on each page template.',
+  'Revision rounds as stated on each item above.',
   'Launch support and a recorded handover walkthrough.',
   '30 days of bug fixes after launch.',
 ];

@@ -46,8 +46,12 @@ p.k{margin:0;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:
 h1{margin:8px 0 6px;font:800 44px/0.95 "Big Shoulders Display",Impact,sans-serif;letter-spacing:-.01em;text-transform:uppercase}
 p.s{margin:0 0 24px;color:var(--muted)}
 label.f{display:grid;gap:6px;font-size:12px;font-weight:600;color:var(--muted)}
-input[type=password]{width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:12px;font:inherit;color:var(--ink);background:var(--bg)}
-input[type=password]:focus{outline:2px solid var(--ink);outline-offset:-1px}
+.w{position:relative;margin-top:6px}
+.w input{width:100%;padding:12px 64px 12px 14px;border:1px solid var(--line);border-radius:12px;font:inherit;color:var(--ink);background:var(--bg)}
+.w input:focus{outline:2px solid var(--ink);outline-offset:-1px}
+.w button{position:absolute;top:6px;right:6px;bottom:6px;width:auto;padding:0 12px;border-radius:8px;background:transparent;color:var(--muted);font-size:13px;font-weight:600}
+.w button:hover{color:var(--ink)}
+#c{margin:6px 0 0;font-size:13px;color:var(--warn)}
 label.r{display:flex;align-items:center;gap:8px;margin:14px 0 18px;font-size:14px;cursor:pointer}
 label.r input{width:16px;height:16px;accent-color:var(--ink)}
 button{width:100%;padding:14px 20px;border:0;border-radius:999px;background:var(--ink);color:var(--bg);font:500 15px Archivo,system-ui,sans-serif;cursor:pointer}
@@ -58,7 +62,9 @@ button:disabled{opacity:.5;cursor:wait}
 
 function gatePage(payload) {
   const unlock = payload
-    ? `<form id="g"><label class="f">Password<input type="password" id="p" autocomplete="current-password" required autofocus></label>
+    ? `<form id="g"><label class="f" for="p">Password</label>
+<div class="w"><input type="password" id="p" autocomplete="current-password" autocapitalize="off" autocorrect="off" spellcheck="false" required autofocus><button type="button" id="t" aria-controls="p" aria-pressed="false">Show</button></div>
+<p id="c" hidden>Caps Lock is on.</p>
 <label class="r"><input type="checkbox" id="m">Remember on this device</label>
 <button type="submit" id="b">Unlock</button><p id="e" role="alert"></p></form>`
     : '<p class="s">This page is locked.</p>';
@@ -83,13 +89,27 @@ function gatePage(payload) {
     crypto.subtle.importKey('raw', bytes(saved), 'AES-GCM', false, ['decrypt']).then(show).catch(() => { try { localStorage.removeItem(KEY); } catch {} });
   }
   const form = document.getElementById('g');
+  const input = document.getElementById('p');
+  const toggle = document.getElementById('t');
+  // Show what was typed (or autofilled), so a wrong saved password is easy to spot
+  toggle.addEventListener('click', () => {
+    const show = input.type === 'password';
+    input.type = show ? 'text' : 'password';
+    toggle.textContent = show ? 'Hide' : 'Show';
+    toggle.setAttribute('aria-pressed', String(show));
+    input.focus();
+  });
+  const caps = (event) => { if (event.getModifierState) document.getElementById('c').hidden = !event.getModifierState('CapsLock'); };
+  input.addEventListener('keydown', caps);
+  input.addEventListener('keyup', caps);
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
     const button = document.getElementById('b');
     const error = document.getElementById('e');
     button.disabled = true; button.textContent = 'Unlocking…'; error.textContent = '';
     try {
-      const key = await derive(document.getElementById('p').value);
+      // The build trims the saved password, so spaces around the typed one are never part of it
+      const key = await derive(input.value.trim());
       if (document.getElementById('m').checked) {
         const raw = new Uint8Array(await crypto.subtle.exportKey('raw', key));
         try { localStorage.setItem(KEY, btoa(String.fromCharCode(...raw))); } catch {}
@@ -98,7 +118,7 @@ function gatePage(payload) {
     } catch {
       error.textContent = 'That password isn’t right.';
       button.disabled = false; button.textContent = 'Unlock';
-      document.getElementById('p').select();
+      input.select();
     }
   });
 })();

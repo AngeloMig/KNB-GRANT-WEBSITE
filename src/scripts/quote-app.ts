@@ -1,11 +1,14 @@
 // Quote builder page: dashboard, editor, options, invoices, business profile.
 import { steps, estimate, type Answers } from '../data/estimator';
 import { readPayload } from '../data/payload';
-import { quoteLines, teamLines, TEAM_LINE_IDS, parseBrief, formatMoney, projectTitle, LINE_PRESETS, phaseTotals, type QuoteLine } from '../data/pricing';
+import { quoteLines, teamLines, TEAM_LINE_IDS, parseBrief, formatMoney, projectTitle, LINE_PRESETS, phaseTotals, DEFAULT_EXCLUDED, DEFAULT_INCLUDED, DEFAULT_TERMS, type QuoteLine } from '../data/pricing';
 import {
-  STATUSES, addDays, billedOption, currentQuoteId, dashboardStats, freshQuote, imageToDataUrl, isDefaultSchedule, loadLibrary, loadProfile, loadQuotes,
+  STATUSES, MILESTONE_WHEN, NEED_DUE, addDays, approvedChanges, balanceDue, billedOption, changeTotals, currentQuoteId, dashboardStats, datedPlan, defaultNeeds, freshQuote,
+  imageToDataUrl, invoiceStatus, isDefaultSchedule, loadLibrary, loadProfile, loadQuotes, milestoneDate, needDate, nextChangeNumber, nextMonday, nextReceiptNumber, paidTotal,
   canPhase, dateFit, margin, migrate, newOption, newQuoteNumber, nextInvoiceNumber, niceDate, optionKind, optionPlan, optionTimeline, optionTotals, quoteEmail, saveLibrary,
-  saveProfile, saveQuotes, saveSettings, setCurrentQuoteId, today, uid, validUntil, type Invoice, type LibraryItem, type Profile, type QuoteOption, type QuoteState, type Status,
+  saveProfile, saveQuotes, saveSettings, setCurrentQuoteId, syncInvoice, today, uid, validUntil, warrantyEnd,
+  RETAINER_EXCLUDED, addMonths, RETAINER_INCLUDED, RETAINER_TERMS, PACKAGES, loadPackageSettings, packageIncluded, packagePrice, packageRate, planSavings, savePackageSettings, yearlyPrice, type PackageId, type PackagePrices, type PackageSettings, bankLine, defaultRetainer, isWeekend, packageTexts, packageHours, packageLine, packageOf, hoursText, monthFor, retainerMonths, retainerPlan, retainerTermsText,
+  type ChangeOrder, type Invoice, type InvoiceLine, type LibraryItem, type MilestoneWhen, type NeedDue, type Profile, type QuoteOption, type QuoteState, type RetainerMonth, type Status, type SupportPackage,
 } from '../data/quote-model';
 
 const $ = <T extends HTMLElement = HTMLElement>(sel: string) => document.querySelector<T>(sel)!;
@@ -20,10 +23,11 @@ function el<K extends keyof HTMLElementTagNameMap>(tag: K, props: Record<string,
 let quotes = loadQuotes();
 let profile = loadProfile();
 let library = loadLibrary();
+let pkgSettings = loadPackageSettings();
 const startId = currentQuoteId();
 let state: QuoteState = startId && quotes[startId] ? quotes[startId] : freshQuote();
 let view: 'dashboard' | 'editor' = Object.keys(quotes).length ? 'dashboard' : 'editor';
-let filter: 'all' | Status = 'all';
+let filter: 'all' | 'retainer' | Status = 'all';
 
 const opt = () => state.options[state.active];
 const money = (n: number, currency = state.settings.currency) => formatMoney(n, currency);
@@ -51,14 +55,63 @@ function iconButton(text: string, label: string, onClick: () => void, extra = ''
 }
 function status(text: string, error = false) { const s = $('#q-status'); s.textContent = text; s.classList.toggle('is-error', error); }
 let toastTimer = 0;
-function toast(text: string, error = false) {
+/** A short message at the bottom of the screen, optionally with one action (e.g. Undo, Reload). */
+function toast(text: string, error = false, action?: { label: string; run: () => void }) {
   let t = document.querySelector<HTMLElement>('.q-toast');
   if (!t) { t = el('div', { className: 'q-toast', role: 'status' }); document.body.append(t); }
-  t.textContent = text;
+  t.replaceChildren(el('span', { textContent: text }));
+  if (action) {
+    const b = el('button', { type: 'button', className: 'q-toast-action', textContent: action.label });
+    b.addEventListener('click', () => { t!.classList.remove('is-on'); action.run(); });
+    t.append(b);
+  }
   t.classList.toggle('is-error', error);
   t.classList.add('is-on');
   clearTimeout(toastTimer);
-  toastTimer = window.setTimeout(() => t!.classList.remove('is-on'), 2600);
+  toastTimer = window.setTimeout(() => t!.classList.remove('is-on'), action ? 7000 : 2600);
+}
+
+/** A designed confirmation dialog. Resolves true when the person confirms. */
+function confirmDialog(opts: { title: string; text: string; list?: string[]; confirm?: string; danger?: boolean }): Promise<boolean> {
+  const d = $<HTMLDialogElement>('#q-confirm');
+  $('#q-confirm-title').textContent = opts.title;
+  $('#q-confirm-text').textContent = opts.text;
+  $('#q-confirm-list').replaceChildren(...(opts.list ?? []).map((item) => el('li', { textContent: item })));
+  const ok = $<HTMLButtonElement>('#q-confirm-ok');
+  ok.textContent = opts.confirm ?? 'Delete';
+  ok.classList.toggle('q-danger-btn', opts.danger !== false);
+  d.classList.toggle('is-danger', opts.danger !== false);
+  d.returnValue = '';
+  d.showModal();
+  return new Promise((resolve) => d.addEventListener('close', () => resolve(d.returnValue === 'ok'), { once: true }));
+}
+
+/**
+ * Deletes something after confirmation, with Undo: the whole quote (or quote list / item library)
+ * is snapshotted first, so undo restores exactly what was there.
+ */
+async function deleteWithUndo(opts: { title: string; text: string; list?: string[]; confirm?: string; done: string; scope?: 'quote' | 'quotes' | 'library'; run: () => void }) {
+  if (!(await confirmDialog(opts))) return false;
+  const scope = opts.scope ?? 'quote';
+  const before = scope === 'quote' ? structuredClone(state) : scope === 'quotes' ? structuredClone(quotes) : structuredClone(library);
+  const beforeId = state.id;
+  opts.run();
+  toast(opts.done, false, {
+    label: 'Undo',
+    run: () => {
+      if (scope === 'quote') { if (state.id === beforeId) { state = before as QuoteState; renderEditor(); save(); } }
+      else if (scope === 'quotes') {
+        quotes = before as Record<string, QuoteState>;
+        saveQuotes(quotes);
+        // If the deleted quote was the one open in the editor, open it again.
+        if (quotes[beforeId] && state.id !== beforeId) { state = quotes[beforeId]; setCurrentQuoteId(beforeId); }
+        if (view === 'dashboard') renderDashboard(); else renderEditor();
+      }
+      else { library = before as LibraryItem[]; saveLibrary(library); renderLibrary(); }
+      toast('Restored');
+    },
+  });
+  return true;
 }
 
 /* ---------- Views ---------- */
@@ -66,6 +119,7 @@ function setView(next: 'dashboard' | 'editor') {
   view = next;
   $('#v-dashboard').hidden = next !== 'dashboard';
   $('#v-editor').hidden = next !== 'editor';
+  $('#q-context').hidden = next !== 'editor';
   document.querySelectorAll<HTMLButtonElement>('[data-view]').forEach((b) => b.setAttribute('aria-current', String(b.dataset.view === next)));
   $('#q-mobile-bar').hidden = next !== 'editor';
   if (next === 'dashboard') renderDashboard(); else renderEditor();
@@ -78,18 +132,33 @@ function renderDashboard() {
   const all = Object.values(quotes).sort((a, b) => b.savedAt - a.savedAt);
   const stats = dashboardStats(all);
   const currency = all[0]?.settings.currency ?? state.settings.currency;
-  const tiles: [string, string, string][] = [
-    ['Awaiting reply', money(stats.awaiting.value, currency), `${stats.awaiting.count} sent quote${stats.awaiting.count === 1 ? '' : 's'}`],
-    ['Accepted this month', money(stats.acceptedThisMonth, currency), new Date().toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })],
-    ['Follow-ups due', String(stats.followUps), 'Sent quotes to chase today'],
-    ['Expiring soon', String(stats.expiring), 'Sent quotes, next 7 days'],
-    ['Unpaid invoices', money(stats.unpaid, currency), 'Across all quotes'],
+  // Three key numbers, then small alerts (each one filters the list).
+  const tiles: [string, string, string, string][] = [
+    ['Accepted this month', money(stats.acceptedThisMonth, currency), new Date().toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }), 'is-dark'],
+    ['Awaiting reply', money(stats.awaiting.value, currency), `${stats.awaiting.count} sent quote${stats.awaiting.count === 1 ? '' : 's'}`, ''],
+    ['Unpaid invoices', money(stats.unpaid, currency), stats.unpaid ? 'Balance still to collect' : 'Everything is paid', stats.unpaid ? 'is-due' : ''],
+    ['Retainers', `${money(stats.retainers.monthly, currency)}`, `${stats.retainers.count} active · per month`, ''],
   ];
-  const statsBox = $('#q-stats');
-  statsBox.replaceChildren(...tiles.map(([label, value, note]) => el('div', { className: 'q-stat' }, el('span', { textContent: label }), el('strong', { textContent: value }), el('small', { textContent: note }))));
+  $('#q-stats').replaceChildren(...tiles.map(([label, value, note, cls]) => el('div', { className: `q-stat ${cls}`.trim() }, el('span', { textContent: label }), el('strong', { textContent: value }), el('small', { textContent: note }))));
+  const alerts: { text: string; count: number; warn: boolean; to: typeof filter }[] = [
+    { text: 'follow-ups due', count: stats.followUps, warn: stats.followUps > 0, to: 'sent' },
+    { text: 'expiring in 7 days', count: stats.expiring, warn: stats.expiring > 0, to: 'sent' },
+    { text: 'in the bug-fix period', count: stats.warranty, warn: stats.warrantyEnding > 0, to: 'accepted' },
+    { text: `retainer hrs used of ${hoursText(stats.retainerHours.available)}`, count: stats.retainerHours.used, warn: stats.retainerHours.near > 0, to: 'retainer' },
+  ];
+  $('#q-alerts').replaceChildren(...alerts.map((a) => {
+    const b = el('button', { type: 'button', className: `q-alert${a.warn ? ' is-warn' : ''}${a.count ? '' : ' is-zero'}` }, el('strong', { textContent: hoursText(a.count) }), a.text);
+    b.addEventListener('click', () => setFilter(a.to));
+    return b;
+  }));
+  // Counts on the filters.
+  document.querySelectorAll<HTMLButtonElement>('[data-filter]').forEach((b) => {
+    const f = b.dataset.filter!;
+    b.dataset.count = String(f === 'all' ? all.length : f === 'retainer' ? all.filter((q) => q.retainer).length : all.filter((q) => q.status === f).length);
+  });
 
   const term = ($<HTMLInputElement>('#q-search').value || '').trim().toLowerCase();
-  const shown = all.filter((q) => (filter === 'all' || q.status === filter) && (!term || [q.client.name, q.client.company, q.project.title, q.meta.number].join(' ').toLowerCase().includes(term)));
+  const shown = all.filter((q) => (filter === 'all' || (filter === 'retainer' ? Boolean(q.retainer) : q.status === filter)) && (!term || [q.client.name, q.client.company, q.project.title, q.meta.number].join(' ').toLowerCase().includes(term)));
   const list = $('#q-list');
   if (!all.length) {
     list.replaceChildren(el('div', { className: 'q-dash-empty' }, el('strong', { textContent: 'No quotes yet' }), el('span', { textContent: 'Start one from a client’s estimate PDF.' }), Object.assign(el('button', { type: 'button', className: 'q-btn', textContent: 'New quote' }), { onclick: () => newQuote() })));
@@ -97,12 +166,21 @@ function renderDashboard() {
   }
   if (!shown.length) { list.replaceChildren(el('p', { className: 'q-empty', textContent: 'No quotes match.' })); return; }
   const now = today();
-  list.replaceChildren(...shown.map((q) => {
+  const head = el('div', { className: 'q-list-head', ariaHidden: 'true' }, el('span', { textContent: 'Client & project' }), el('span', { textContent: 'Status' }), el('span', { textContent: 'Total' }), el('span', { textContent: 'Next step' }), el('span'));
+  list.replaceChildren(head, ...shown.map((q) => {
     const o = billedOption(q);
     const total = optionTotals(q, o).total;
     const valid = validUntil(q);
-    const unpaid = q.invoices.filter((i) => i.status === 'unpaid');
-    const next = q.status === 'sent'
+    const unpaid = q.invoices.filter((i) => invoiceStatus(i) !== 'paid');
+    const wEnd = warrantyEnd(q);
+    const month = q.retainer && q.status === 'accepted' ? monthFor(q, now) : null;
+    const next = q.retainer && q.status === 'accepted'
+      ? q.retainer.endedOn && q.retainer.endedOn < now ? { text: `Retainer ended ${niceDate(q.retainer.endedOn)}`, warn: false }
+        : month ? { text: `This month ${hoursText(month.used)} of ${hoursText(month.available)} hrs${unpaid.length ? ` · ${unpaid.length} unpaid` : ''}`, warn: month.available > 0 && month.used / month.available >= (q.retainer.warnAt || 80) / 100 || unpaid.some((i) => i.due < now) }
+        : { text: `Retainer starts ${niceDate(q.retainer.start)}`, warn: false }
+      : q.status === 'accepted' && wEnd
+      ? wEnd >= now ? { text: `Bug-fix period ends ${niceDate(wEnd)}`, warn: wEnd <= addDays(now, 14) } : { text: `Launched ${niceDate(q.delivery.launchedOn)} · warranty ended`, warn: false }
+      : q.status === 'sent'
       ? q.followUp && q.followUp <= now ? { text: `Follow up (${niceDate(q.followUp)})`, warn: true } : valid < now ? { text: 'Expired', warn: true } : { text: `Valid until ${niceDate(valid)}`, warn: valid <= addDays(now, 7) }
       : q.status === 'accepted' ? unpaid.length ? { text: `${unpaid.length} unpaid invoice${unpaid.length > 1 ? 's' : ''}`, warn: unpaid.some((i) => i.due < now) } : { text: q.invoices.length ? 'All invoices paid' : 'No invoices yet', warn: false }
       : { text: `Edited ${new Date(q.savedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}`, warn: false };
@@ -112,32 +190,49 @@ function renderDashboard() {
     select.addEventListener('click', (e) => e.stopPropagation());
     select.addEventListener('change', () => { setStatus(q, select.value as Status); quotes[q.id] = q; saveQuotes(quotes); renderDashboard(); });
     const row = el('article', { className: 'q-row', tabIndex: 0 },
-      el('div', { className: 'q-row-main' }, el('strong', { textContent: q.client.company || q.client.name || 'Untitled client' }), el('span', { textContent: [q.project.title, q.meta.number].filter(Boolean).join(' · ') })),
+      el('div', { className: 'q-row-main' },
+        el('span', { className: `q-avatar${q.retainer ? ' is-retainer' : ''}`, textContent: initials(q.client.company || q.client.name), ariaHidden: 'true' }),
+        el('div', {},
+          el('strong', {}, q.client.company || q.client.name || 'Untitled client', ...(q.retainer ? [el('em', { className: 'q-badge', textContent: 'Retainer' })] : [])),
+          el('span', { textContent: [q.project.title, q.meta.number].filter(Boolean).join(' · ') }))),
       select,
-      el('div', { className: 'q-row-total' }, el('strong', { textContent: o.lines.length ? money(total, q.settings.currency) : '—' }), el('span', { textContent: q.options.length > 1 ? `${q.options.length} options` : optionKind(o) })),
+      el('div', { className: 'q-row-total' }, el('strong', { textContent: o.lines.length ? `${money(total, q.settings.currency)}${q.monthly ? ' / mo' : ''}` : '—' }), el('span', { textContent: q.retainer ? `Retainer · ${q.retainer.pkg && q.retainer.pkg !== 'custom' ? packageOf(q.retainer.pkg).name : `${hoursText(retainerPlan(q).hours)} hrs / month`}` : q.options.length > 1 ? `${q.options.length} options` : optionKind(o) })),
       el('span', { className: `q-row-next${next.warn ? ' is-warn' : ''}`, textContent: next.text }),
       el('div', { className: 'q-row-tools' },
         iconButton('⧉', `Duplicate ${q.meta.number}`, () => { duplicate(q); }),
-        iconButton('×', `Delete ${q.meta.number}`, () => { if (window.confirm(`Delete quote ${q.meta.number}? This can’t be undone.`)) { delete quotes[q.id]; saveQuotes(quotes); if (q.id === state.id) state = freshQuote(); renderDashboard(); } }, 'is-danger')),
+        iconButton('×', `Delete ${q.meta.number}`, () => deleteWithUndo({
+          title: 'Delete this quote?',
+          text: `${q.client.company || q.client.name || 'Untitled client'} · ${q.meta.number}. This removes everything saved with it:`,
+          list: [`${q.options.length} option${q.options.length === 1 ? '' : 's'} and their pricing`, ...(q.invoices.length ? [q.invoices.length === 1 ? '1 invoice and its payments' : `${q.invoices.length} invoices and their payments`] : []), ...(q.changes.length ? [`${q.changes.length} change order${q.changes.length === 1 ? '' : 's'}`] : []), 'The client checklist and delivery details'],
+          done: `Deleted ${q.meta.number}`, scope: 'quotes',
+          run: () => { delete quotes[q.id]; saveQuotes(quotes); if (q.id === state.id) state = freshQuote(); renderDashboard(); },
+        }), 'is-danger')),
     );
-    const open = () => { state = q; setCurrentQuoteId(q.id); setView('editor'); };
+    const open = () => openQuote(q);
     row.addEventListener('click', (e) => { if (!(e.target as HTMLElement).closest('button, select')) open(); });
     row.addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target === row) open(); });
     return row;
   }));
 }
-document.querySelectorAll<HTMLButtonElement>('[data-filter]').forEach((b) => b.addEventListener('click', () => {
-  filter = b.dataset.filter as typeof filter;
-  document.querySelectorAll('[data-filter]').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+/** Up to two initials for a client, for the avatar. */
+const initials = (name: string) => (name || '?').split(/\s+/).filter((w) => /[a-z0-9]/i.test(w)).slice(0, 2).map((w) => w[0].toUpperCase()).join('') || '?';
+function setFilter(next: typeof filter) {
+  filter = next;
+  document.querySelectorAll<HTMLButtonElement>('[data-filter]').forEach((x) => x.setAttribute('aria-pressed', String(x.dataset.filter === next)));
   renderDashboard();
-}));
+}
+document.querySelectorAll<HTMLButtonElement>('[data-filter]').forEach((b) => b.addEventListener('click', () => setFilter(b.dataset.filter as typeof filter)));
 $('#q-search').addEventListener('input', renderDashboard);
 
 function newQuote() { state = freshQuote(); status(''); setView('editor'); }
+function openQuote(q: QuoteState) { state = q; setCurrentQuoteId(q.id); logMonth = ''; status(''); setView('editor'); }
 function duplicate(q: QuoteState) {
   const copy = migrate(structuredClone(q));
-  Object.assign(copy, { id: uid(), savedAt: Date.now(), status: 'draft', statusDates: {}, followUp: '', invoices: [], acceptedOption: '' });
+  Object.assign(copy, { id: uid(), savedAt: Date.now(), status: 'draft', statusDates: {}, followUp: '', invoices: [], acceptedOption: '', changes: [] });
+  copy.needs = copy.needs.map((n) => ({ ...n, id: uid(), done: false }));
+  copy.delivery = { ...copy.delivery, kickoff: nextMonday(addDays(today(), 7)), launchedOn: '', liveUrl: '', adminUrl: '', links: '', access: '', notes: '' };
   copy.meta = { ...copy.meta, number: newQuoteNumber(), date: today() };
+  if (copy.retainer) copy.retainer = { ...copy.retainer, log: [], endedOn: '' };
   quotes[copy.id] = copy;
   saveQuotes(quotes);
   toast(`Duplicated as ${copy.meta.number}`);
@@ -155,8 +250,8 @@ function setStatus(q: QuoteState, s: Status) {
   if (s === 'accepted' && !q.acceptedOption) q.acceptedOption = q.options[q.active]?.id ?? q.options[0].id;
   if (s !== 'sent') q.followUp = s === 'draft' ? q.followUp : '';
 }
-$<HTMLSelectElement>('#q-status-select').addEventListener('change', (e) => { setStatus(state, (e.target as HTMLSelectElement).value as Status); fillBound(); renderSummary(); save(); });
-$<HTMLSelectElement>('#q-accepted').addEventListener('change', (e) => { state.acceptedOption = (e.target as HTMLSelectElement).value; renderSummary(); renderInvoices(); save(); });
+$<HTMLSelectElement>('#q-status-select').addEventListener('change', (e) => { setStatus(state, (e.target as HTMLSelectElement).value as Status); fillBound(); renderSummary(); renderTimeline(); renderNeeds(); renderChangeSummary(); save(); });
+$<HTMLSelectElement>('#q-accepted').addEventListener('change', (e) => { state.acceptedOption = (e.target as HTMLSelectElement).value; renderSummary(); renderInvoices(); renderTimeline(); renderNeeds(); renderChangeSummary(); save(); });
 
 /* ---------- Field binding (data-bind="section.key") ---------- */
 const getPath = (path: string) => path.split('.').reduce<any>((obj, key) => obj?.[key], state);
@@ -169,12 +264,16 @@ bound().forEach((f) => f.addEventListener('input', () => {
   const before = state.settings.rate;
   const beforeTeam = state.teamRate;
   setPath(path, numeric ? Math.max(0, Number(f.value) || 0) : f.value);
+  // The same value can have two fields (e.g. the discount in Pricing and in Retainer).
+  document.querySelectorAll<HTMLInputElement | HTMLSelectElement>(`[data-bind="${path}"]`).forEach((other) => { if (other !== f) other.value = f.value; });
   // A new rate moves every hourly line still on the old rate (custom rates stay), in every option.
   if (path === 'settings.rate') state.options.forEach((o) => o.lines.forEach((l) => { if ((l.unit ?? 'hours') === 'hours' && l.rate === before && l.id !== 'team') l.rate = state.settings.rate; }));
   if (path === 'teamRate') state.options.forEach((o) => o.lines.forEach((l) => { if (l.id === 'team' && l.rate === beforeTeam) l.rate = state.teamRate; }));
   if (path === 'teamPremium') state.options.forEach((o) => { if (o.team > 1 && o.lines.length) applyTeam(o, o.team); });
   if (path === 'settings.rate') state.options.forEach((o) => { if (o.team > 1 && o.lines.length) applyTeam(o, o.team); });
   if (['settings.rate', 'teamRate', 'teamPremium', 'settings.currency'].includes(path)) { renderLines(); renderOptionTabs(); }
+  if (path.startsWith('delivery.') || path === 'meta.date') { renderTimeline(); renderNeeds(); renderSchedule(); renderDelivery(); }
+  if (path === 'retainer.start' && state.retainer) state.delivery.kickoff = state.retainer.start;
   renderSummary();
   save();
 }));
@@ -192,7 +291,7 @@ function renderScope() {
       select.append(new Option('—', ''));
       options.forEach((o) => select.append(new Option(o.label, o.id)));
       select.value = String(state.answers[step.id] ?? '');
-      select.addEventListener('change', () => { state.answers[step.id] = select.value || undefined; scopeChanged(); });
+      select.addEventListener('change', () => { state.answers[step.id] = select.value || undefined; scopeChanged(step.id); });
       row.append(select);
     } else if (step.kind === 'multi') {
       const chosen = new Set((state.answers[step.id] as string[] | undefined) ?? []);
@@ -215,21 +314,33 @@ function renderScope() {
   const r = estimate(state.answers);
   $('#q-estimate').textContent = r.mode === 'weeks' ? `Client’s estimate: ${r.low}–${r.high} weeks with one developer${r.scenario ? ` · they chose: ${r.scenario}` : ''}` : r.mode === 'monthly' ? `Support retainer: ${r.hours} hours a month` : 'Pick a project type, or import an estimate, to calculate pricing.';
 }
-function scopeChanged() { $('#q-dirty').hidden = false; renderScope(); renderTeam(); renderProgress(); save(); }
+/** The launch date doesn't change the price (only how each option compares with it), so it doesn't ask for a recalculation. */
+function scopeChanged(stepId = '') {
+  if (stepId !== 'deadline') $('#q-dirty').hidden = false;
+  state.options.forEach((o) => { o.timeline = optionTimeline(state.answers, o); });
+  renderScope();
+  renderOptionTabs();
+  renderSummary();
+  renderTimeline();
+  save();
+}
 
 /* ---------- Pricing: options ---------- */
 function calcOption(o: QuoteOption) {
   const { lines, result } = quoteLines(state.answers, state.settings, { team: o.team, teamRate: state.teamRate, teamPremium: state.teamPremium, essentials: o.essentials });
   const custom = o.lines.filter((l) => l.id.startsWith('custom-'));
   o.lines = [...lines, ...custom];
+  // A support plan picked in the estimator becomes that package, at its price.
+  const pkg = result.mode === 'monthly' ? PACKAGES.find((p) => p.id === result.support?.id && p.id !== 'custom') : undefined;
+  if (pkg) o.lines = [packageLine(pkg, packageHours(pkg), packageRate(pkg.id, pkgSettings.prices, state.settings.rate)), ...o.lines.filter((l) => l.id !== 'retainer')];
   o.timeline = optionTimeline(state.answers, o);
   o.edited = false;
   state.monthly = result.mode === 'monthly';
   if (state.monthly && isDefaultSchedule(state.schedule)) state.schedule = [{ label: 'Billed monthly in advance', percent: 100 }];
 }
-function recalc(ask = true) {
+async function recalc(ask = true) {
   const edited = state.options.some((o) => o.edited && o.lines.length);
-  if (ask && edited && !window.confirm('Recalculate every option? Manual edits to calculated lines will be replaced (items you added yourself stay).')) return;
+  if (ask && edited && !(await confirmDialog({ title: 'Recalculate pricing?', text: 'Every option is recalculated from the scope. Your manual edits to calculated lines are replaced. Items you added yourself stay.', confirm: 'Recalculate', danger: false }))) return;
   state.options.forEach(calcOption);
   if (!state.project.title) state.project.title = projectTitle(state.answers);
   $('#q-dirty').hidden = true;
@@ -265,21 +376,30 @@ function renderOptionTabs() {
   $('#q-option-remove').hidden = state.options.length < 2;
 }
 $<HTMLInputElement>('#q-option-name').addEventListener('input', (e) => { opt().name = (e.target as HTMLInputElement).value || 'Option'; renderOptionTabs(); renderSummary(); save(); });
-$<HTMLInputElement>('#q-option-essentials').addEventListener('change', (e) => {
+$<HTMLInputElement>('#q-option-essentials').addEventListener('change', async (e) => {
   const o = opt();
-  if (o.edited && !window.confirm('Switching recalculates this option’s lines. Manual edits to calculated lines will be replaced.')) { (e.target as HTMLInputElement).checked = o.essentials; return; }
+  const box = e.target as HTMLInputElement;
+  if (o.edited && !(await confirmDialog({ title: 'Recalculate this option?', text: 'Switching recalculates this option’s lines. Your manual edits to calculated lines are replaced.', confirm: 'Switch', danger: false }))) { box.checked = o.essentials; return; }
   o.essentials = (e.target as HTMLInputElement).checked;
   calcOption(o);
   renderPricing();
   save();
 });
 $('#q-option-remove').addEventListener('click', () => {
-  if (state.options.length < 2 || !window.confirm(`Remove ${opt().name}?`)) return;
-  const removed = state.options.splice(state.active, 1)[0];
-  if (state.acceptedOption === removed.id) state.acceptedOption = '';
-  state.active = Math.max(0, state.active - 1);
-  renderPricing();
-  save();
+  if (state.options.length < 2) return;
+  const o = opt();
+  deleteWithUndo({
+    title: `Remove ${o.name}?`,
+    text: `${optionKind(o)} · ${money(optionTotals(state, o).total)}. Its ${o.lines.length} line items are removed too.${state.acceptedOption === o.id ? ' It’s the accepted option, so the quote will need a new accepted option.' : ''}`,
+    done: `Removed ${o.name}`,
+    run: () => {
+      const removed = state.options.splice(state.active, 1)[0];
+      if (state.acceptedOption === removed.id) state.acceptedOption = '';
+      state.active = Math.max(0, state.active - 1);
+      renderPricing();
+      save();
+    },
+  });
 });
 document.querySelectorAll<HTMLButtonElement>('[data-new-option]').forEach((b) => b.addEventListener('click', () => {
   const kind = b.dataset.newOption!;
@@ -385,6 +505,7 @@ function renderLines() {
       box.append(el('div', { className: 'q-phase-head', textContent: phase === 1 ? 'Phase 1 · launch with the essentials' : 'Phase 2 · after launch' }));
     }
     const row = el('div', { className: 'q-tr', role: 'row' });
+    row.dataset.line = line.id;
     row.classList.toggle('is-optional', Boolean(line.optional));
     const move = el('div', { className: 'q-move' },
       Object.assign(iconButton('↑', `Move ${line.title} up`, () => { if (index > 0) { [o.lines[index - 1], o.lines[index]] = [o.lines[index], o.lines[index - 1]]; changed(); } }), { disabled: index === 0 }),
@@ -398,7 +519,11 @@ function renderLines() {
       box2.addEventListener('change', () => onChange(box2.checked));
       return el('label', { className: `q-flag${checked ? ' is-on' : ''}` }, box2, label);
     };
+    const revisions = el('input', { type: 'number', min: '0', max: '9', value: String(line.revisions ?? 0), className: 'q-rev-input', ariaLabel: 'Revision rounds' });
+    revisions.addEventListener('input', () => { line.revisions = Math.max(0, Math.min(9, Number(revisions.value) || 0)); revLabel.classList.toggle('is-on', Boolean(line.revisions)); o.edited = true; save(); });
+    const revLabel = el('label', { className: `q-flag q-rev${line.revisions ? ' is-on' : ''}`, title: 'Rounds of revisions included (0 = not stated)' }, revisions, 'revisions');
     const flags = el('div', { className: 'q-flags' },
+      revLabel,
       flag('Phase 2', line.phase === 2, (v) => { line.phase = v ? 2 : 1; changed(); }),
       flag('At cost', Boolean(line.passThrough), (v) => { line.passThrough = v; changed(); }),
       flag('Optional', Boolean(line.optional), (v) => { line.optional = v; changed(); }));
@@ -408,6 +533,8 @@ function renderLines() {
     unit.value = line.unit ?? 'hours';
     const rate = el('input', { type: 'number', min: '0', step: 'any', value: String(line.rate), className: 'q-in q-num q-rate', ariaLabel: (line.unit ?? 'hours') === 'fixed' ? 'Price' : 'Hourly rate' });
     const amount = el('output', { className: 'q-amount', textContent: money(line.hours * line.rate) });
+    // The hour bank's price follows its premium % (Retainer terms), so it isn't typed here.
+    if (line.id === 'rollover') { [qty, rate].forEach((x) => { x.readOnly = true; x.title = 'Set by the hour bank premium in Retainer terms'; }); unit.disabled = true; }
     const update = () => { amount.textContent = money(line.hours * line.rate); o.edited = true; renderSummary(); renderOptionTabs(); save(); };
     title.addEventListener('input', () => { line.title = title.value; o.edited = true; save(); });
     detail.addEventListener('input', () => { line.detail = detail.value; grow(); o.edited = true; save(); });
@@ -417,7 +544,12 @@ function renderLines() {
     const tools = el('div', { className: 'q-row-tools' },
       iconButton('☆', `Save ${line.title} to your items`, () => saveToLibrary(line)),
       iconButton('⧉', `Duplicate ${line.title}`, () => { o.lines.splice(index + 1, 0, { ...line, id: `custom-${uid()}` }); changed(); }),
-      iconButton('×', `Remove ${line.title}`, () => { o.lines.splice(index, 1); changed(); }, 'is-danger'));
+      iconButton('×', `Remove ${line.title}`, () => deleteWithUndo({
+        title: 'Remove this item?',
+        text: `${line.title || 'Untitled item'} · ${money(line.hours * line.rate)}${line.optional ? ' (optional extra)' : ''}.`,
+        done: `Removed ${line.title || 'item'}`,
+        run: () => { o.lines.splice(index, 1); changed(); },
+      }), 'is-danger'));
     row.append(move, el('div', { className: 'q-item' }, title, detail, flags), qty, unit, rate, amount, tools);
     box.append(row);
   });
@@ -438,7 +570,12 @@ function renderLibrary() {
   box.replaceChildren(...library.map((item) => {
     const add = el('button', { type: 'button', textContent: item.title });
     add.addEventListener('click', () => addLine({ ...item, rate: (item.unit ?? 'hours') === 'fixed' ? item.rate : state.settings.rate }));
-    const remove = iconButton('×', `Remove ${item.title} from your items`, () => { library = library.filter((i) => i.key !== item.key); saveLibrary(library); renderLibrary(); }, 'is-danger');
+    const remove = iconButton('×', `Remove ${item.title} from your items`, () => deleteWithUndo({
+      title: 'Remove from your items?',
+      text: `“${item.title}” is removed from your saved items. Quotes that already use it keep it.`,
+      done: `Removed “${item.title}” from your items`, scope: 'library',
+      run: () => { library = library.filter((i) => i.key !== item.key); saveLibrary(library); renderLibrary(); },
+    }), 'is-danger');
     return el('div', { className: 'q-menu-item' }, add, remove);
   }));
 }
@@ -475,6 +612,8 @@ function renderTotals() {
 }
 
 function renderSummary() {
+  renderMode();
+  renderContext();
   renderTotals();
   // Once accepted, the summary shows the accepted option: the same one payments and invoices use.
   const o = state.status === 'accepted' ? billedOption(state) : opt();
@@ -482,6 +621,7 @@ function renderSummary() {
   const ready = o.lines.some((l) => !l.optional);
   const multi = state.options.length > 1;
   $<HTMLSelectElement>('#q-status-select').value = state.status;
+  $('.q-follow').hidden = state.status !== 'sent';
   $('#q-status-select').className = `is-${state.status}`;
   const acceptedWrap = $('#q-accepted-wrap');
   acceptedWrap.hidden = !(state.status === 'accepted' && multi);
@@ -489,19 +629,36 @@ function renderSummary() {
   acc.replaceChildren(...state.options.map((x) => new Option(`${x.name} · ${money(optionTotals(state, x).total)}`, x.id)));
   acc.value = state.acceptedOption || o.id;
 
-  $('#q-total-label').textContent = multi ? `${o.name} total${state.status === 'accepted' ? ' · accepted' : ''}` : 'Quotation total';
+  $('#q-total-label').textContent = multi ? `${o.name} total${state.status === 'accepted' ? ' · accepted' : ''}` : state.monthly && state.retainer ? 'Monthly fee' : 'Quotation total';
   const total = $('#q-total');
   total.textContent = ready ? money(t.total) : '';
   total.classList.toggle('is-empty', !ready);
+  $('#q-start').hidden = ready;
+  $('.q-actions').classList.toggle('is-empty', !ready && !state.options.some((x) => x.lines.some((l) => !l.optional)));
   $('#q-sub').textContent = ready
     ? `${state.monthly ? 'Per month' : 'Fixed price'}${t.tax ? `, including ${state.pricing.taxLabel || 'tax'}` : ''}${t.optional ? ` · plus ${money(t.optional)} optional` : ''}${multi ? ` · ${state.options.length} options` : ''}`
     : 'Upload the client’s estimate to start pricing.';
   const hourly = o.lines.filter((l) => !l.optional && (l.unit ?? 'hours') === 'hours');
-  const facts: [string, string][] = ready ? [
+  const retainer = state.monthly ? state.retainer : undefined;
+  const thisMonth = retainer ? monthFor(state) : null;
+  const facts: [string, string][] = ready && retainer ? [
+    ['Hours / month', hoursText(t.hours)],
+    ['Average hourly rate', t.hours ? `${money(hourly.reduce((s, l) => s + l.hours * l.rate, 0) / t.hours)} / hr` : '—'],
+    ['Extra hours', `${money(retainer.overageRate)} / hr`],
+    [retainer.start > today() ? 'Starts' : 'Started', niceDate(retainer.start)],
+    ...(thisMonth ? [['This month', `${hoursText(thisMonth.used)} of ${hoursText(thisMonth.available)} hrs`] as [string, string]] : []),
+    ['Valid until', niceDate(validUntil(state))],
+  ] : ready ? [
     ['Hours', `${Math.round(t.hours * 10) / 10}`],
     ['Average hourly rate', t.hours ? `${money(hourly.reduce((s, l) => s + l.hours * l.rate, 0) / t.hours)} / hr` : '—'],
-    ['Timeline', o.timeline || optionTimeline(state.answers, o) || '—'],
+    ...(() => {
+      const plan = optionPlan(state.answers, o);
+      const dated = datedPlan(state, o);
+      if (!plan) return [['Timeline', o.timeline || optionTimeline(state.answers, o) || '—']] as [string, string][];
+      return [['Timeline', `${plan.low}–${plan.high} weeks${o.team > 1 ? ` · ${o.team} devs` : ''}`], ...(dated ? [['Launch', `≈ ${niceDate(dated.launch)}`]] : [])] as [string, string][];
+    })(),
     ...clientDateFact(o),
+    ...(state.status === 'accepted' && approvedChanges(state).length ? [['With change orders', money(t.total + approvedChanges(state).reduce((s, c) => s + changeTotals(state, c).total, 0))] as [string, string]] : []),
     [state.schedule[0]?.label || 'Deposit', money((t.total * (state.schedule[0]?.percent ?? 0)) / 100)],
     ['Valid until', niceDate(validUntil(state))],
   ] : [];
@@ -528,8 +685,9 @@ function clientDateFact(o: QuoteOption): [string, string][] {
 }
 
 function renderMargin() {
-  const o = opt();
-  $('#q-profit summary').firstChild!.textContent = state.options.length > 1 ? `Profit check · ${o.name} ` : 'Profit check ';
+  // Same option as the summary: the accepted one once accepted, otherwise the one being edited.
+  const o = state.status === 'accepted' ? billedOption(state) : opt();
+  $('#q-profit-label').textContent = state.options.length > 1 ? `Profit check · ${o.name}` : 'Profit check';
   const m = margin(state, o);
   const rows: [string, string, string?][] = [
     ['Client pays (before tax)', money(m.revenue)],
@@ -541,6 +699,7 @@ function renderMargin() {
     ['Margin', `${Math.round(m.marginPct * 100)}%`],
   ];
   $('#q-margin').replaceChildren(...rows.flatMap(([k, v, cls]) => [el('dt', { textContent: k, className: cls ?? '' }), el('dd', { textContent: v, className: cls ?? '' })]));
+  $('#q-profit-peek').textContent = o.lines.length ? `${money(m.yourTake)} · ${Math.round(m.marginPct * 100)}%` : '';
   const note = $('#q-margin-note');
   const low = m.yourHours > 0 && m.yourRate < state.settings.rate - 0.01;
   note.textContent = !o.lines.length ? '' : low
@@ -556,6 +715,15 @@ function renderSchedule(rebuild = true) {
   if (rebuild) {
     box.replaceChildren(...state.schedule.map((m, index) => {
       const label = el('input', { value: m.label, className: 'q-in', ariaLabel: 'Milestone' });
+      const when = el('select', { className: 'q-in q-when', ariaLabel: 'When it’s due' });
+      MILESTONE_WHEN.forEach((w) => when.append(new Option(w.label, w.id)));
+      when.value = m.when ?? 'launch';
+      const date = el('input', { type: 'date', className: 'q-in q-when-date', value: m.date ?? '', ariaLabel: 'Due date' });
+      date.hidden = when.value !== 'date';
+      const dateText = el('span', { className: 'q-when-text' });
+      dateText.dataset.index = String(index);
+      when.addEventListener('change', () => { m.when = when.value as MilestoneWhen; date.hidden = m.when !== 'date'; if (m.when === 'date' && !m.date) { m.date = milestoneDate(state, billedOption(state), { ...m, when: 'launch' }) || today(); date.value = m.date; } renderSchedule(false); save(); });
+      date.addEventListener('input', () => { m.date = date.value; renderSchedule(false); save(); });
       const pct = el('input', { type: 'number', min: '0', max: '100', value: String(m.percent), className: 'q-in q-num', ariaLabel: 'Percent' });
       const amount = el('output', { className: 'q-amount' });
       amount.dataset.index = String(index);
@@ -565,52 +733,870 @@ function renderSchedule(rebuild = true) {
       const invoice = el('button', { type: 'button', className: 'q-btn q-ghost q-small', textContent: invoiced ? 'Invoice again' : 'Create invoice' });
       invoice.addEventListener('click', () => createInvoice(m.label, m.percent));
       return el('div', { className: 'q-milestone' },
-        el('span', { className: 'q-ms-num', textContent: String(index + 1).padStart(2, '0') }), label,
+        el('span', { className: 'q-ms-num', textContent: String(index + 1).padStart(2, '0') }),
+        el('div', { className: 'q-ms-main' }, label, el('div', { className: 'q-ms-when' }, when, date, dateText)),
         el('span', { className: 'q-pct' }, pct, '%'), amount, invoice,
-        iconButton('×', `Remove ${m.label}`, () => { state.schedule.splice(index, 1); renderSchedule(); renderSummary(); save(); }, 'is-danger'));
+        iconButton('×', `Remove ${m.label}`, () => deleteWithUndo({
+          title: 'Remove this milestone?',
+          text: `${m.label || 'Milestone'} · ${m.percent}%. The remaining milestones won’t add up to 100% until you adjust them.${state.invoices.some((i) => i.milestone === m.label) ? ' Invoices already created for it stay.' : ''}`,
+          done: `Removed ${m.label || 'milestone'}`,
+          run: () => { state.schedule.splice(index, 1); renderSchedule(); renderSummary(); save(); },
+        }), 'is-danger'));
     }));
   }
   box.querySelectorAll<HTMLOutputElement>('output[data-index]').forEach((out) => { const m = state.schedule[Number(out.dataset.index)]; if (m) out.textContent = money((t.total * m.percent) / 100); });
+  box.querySelectorAll<HTMLElement>('.q-when-text').forEach((span) => { const m = state.schedule[Number(span.dataset.index)]; const d = m ? milestoneDate(state, billedOption(state), m) : ''; span.textContent = d && m?.when !== 'date' ? `≈ ${niceDate(d)}` : ''; });
   box.querySelectorAll<HTMLButtonElement>('.q-small').forEach((b) => { b.disabled = !t.total; });
   const sum = state.schedule.reduce((s, m) => s + m.percent, 0);
   const st = $('#q-schedule-status');
   st.textContent = sum === 100 ? 'Adds up to 100%' : `Adds up to ${sum}%. It should total 100%.`;
   st.classList.toggle('is-error', sum !== 100);
 }
-$('#q-add-milestone').addEventListener('click', () => { state.schedule.push({ label: 'Milestone', percent: 0 }); renderSchedule(); renderSummary(); save(); });
+$('#q-add-milestone').addEventListener('click', () => { state.schedule.push({ label: 'Milestone', percent: 0, when: 'build' }); renderSchedule(); renderSummary(); save(); });
 
-function createInvoice(milestone: string, percent: number) {
+function createInvoice(milestone: string, percent: number, fixed?: { amount: number; tax: number; changeId: string }) {
   const o = billedOption(state);
   const t = optionTotals(state, o);
-  const amount = Math.round(t.total * percent) / 100;
-  const tax = Math.round(t.tax * percent) / 100;
-  const inv: Invoice = { id: uid(), number: nextInvoiceNumber(profile.invoicePrefix), milestone, percent, amount, tax, currency: state.settings.currency, issued: today(), due: addDays(today(), Number(profile.paymentDays) || 0), status: 'unpaid' };
+  const amount = fixed ? fixed.amount : Math.round(t.total * percent) / 100;
+  const tax = fixed ? fixed.tax : Math.round(t.tax * percent) / 100;
+  const inv: Invoice = { id: uid(), number: nextInvoiceNumber(profile.invoicePrefix), milestone, percent, amount, tax, currency: state.settings.currency, issued: today(), due: addDays(today(), Number(profile.paymentDays) || 0), status: 'unpaid', payments: [], changeId: fixed?.changeId };
   state.invoices.push(inv);
   renderInvoices();
   renderSchedule();
+  renderChanges();
   save();
   toast(`Created ${inv.number} for ${money(amount)}`);
   if (!profile.payment.trim()) toast('Tip: add how clients pay you in Business profile, so it shows on invoices.');
 }
+
+/** Payment methods to suggest: the labels from Business profile ("Wise", "PayPal"…). */
+const paymentMethods = () => profile.payment.split(/\r?\n/).map((l) => l.split(':')[0].trim()).filter(Boolean);
+
 function renderInvoices() {
   const box = $('#q-invoices');
   if (!state.invoices.length) { box.replaceChildren(); return; }
   const now = today();
   box.replaceChildren(el('p', { className: 'q-invoices-title', textContent: 'Invoices' }), ...state.invoices.map((inv, index) => {
-    const overdue = inv.status === 'unpaid' && inv.due < now;
-    const chip = el('span', { className: `q-chip-status is-${inv.status === 'paid' ? 'accepted' : overdue ? 'declined' : 'sent'}`, textContent: inv.status === 'paid' ? `Paid ${niceDate(inv.paidOn ?? '')}` : overdue ? 'Overdue' : `Due ${niceDate(inv.due)}` });
+    syncInvoice(inv);
+    const st = invoiceStatus(inv);
+    const overdue = st !== 'paid' && inv.due < now;
+    const chipText = st === 'paid' ? `Paid ${niceDate(inv.paidOn ?? '')}` : st === 'partial' ? `${money(balanceDue(inv), inv.currency)} left${overdue ? ' · overdue' : ''}` : overdue ? 'Overdue' : `Due ${niceDate(inv.due)}`;
+    const chip = el('span', { className: `q-chip-status is-${st === 'paid' ? 'accepted' : overdue ? 'declined' : 'sent'}`, textContent: chipText });
     const view = el('button', { type: 'button', className: 'q-btn q-ghost q-small', textContent: 'View' });
     view.addEventListener('click', () => showPdf(view, async (m) => m.buildInvoicePdf(state, inv, profile)));
     const pdf = el('button', { type: 'button', className: 'q-btn q-small', textContent: 'Download' });
     pdf.addEventListener('click', () => savePdf(pdf, async (m) => m.buildInvoicePdf(state, inv, profile)));
-    const paid = el('button', { type: 'button', className: 'q-btn q-ghost q-small', textContent: inv.status === 'paid' ? 'Mark unpaid' : 'Mark paid' });
-    paid.addEventListener('click', () => { inv.status = inv.status === 'paid' ? 'unpaid' : 'paid'; inv.paidOn = inv.status === 'paid' ? today() : undefined; renderInvoices(); save(); });
-    return el('div', { className: 'q-invoice' },
-      el('div', {}, el('strong', { textContent: inv.number }), el('span', { textContent: `${inv.milestone} · ${inv.percent}%` })),
-      el('strong', { className: 'q-amount', textContent: money(inv.amount, inv.currency) }), chip, view, pdf, paid,
-      iconButton('×', `Delete ${inv.number}`, () => { if (window.confirm(`Delete invoice ${inv.number}?`)) { state.invoices.splice(index, 1); renderInvoices(); renderSchedule(); save(); } }, 'is-danger'));
+    const pay = el('button', { type: 'button', className: 'q-btn q-ghost q-small', textContent: st === 'paid' ? 'Payments' : 'Record payment' });
+
+    // Payment form + list (toggled)
+    const panel = el('div', { className: 'q-pay-panel' });
+    panel.hidden = true;
+    const amount = el('input', { type: 'number', min: '0', step: 'any', value: String(balanceDue(inv)), className: 'q-in q-num', ariaLabel: 'Amount received' });
+    const date = el('input', { type: 'date', value: today(), className: 'q-in', ariaLabel: 'Date received' });
+    const method = el('input', { className: 'q-in', placeholder: 'Method (e.g. Wise)', value: paymentMethods()[0] ?? '', ariaLabel: 'Payment method' });
+    method.setAttribute('list', 'q-methods');
+    const note = el('input', { className: 'q-in', placeholder: 'Reference (optional)', ariaLabel: 'Reference' });
+    const add = el('button', { type: 'button', className: 'q-btn q-small', textContent: 'Save payment' });
+    add.addEventListener('click', async () => {
+      const value = Math.round(Math.max(0, Number(amount.value) || 0) * 100) / 100;
+      if (!value) { toast('Enter the amount received.', true); return; }
+      if (value > balanceDue(inv) + 0.009 && !(await confirmDialog({ title: 'More than what’s due', text: `${money(value, inv.currency)} is more than the ${money(balanceDue(inv), inv.currency)} still due on ${inv.number}. Record it anyway?`, confirm: 'Record payment', danger: false }))) return;
+      inv.payments.push({ id: uid(), date: date.value || today(), amount: value, method: method.value.trim(), note: note.value.trim(), receipt: nextReceiptNumber() });
+      syncInvoice(inv);
+      renderInvoices();
+      renderSummary();
+      save();
+      toast(invoiceStatus(inv) === 'paid' ? `${inv.number} is now paid in full` : `Recorded. ${money(balanceDue(inv), inv.currency)} still due.`);
+    });
+    const list = el('div', { className: 'q-pay-list' }, ...inv.payments.map((pmt, pi) => {
+      const receipt = el('button', { type: 'button', className: 'q-btn q-ghost q-small', textContent: 'Receipt' });
+      receipt.addEventListener('click', () => showPdf(receipt, async (m) => m.buildReceiptPdf(state, inv, pmt, profile)));
+      return el('div', { className: 'q-pay-row' },
+        el('span', { textContent: `${niceDate(pmt.date)} · ${money(pmt.amount, inv.currency)}${pmt.method ? ` · ${pmt.method}` : ''}${pmt.note ? ` · ${pmt.note}` : ''}` }),
+        el('span', { className: 'q-pay-receipt', textContent: pmt.receipt }), receipt,
+        iconButton('×', `Delete payment of ${money(pmt.amount, inv.currency)}`, () => deleteWithUndo({
+          title: 'Delete this payment?',
+          text: `${money(pmt.amount, inv.currency)} received ${niceDate(pmt.date)}${pmt.method ? ` by ${pmt.method}` : ''} on ${inv.number}. Its receipt ${pmt.receipt} won’t be available any more, and the invoice balance goes back up.`,
+          done: 'Payment deleted',
+          run: () => { inv.payments.splice(pi, 1); syncInvoice(inv); renderInvoices(); renderSummary(); save(); },
+        }), 'is-danger'));
+    }));
+    panel.append(...(st === 'paid' ? [] : [el('div', { className: 'q-pay-form' }, amount, date, method, note, add)]), list);
+    pay.addEventListener('click', () => { panel.hidden = !panel.hidden; });
+    if (inv.payments.length && st !== 'paid') panel.hidden = false;
+
+    return el('div', { className: 'q-invoice-wrap' },
+      el('div', { className: 'q-invoice' },
+        el('div', {}, el('strong', { textContent: inv.number }), el('span', { textContent: `${inv.milestone}${inv.changeId || inv.lines ? '' : ` · ${inv.percent}%`}${inv.payments.length ? ` · paid ${money(paidTotal(inv), inv.currency)}` : ''}` })),
+        el('strong', { className: 'q-amount', textContent: money(inv.amount, inv.currency) }), chip, view, pdf, pay,
+        iconButton('×', `Delete ${inv.number}`, () => deleteWithUndo({
+          title: `Delete invoice ${inv.number}?`,
+          text: `${inv.milestone} · ${money(inv.amount, inv.currency)}.${inv.payments.length ? ' This also deletes:' : ' If you already sent it to the client, keep it and mark it paid or adjust it instead.'}`,
+          list: inv.payments.length ? [inv.payments.length === 1 ? `1 recorded payment (${money(paidTotal(inv), inv.currency)}) and its receipt` : `${inv.payments.length} recorded payments (${money(paidTotal(inv), inv.currency)}) and their receipts`] : [],
+          done: `Deleted ${inv.number}`,
+          run: () => { state.invoices.splice(index, 1); renderInvoices(); renderSchedule(); renderChanges(); renderSummary(); save(); },
+        }), 'is-danger')),
+      panel);
+  }), el('datalist', { id: 'q-methods' }, ...paymentMethods().map((m) => new Option(m))));
+}
+
+/* ---------- Timeline & dates ---------- */
+function renderTimeline() {
+  const box = $('#q-timeline');
+  const o = state.status === 'accepted' ? billedOption(state) : opt();
+  const d = datedPlan(state, o);
+  if (estimate(state.answers).mode === 'monthly') { box.replaceChildren(el('p', { className: 'q-help', textContent: 'Support retainers run month to month, so there are no phase dates.' })); return; }
+  if (!d) { box.replaceChildren(el('p', { className: 'q-empty', textContent: state.delivery.kickoff ? 'Import an estimate or pick a project type to see the dates.' : 'Pick a kick-off date to see the dates.' })); return; }
+  const rows = d.phases.map((p) => el('div', { className: 'q-date-row' },
+    el('i', { className: `q-dot phase-${p.id}` }), el('strong', { textContent: p.label }),
+    el('span', { textContent: `${niceDate(p.start)} – ${niceDate(p.end)}` }), el('span', { className: 'q-muted', textContent: `~${p.display}` })));
+  const extra = d.workingDays ? [el('p', { className: 'q-help q-gap-top', textContent: `Includes ${d.workingDays} working day${d.workingDays === 1 ? '' : 's'} added by approved change orders.` })] : [];
+  box.replaceChildren(
+    el('p', { className: 'q-date-head' }, el('span', { textContent: state.options.length > 1 ? `${o.name} · ` : '' }), el('strong', { textContent: `Launch around ${niceDate(d.launch, 'long')}` }), el('span', { className: 'q-muted', textContent: ` (between ${niceDate(d.earliest)} and ${niceDate(d.latest)})` })),
+    ...rows, ...extra);
+}
+$('#q-kickoff-monday').addEventListener('click', () => { state.delivery.kickoff = nextMonday(addDays(today(), 7)); fillBound(); renderTimeline(); renderNeeds(); renderSchedule(); renderDelivery(); renderSummary(); save(); });
+
+/* ---------- What we need from the client ---------- */
+function renderNeeds() {
+  const box = $('#q-needs');
+  const o = state.status === 'accepted' ? billedOption(state) : opt();
+  if (!state.needs.length) { box.replaceChildren(el('p', { className: 'q-empty', textContent: 'No items yet. Import an estimate to get a checklist, or add one.' })); renderProgress(); return; }
+  const done = state.needs.filter((n) => n.done).length;
+  box.replaceChildren(
+    el('p', { className: 'q-needs-count', textContent: `${done} of ${state.needs.length} received` }),
+    ...state.needs.map((n, index) => {
+      const check = el('input', { type: 'checkbox', checked: n.done, ariaLabel: 'Received' });
+      check.addEventListener('change', () => { n.done = check.checked; row.classList.toggle('is-done', n.done); renderNeeds(); save(); });
+      const text = el('input', { value: n.text, className: 'q-in', ariaLabel: 'What the client provides' });
+      text.addEventListener('input', () => { n.text = text.value; save(); });
+      const due = el('select', { className: 'q-in q-when', ariaLabel: 'Needed by' });
+      NEED_DUE.forEach((x) => due.append(new Option(x.label, x.id)));
+      due.value = n.due;
+      const date = needDate(state, o, n.due);
+      const dateText = el('span', { className: 'q-when-text', textContent: date ? niceDate(date) : '' });
+      due.addEventListener('change', () => { n.due = due.value as NeedDue; renderNeeds(); save(); });
+      const row = el('div', { className: `q-need${n.done ? ' is-done' : ''}` }, check, text, due, dateText,
+        iconButton('×', 'Remove item', () => deleteWithUndo({
+          title: 'Remove this checklist item?',
+          text: n.text || 'Empty item',
+          done: 'Checklist item removed',
+          run: () => { state.needs.splice(index, 1); renderNeeds(); save(); },
+        }), 'is-danger'));
+      return row;
+    }));
+  renderProgress();
+}
+$('#q-add-need').addEventListener('click', () => { state.needs.push({ id: uid(), text: '', due: 'kickoff', done: false }); renderNeeds(); save(); ($('#q-needs').querySelector<HTMLInputElement>('.q-need:last-child .q-in'))?.focus(); });
+$('#q-reset-needs').addEventListener('click', async () => {
+  if (!state.needs.length) { state.needs = defaultNeeds(state.answers); renderNeeds(); save(); return; }
+  await deleteWithUndo({
+    title: 'Rebuild the checklist?',
+    text: `The ${state.needs.length} current items (${state.needs.filter((n) => n.done).length} ticked) are replaced with a fresh checklist from the scope.`,
+    confirm: 'Rebuild', done: 'Checklist rebuilt',
+    run: () => { state.needs = defaultNeeds(state.answers); renderNeeds(); save(); },
+  });
+});
+
+/* ---------- Change orders ---------- */
+function renderChanges() {
+  const box = $('#q-changes');
+  if (!state.changes.length) { box.replaceChildren(el('p', { className: 'q-empty', textContent: 'No change orders. Add one when the client asks for something outside the accepted scope.' })); renderChangeSummary(); return; }
+  box.replaceChildren(...state.changes.map((c, index) => {
+    const totals = changeTotals(state, c);
+    const title = el('input', { value: c.title, className: 'q-in q-in-title', placeholder: 'What’s changing (e.g. Add a wholesale page)', ariaLabel: 'Change title' });
+    title.addEventListener('input', () => { c.title = title.value; save(); });
+    const detail = el('textarea', { value: c.detail, className: 'q-in', rows: 2, placeholder: 'Details: what’s included and why', ariaLabel: 'Change details' });
+    detail.addEventListener('input', () => { c.detail = detail.value; save(); });
+    const statusSel = el('select', { className: `q-chip-select is-${c.status === 'approved' ? 'accepted' : c.status}`, ariaLabel: 'Change status' });
+    [['draft', 'Draft'], ['sent', 'Sent'], ['approved', 'Approved'], ['declined', 'Declined']].forEach(([v, l]) => statusSel.append(new Option(l, v)));
+    statusSel.value = c.status;
+    statusSel.addEventListener('change', () => { c.status = statusSel.value as ChangeOrder['status']; renderChanges(); renderTimeline(); renderNeeds(); renderSchedule(false); save(); });
+    const days = el('input', { type: 'number', min: '0', value: String(c.days), className: 'q-in q-num', ariaLabel: 'Extra working days' });
+    days.addEventListener('input', () => { c.days = Math.max(0, Number(days.value) || 0); renderTimeline(); renderChangeSummary(); save(); });
+    const lines = el('div', { className: 'q-co-lines' }, ...c.lines.map((l, li) => {
+      const lt = el('input', { value: l.title, className: 'q-in', placeholder: 'Item', ariaLabel: 'Item' });
+      const lq = el('input', { type: 'number', min: '0', step: 'any', value: String(l.hours), className: 'q-in q-num', ariaLabel: 'Hours' });
+      const lr = el('input', { type: 'number', min: '0', step: 'any', value: String(l.rate), className: 'q-in q-num', ariaLabel: 'Rate' });
+      const la = el('output', { className: 'q-amount', textContent: money(l.hours * l.rate) });
+      const upd = () => { la.textContent = money(l.hours * l.rate); totalEl.textContent = money(changeTotals(state, c).total); renderChangeSummary(); save(); };
+      lt.addEventListener('input', () => { l.title = lt.value; save(); });
+      lq.addEventListener('input', () => { l.hours = Math.max(0, Number(lq.value) || 0); upd(); });
+      lr.addEventListener('input', () => { l.rate = Math.max(0, Number(lr.value) || 0); upd(); });
+      return el('div', { className: 'q-co-line' }, lt, lq, el('span', { className: 'q-muted', textContent: 'hrs ×' }), lr, la, iconButton('×', 'Remove item', () => deleteWithUndo({
+        title: 'Remove this item?',
+        text: `${l.title || 'Untitled item'} · ${money(l.hours * l.rate)} from change order ${c.number}.`,
+        done: 'Item removed',
+        run: () => { c.lines.splice(li, 1); renderChanges(); save(); },
+      }), 'is-danger'));
+    }));
+    const addItem = el('button', { type: 'button', className: 'q-link', textContent: '+ Add item' });
+    addItem.addEventListener('click', () => { c.lines.push({ id: `co-${uid()}`, title: '', detail: '', hours: 1, rate: state.settings.rate, unit: 'hours' }); renderChanges(); save(); });
+    const totalEl = el('strong', { textContent: money(totals.total) });
+    const view = el('button', { type: 'button', className: 'q-btn q-ghost q-small', textContent: 'View' });
+    view.addEventListener('click', () => showPdf(view, async (m) => m.buildChangeOrderPdf(state, c, profile)));
+    const pdf = el('button', { type: 'button', className: 'q-btn q-small', textContent: 'Download' });
+    pdf.addEventListener('click', () => savePdf(pdf, async (m) => m.buildChangeOrderPdf(state, c, profile)));
+    const invoiced = state.invoices.some((i) => i.changeId === c.id);
+    const invoice = el('button', { type: 'button', className: 'q-btn q-ghost q-small', textContent: invoiced ? 'Invoiced' : 'Create invoice' });
+    invoice.disabled = invoiced || c.status !== 'approved' || !totals.total;
+    invoice.title = c.status !== 'approved' ? 'Approve the change order first' : '';
+    invoice.addEventListener('click', () => createInvoice(`Change order ${c.number}: ${c.title || 'extra work'}`, 100, { amount: Math.round(totals.total * 100) / 100, tax: Math.round(totals.tax * 100) / 100, changeId: c.id }));
+    return el('div', { className: 'q-co' },
+      el('div', { className: 'q-co-head' }, el('strong', { textContent: c.number }), el('span', { className: 'q-muted', textContent: niceDate(c.date) }), statusSel,
+        iconButton('×', `Delete ${c.number}`, () => deleteWithUndo({
+          title: `Delete change order ${c.number}?`,
+          text: `${c.title || 'Untitled change'} · ${money(totals.total)}${c.status === 'approved' ? '. It’s approved, so the project total and launch date change back.' : '.'}${invoiced ? ' Its invoice stays.' : ''}`,
+          done: `Deleted ${c.number}`,
+          run: () => { state.changes.splice(index, 1); renderChanges(); renderTimeline(); renderNeeds(); renderSchedule(false); renderSummary(); save(); },
+        }), 'is-danger')),
+      title, detail, lines, addItem,
+      el('div', { className: 'q-co-foot' },
+        el('label', { className: 'q-co-days' }, 'Adds', days, 'working days'),
+        el('span', { className: 'q-co-total' }, 'Total ', totalEl),
+        view, pdf, invoice));
+  }));
+  renderChangeSummary();
+}
+function renderChangeSummary() {
+  const o = billedOption(state);
+  const base = optionTotals(state, o).total;
+  const approved = approvedChanges(state);
+  const extra = approved.reduce((s, c) => s + changeTotals(state, c).total, 0);
+  const days = approved.reduce((s, c) => s + (Number(c.days) || 0), 0);
+  $('#q-change-summary').textContent = approved.length
+    ? `Accepted quote ${money(base)} + ${approved.length} approved change${approved.length > 1 ? 's' : ''} ${money(extra)} = ${money(base + extra)} project total${days ? `, ${days} extra working days` : ''}.`
+    : '';
+}
+$('#q-add-change').addEventListener('click', () => {
+  state.changes.push({ id: uid(), number: nextChangeNumber(state), date: today(), title: '', detail: '', lines: [{ id: `co-${uid()}`, title: '', detail: '', hours: 4, rate: state.settings.rate, unit: 'hours' }], days: 2, status: 'draft' });
+  renderChanges();
+  save();
+  ($('#q-changes').querySelector<HTMLInputElement>('.q-co:last-child .q-in-title'))?.focus();
+});
+
+/* ---------- Delivery: kick-off, launch, warranty, handover ---------- */
+function renderDelivery() {
+  const end = warrantyEnd(state);
+  const now = today();
+  $('#q-warranty').textContent = !state.delivery.launchedOn
+    ? 'Set the launch date once the site is live to start the bug-fix period.'
+    : end >= now ? `Bug-fix period runs until ${niceDate(end, 'long')} (${Math.round((new Date(`${end}T00:00:00`).getTime() - new Date(`${now}T00:00:00`).getTime()) / 86400000)} days left).` : `Bug-fix period ended on ${niceDate(end, 'long')}.`;
+  $('#q-warranty').classList.toggle('is-warn', Boolean(end) && end >= now && end <= addDays(now, 14));
+  const ready = billedOption(state).lines.some((l) => !l.optional);
+  ($('#q-kickoff-view') as HTMLButtonElement).disabled = !ready;
+  ($('#q-kickoff-pdf') as HTMLButtonElement).disabled = !ready;
+  renderStartRetainer();
+}
+$('#q-launched-today').addEventListener('click', () => { state.delivery.launchedOn = today(); fillBound(); renderDelivery(); save(); });
+$('#q-kickoff-view').addEventListener('click', () => showPdf($<HTMLButtonElement>('#q-kickoff-view'), async (m) => m.buildKickoffPdf(state, profile)));
+$('#q-kickoff-pdf').addEventListener('click', () => savePdf($<HTMLButtonElement>('#q-kickoff-pdf'), async (m) => m.buildKickoffPdf(state, profile)));
+$('#q-handover-view').addEventListener('click', () => showPdf($<HTMLButtonElement>('#q-handover-view'), async (m) => m.buildHandoverPdf(state, profile)));
+$('#q-handover-pdf').addEventListener('click', () => savePdf($<HTMLButtonElement>('#q-handover-pdf'), async (m) => m.buildHandoverPdf(state, profile)));
+
+/* ---------- Retainers ---------- */
+const round2 = (n: number) => Math.round(n * 100) / 100;
+/** The month whose hours are shown in the log (its start date). */
+let logMonth = '';
+
+/** Monthly quotes always carry retainer terms; a new one swaps the project texts for retainer ones. */
+function ensureRetainer() {
+  if (!state.monthly || state.retainer) return;
+  // The plan picked in the estimator (if any) sets the package; the price list sets savings, yearly offer and extra hours.
+  const plan = estimate(state.answers).support;
+  const pkg = PACKAGES.find((p) => p.id === plan?.id && p.id !== 'custom');
+  state.retainer = {
+    ...defaultRetainer({ start: state.delivery.kickoff, rate: state.settings.rate }),
+    overageRate: pkgSettings.payg, paygRate: pkgSettings.payg, freeMonths: pkgSettings.freeMonths,
+    ...(pkg ? { pkg: pkg.id, dailyHours: pkg.daily, weekendEmergency: pkg.emergency, response: pkg.response } : {}),
+  };
+  const texts = pkg ? packageTexts(pkg) : { included: RETAINER_INCLUDED.join('\n'), excluded: RETAINER_EXCLUDED.join('\n') };
+  if (state.text.included === DEFAULT_INCLUDED.join('\n')) state.text.included = texts.included;
+  if (state.text.excluded === DEFAULT_EXCLUDED.join('\n')) state.text.excluded = texts.excluded;
+  if (state.text.terms === DEFAULT_TERMS.join('\n')) state.text.terms = RETAINER_TERMS.join('\n');
+  fillBound();
+}
+
+/**
+ * Keeps the hour bank's price line in step with the retainer terms and the other lines.
+ * Adding or removing it redraws the lines; a price change only updates that row (so typing elsewhere keeps focus).
+ */
+function syncBankLines() {
+  const r = state.monthly ? state.retainer : undefined;
+  let redraw = false;
+  for (const o of state.options) {
+    const i = o.lines.findIndex((l) => l.id === 'rollover');
+    const want = r ? bankLine(r, o.lines) : null;
+    if (!want) { if (i >= 0) { o.lines.splice(i, 1); redraw = true; } continue; }
+    if (i < 0) { o.lines.push(want); redraw = true; continue; }
+    const have = o.lines[i];
+    if (have.rate !== want.rate || have.title !== want.title || have.detail !== want.detail) {
+      o.lines[i] = { ...have, ...want };
+      if (o === opt()) {
+        const row = document.querySelector<HTMLElement>('#q-lines [data-line="rollover"]');
+        if (have.title !== want.title || have.detail !== want.detail || !row) redraw = true;
+        else { row.querySelector<HTMLInputElement>('.q-rate')!.value = String(want.rate); row.querySelector('.q-amount')!.textContent = money(want.rate); }
+      }
+    }
+  }
+  if (redraw) { renderLines(); renderOptionTabs(); }
+}
+
+/** The header above the editor: which quote this is. */
+function renderContext() {
+  const who = state.client.company || state.client.name;
+  $('#q-ctx-avatar').textContent = initials(who);
+  $('#q-ctx-avatar').classList.toggle('is-retainer', Boolean(state.retainer && state.monthly));
+  $('#q-ctx-client').textContent = who || 'New quote';
+  $('#q-ctx-sub').textContent = [state.retainer && state.monthly ? 'Retainer' : 'Project', state.project.title, state.meta.number, STATUSES.find((x) => x.id === state.status)?.label].filter(Boolean).join(' · ');
+}
+
+/** Sticky section bar: the sections shown for this quote, ticked when done (from the progress checks). */
+const SECTION_CHECK: Record<string, string> = { 's-import': 'import', 's-client': 'client', 's-scope': 'scope', 's-pricing': 'pricing', 's-retainer': 'retainer', 's-dates': 'dates', 's-payment': 'payment', 's-needs': 'needs', 's-terms': 'terms' };
+const SECTION_SHORT: Record<string, string> = { 's-import': 'Import', 's-client': 'Client', 's-scope': 'Scope', 's-pricing': 'Pricing', 's-retainer': 'Retainer', 's-dates': 'Dates', 's-payment': 'Payments', 's-needs': 'Checklist', 's-terms': 'Terms', 's-changes': 'Changes', 's-delivery': 'Delivery' };
+let jumpKey = '';
+function renderJump() {
+  const sections = [...document.querySelectorAll<HTMLElement>('#v-editor .q-main > .q-card')].filter((x) => !x.hidden);
+  const key = sections.map((x) => x.id).join(',');
+  if (key === jumpKey) return;
+  jumpKey = key;
+  $('#q-jump').replaceChildren(...sections.map((sec, i) => {
+    const a = el('a', { href: `#${sec.id}` }, el('i', { textContent: String(i + 1).padStart(2, '0') }), SECTION_SHORT[sec.id] ?? sec.querySelector('h2')?.textContent ?? '');
+    a.dataset.section = sec.id;
+    return a;
+  }));
+  sections.forEach((sec) => sectionObserver.observe(sec));
+}
+// Highlights the section being read.
+const sectionObserver = new IntersectionObserver((entries) => {
+  for (const e of entries) if (e.isIntersecting) document.querySelectorAll<HTMLElement>('#q-jump a').forEach((a) => a.classList.toggle('is-active', a.dataset.section === e.target.id));
+}, { rootMargin: '-30% 0px -60% 0px' });
+
+/** A package whose hours were edited by hand in Pricing becomes a custom package. */
+function syncPackage() {
+  const r = state.monthly ? state.retainer : undefined;
+  if (!r || r.pkg === 'custom') return;
+  const line = billedOption(state).lines.find((l) => l.id === 'retainer');
+  if (!line || line.hours !== packageHours(packageOf(r.pkg))) { r.pkg = 'custom'; r.dailyHours = 0; r.weekendEmergency = false; }
+}
+
+/** Package cards: name, hours, the monthly price, and what it saves against pay-as-you-go. Medium is "Most popular". */
+function renderPackageCards(box: HTMLElement, selected: string, priceFor: (p: SupportPackage) => number, customHours: number, onPick: (p: SupportPackage) => void) {
+  box.replaceChildren(...PACKAGES.map((p) => {
+    const hours = p.id === 'custom' ? customHours : packageHours(p);
+    const price = priceFor(p);
+    const saved = planSavings(hours, price, pkgSettings.payg);
+    const b = el('button', { type: 'button', role: 'radio', className: `q-pkg is-${p.id}${p.popular ? ' is-popular' : ''}` },
+      ...(p.popular ? [el('i', { className: 'q-pkg-badge', textContent: 'Most popular' })] : []),
+      el('strong', { textContent: p.name }),
+      el('span', { textContent: p.daily ? `${p.daily} hrs a day, Mon–Fri` : `${hoursText(hours)} hrs a month` }),
+      el('em', { textContent: `${money(price)} / mo` }),
+      // A saving if there is one; otherwise the price per day, which feels small.
+      el('b', { className: `q-pkg-save${saved ? '' : ' is-daily'}`, textContent: saved ? `Save ${money(saved)}/mo vs pay-as-you-go` : `About ${money(Math.round(price / 30))} a day` }),
+      el('small', { textContent: p.blurb }));
+    b.setAttribute('aria-checked', String(p.id === selected));
+    b.addEventListener('click', () => onPick(p));
+    return b;
   }));
 }
+
+/** Your price list (monthly prices, pay-as-you-go rate, yearly offer, hourly rates on PDFs), under the package cards. */
+function renderPackageRates() {
+  const ps = pkgSettings;
+  document.querySelectorAll<HTMLElement>('[data-pkg-rates]').forEach((box) => {
+    const num = (value: number, label: string, onChange: (v: number) => void, width = '') => {
+      const input = el('input', { type: 'number', min: '0', step: 'any', value: String(value), ariaLabel: label });
+      if (width) input.style.width = width;
+      input.addEventListener('change', () => onChange(Math.max(0, Number(input.value) || 0)));
+      return input;
+    };
+    const hide = el('input', { type: 'checkbox', checked: ps.hideRates, ariaLabel: 'Hide hourly rates on client PDFs' });
+    hide.addEventListener('change', () => updateSettings({ hideRates: hide.checked }, hide.checked ? 'Client PDFs show monthly prices only' : 'Client PDFs show hourly rates'));
+    box.replaceChildren(
+      el('div', { className: 'q-pkg-rates-row' },
+        el('span', { className: 'q-pkg-rates-title', textContent: 'Monthly prices' }),
+        ...PACKAGES.filter((p) => p.id !== 'custom').map((p) => {
+          const id = p.id as keyof PackagePrices;
+          return el('label', {}, p.name, el('span', { className: 'q-pkg-rate' }, '$', num(ps.prices[id], `${p.name} monthly price`, (v) => setPackagePrice(id, v)), '/mo'));
+        })),
+      el('div', { className: 'q-pkg-rates-row' },
+        el('label', {}, 'Pay-as-you-go', el('span', { className: 'q-pkg-rate' }, '$', num(ps.payg, 'Pay-as-you-go hourly rate', (v) => updateSettings({ payg: v }, `Savings now compare with ${money(v)} an hour`)), '/hr')),
+        el('label', {}, 'Yearly prepay', el('span', { className: 'q-pkg-rate' }, num(ps.freeMonths, 'Months free when paying yearly', (v) => updateSettings({ freeMonths: Math.min(11, Math.round(v)) }, v ? `Yearly prepay: ${Math.round(v)} months free` : 'No yearly offer'), '48px'), 'months free')),
+        el('label', { className: 'q-pkg-hide' }, hide, 'Hide hourly rates on client PDFs')));
+  });
+}
+function updateSettings(patch: Partial<PackageSettings>, message: string) {
+  pkgSettings = { ...pkgSettings, ...patch };
+  savePackageSettings(pkgSettings);
+  renderPackageRates();
+  updateRetainerFee();
+  if (state.monthly && state.retainer) renderRetainer();
+  toast(message);
+}
+/** Changes one package's monthly price: the price list, the cards, and this retainer if it uses that package at the old price. */
+function setPackagePrice(id: keyof PackagePrices, price: number) {
+  const before = pkgSettings.prices[id];
+  pkgSettings = { ...pkgSettings, prices: { ...pkgSettings.prices, [id]: price } };
+  savePackageSettings(pkgSettings);
+  const r = state.monthly ? state.retainer : undefined;
+  if (r && r.pkg === id) {
+    const rate = packageRate(id, pkgSettings.prices, state.settings.rate);
+    for (const o of state.options) o.lines.forEach((l) => { if (l.id === 'retainer' && Math.abs(l.hours * l.rate - before) < 0.05) l.rate = rate; });
+    renderPricing();
+    save();
+  }
+  if (startPkg.id === id) $<HTMLInputElement>('#q-ret-price').value = String(price);
+  renderPackageRates();
+  updateRetainerFee();
+  if (r) renderRetainer();
+  toast(`${packageOf(id).name} is now ${money(price)} a month`);
+}
+
+/** Switches a retainer quote to a package: its price line, daily hours, response time and weekend emergencies. */
+async function setPackage(p: SupportPackage) {
+  const r = state.retainer;
+  if (!r || p.id === r.pkg) return;
+  if (r.log.length && !(await confirmDialog({ title: `Switch to ${p.name}?`, text: 'The new hours apply to every month of this retainer, including months already logged. To change from a date, end this retainer and start a new one.', confirm: 'Switch', danger: false }))) return;
+  const current = billedOption(state).lines.find((l) => l.id === 'retainer');
+  const hours = p.id === 'custom' ? current?.hours || 20 : packageHours(p);
+  // Each package has its own rate; Custom keeps the current one.
+  const rate = p.id === 'custom' ? current?.rate ?? state.settings.rate : packageRate(p.id, pkgSettings.prices, state.settings.rate);
+  for (const o of state.options) {
+    const i = o.lines.findIndex((l) => l.id === 'retainer');
+    const line = packageLine(p, hours, rate);
+    if (i >= 0) o.lines[i] = { ...o.lines[i], ...line }; else o.lines.unshift(line);
+  }
+  const wasDefault = PACKAGES.some((x) => x.response === r.response);
+  Object.assign(r, { pkg: p.id, dailyHours: p.daily, weekendEmergency: p.emergency });
+  if (wasDefault) r.response = p.response;
+  // Swap the covered / not covered lists too, unless they were edited by hand.
+  const stock = [...PACKAGES.map(packageTexts), { included: RETAINER_INCLUDED.join('\n'), excluded: RETAINER_EXCLUDED.join('\n') }];
+  const edited = !stock.some((t) => t.included === state.text.included) || !stock.some((t) => t.excluded === state.text.excluded);
+  if (!edited) Object.assign(state.text, packageTexts(p));
+  state.answers.hours = String(hours);
+  fillBound();
+  renderPricing();
+  save();
+  toast(edited ? `Switched to ${p.name}. Your edited covered / not covered lists were kept.` : `Switched to ${p.name}`);
+}
+/**
+ * Packages PDFs: data-packages-pdf is every package, data-package-pdf only the chosen one.
+ * Each package is priced at its own rate; the chosen one at the rate typed (or the retainer's rate).
+ */
+function packagesPdfOptions(only: boolean) {
+  const r = state.monthly ? state.retainer : undefined;
+  const line = r ? billedOption(state).lines.find((l) => l.id === 'retainer') : undefined;
+  const chosen: PackageId = r ? r.pkg : startPkg.id;
+  const customHours = r ? line?.hours ?? 20 : Number($<HTMLInputElement>('#q-ret-hours').value) || 20;
+  const chosenPrice = r ? retainerPlan(state).subtotal : startPrice();
+  const prices = Object.fromEntries(PACKAGES.map((p) => [p.id, p.id === chosen ? chosenPrice : packagePrice(p.id, pkgSettings.prices, 20, state.settings.rate)])) as Record<PackageId, number>;
+  // On a retainer quote, the single-package PDF uses the quote's own covered / not covered lists.
+  const lists = r ? { included: state.text.included.split('\n').filter((x) => x.trim()), excluded: state.text.excluded.split('\n').filter((x) => x.trim()) } : undefined;
+  const client = state.client.name || state.client.company ? state : undefined;
+  const discount = r ? retainerPlan(state).discount : startDiscount(chosenPrice);
+  return {
+    prices, currency: state.settings.currency, client, recommended: chosen, customHours,
+    payg: r ? r.paygRate : pkgSettings.payg, freeMonths: r ? r.freeMonths : pkgSettings.freeMonths, hideRates: pkgSettings.hideRates,
+    ...(only ? { only: chosen, lists, discount } : {}),
+  };
+}
+document.querySelectorAll<HTMLButtonElement>('[data-packages-pdf], [data-package-pdf]').forEach((b) => b.addEventListener('click', () => {
+  const only = Boolean(b.dataset.packagePdf);
+  const build: Builder = async (m) => m.buildPackagesPdf(packagesPdfOptions(only), profile);
+  if ((b.dataset.packagePdf ?? b.dataset.packagesPdf) === 'view') showPdf(b, build); else savePdf(b, build);
+}));
+$<HTMLInputElement>('#q-log-date').addEventListener('change', (e) => { if (state.retainer?.weekendEmergency) $<HTMLInputElement>('#q-log-emergency').checked = isWeekend((e.target as HTMLInputElement).value); });
+
+/** Shows the sections for a project quote or a retainer quote, and numbers the visible ones. */
+function renderMode() {
+  ensureRetainer();
+  syncPackage();
+  // Before anything reads the fee: the hour bank's price depends on the other lines.
+  syncBankLines();
+  const ret = Boolean(state.monthly && state.retainer);
+  ['#s-dates', '#s-changes', '#s-delivery'].forEach((id) => { $(id).hidden = ret; });
+  $('#s-retainer').hidden = !ret;
+  document.querySelectorAll<HTMLElement>('[data-project-only]').forEach((e) => { e.hidden = ret; });
+  document.querySelectorAll<HTMLElement>('[data-retainer-only]').forEach((e) => { e.hidden = !ret; });
+  let n = 0;
+  document.querySelectorAll<HTMLElement>('#v-editor .q-main > .q-card').forEach((sec) => { if (sec.hidden) return; n += 1; const step = sec.querySelector('.q-step'); if (step) step.textContent = String(n).padStart(2, '0'); });
+  if (ret) renderRetainer();
+  renderJump();
+}
+
+/** Delivery → Ongoing support: create a retainer quote that follows this project. */
+function retainerStartDate() {
+  const end = warrantyEnd(state);
+  const after = end ? addDays(end, 1) : '';
+  return after && after > today() ? after : today();
+}
+function renderStartRetainer() {
+  const linked = Object.values(quotes).filter((q) => q.retainer?.fromQuote === state.id);
+  $('#q-ret-existing').replaceChildren(...linked.map((q) => {
+    const plan = retainerPlan(q);
+    const b = el('button', { type: 'button', className: 'q-ret-link' },
+      el('strong', { textContent: `Retainer ${q.meta.number}` }),
+      el('span', { textContent: `${hoursText(plan.hours)} hrs / month · ${money(plan.fee, q.settings.currency)} / month · ${STATUSES.find((x) => x.id === q.status)?.label ?? ''}` }),
+      el('em', { textContent: 'Open' }));
+    b.addEventListener('click', () => openQuote(q));
+    return b;
+  }));
+  const hours = $<HTMLInputElement>('#q-ret-hours');
+  const date = $<HTMLInputElement>('#q-ret-date');
+  if (hours.dataset.for !== state.id) {
+    hours.dataset.for = state.id;
+    // Start on the "Most popular" plan.
+    pickStartPackage(PACKAGES.find((p) => p.popular) ?? PACKAGES[0]);
+    date.value = retainerStartDate();
+  }
+  updateRetainerFee();
+  $('#q-ret-create').textContent = linked.length ? 'Create another retainer quote' : 'Create retainer quote';
+}
+let startPkg: SupportPackage = PACKAGES[0];
+/** The discount typed in the start form, for a monthly amount. */
+function startDiscount(base: number) {
+  const value = Math.max(0, Number($<HTMLInputElement>('#q-ret-discount').value) || 0);
+  return Math.min(base, $<HTMLSelectElement>('#q-ret-discount-type').value === 'percent' ? (base * value) / 100 : value);
+}
+['#q-ret-discount', '#q-ret-discount-type'].forEach((sel) => $(sel).addEventListener('input', () => updateRetainerFee()));
+/** The start form's monthly price before discount: a package's price (editable for this client), or Custom's hours × rate. */
+function startPrice() {
+  const hours = Number($<HTMLInputElement>('#q-ret-hours').value) || 0;
+  return startPkg.id === 'custom' ? hours * (Number($<HTMLInputElement>('#q-ret-rate').value) || 0) : Number($<HTMLInputElement>('#q-ret-price').value) || 0;
+}
+/** Picks a package in the start form: its hours and monthly price (Custom: your hourly rate). */
+function pickStartPackage(p: SupportPackage) {
+  startPkg = p;
+  if (p.id === 'custom') $<HTMLInputElement>('#q-ret-rate').value = String(state.settings.rate);
+  else { $<HTMLInputElement>('#q-ret-hours').value = String(packageHours(p)); $<HTMLInputElement>('#q-ret-price').value = String(pkgSettings.prices[p.id]); }
+  updateRetainerFee();
+  if (p.id === 'custom') $<HTMLInputElement>('#q-ret-hours').focus();
+}
+function updateRetainerFee() {
+  const custom = startPkg.id === 'custom';
+  const hoursInput = $<HTMLInputElement>('#q-ret-hours');
+  const rateInput = $<HTMLInputElement>('#q-ret-rate');
+  const priceInput = $<HTMLInputElement>('#q-ret-price');
+  if (!custom) hoursInput.value = String(packageHours(startPkg));
+  hoursInput.disabled = !custom;
+  rateInput.disabled = !custom;
+  priceInput.disabled = custom;
+  hoursInput.closest('label')!.firstChild!.textContent = startPkg.daily ? `Hours a month (${startPkg.daily} a day, Mon–Fri)` : 'Hours a month';
+  const hours = Number(hoursInput.value) || 0;
+  const price = startPrice();
+  // Packages: the price is typed and the hourly rate follows. Custom: the other way round.
+  if (custom) priceInput.value = String(Math.round(price * 100) / 100);
+  else rateInput.value = hours ? String(Math.round((price / hours) * 100) / 100) : '0';
+  const off = startDiscount(price);
+  const saved = planSavings(hours, price - off, pkgSettings.payg);
+  $('#q-ret-fee').textContent = `${money(price - off)}${state.pricing.tax ? ` + ${state.pricing.taxLabel || 'tax'}` : ''}`;
+  $('#q-ret-discount-note').textContent = [off ? `${money(price)} − ${money(off)} discount, every month.` : 'Optional. Applies to every month of the retainer.', saved ? `Saves the client ${money(saved)} a month vs pay-as-you-go.` : ''].filter(Boolean).join(' ');
+  // The price typed here is for the chosen package only; the other cards keep their list prices.
+  renderPackageCards($('#q-ret-pkgs'), startPkg.id, (p) => (p.id === startPkg.id ? price : packagePrice(p.id, pkgSettings.prices, 20, state.settings.rate)), custom ? hours || 20 : 20, pickStartPackage);
+  $('#q-ret-pkg-name').textContent = startPkg.name;
+}
+['#q-ret-hours', '#q-ret-rate', '#q-ret-price'].forEach((sel) => $(sel).addEventListener('input', updateRetainerFee));
+$('#q-ret-create').addEventListener('click', () => {
+  const p = state;
+  const pkg = startPkg;
+  const hours = pkg.id === 'custom' ? Math.max(1, Math.round((Number($<HTMLInputElement>('#q-ret-hours').value) || 20) * 4) / 4) : packageHours(pkg);
+  // Packages: the hourly rate comes from the monthly price (4 decimals, so the line totals the price).
+  const rate = pkg.id === 'custom' ? Math.max(0, Number($<HTMLInputElement>('#q-ret-rate').value) || p.settings.rate) : Math.round((startPrice() / hours) * 10000) / 10000;
+  const start = $<HTMLInputElement>('#q-ret-date').value || today();
+  const r = freshQuote();
+  r.client = { ...p.client };
+  r.settings = { ...p.settings };
+  r.pricing = { ...p.pricing, discount: Math.max(0, Number($<HTMLInputElement>('#q-ret-discount').value) || 0), discountType: $<HTMLSelectElement>('#q-ret-discount-type').value as 'percent' | 'amount' };
+  r.answers = { type: 'support', hours: String(hours), ...(p.answers.platform ? { platform: p.answers.platform } : {}) };
+  r.monthly = true;
+  r.project = {
+    title: `${p.project.title || 'Website'}: ${pkg.id === 'custom' ? 'monthly' : pkg.name} support`,
+    summary: `Ongoing help after launch${p.delivery.liveUrl ? ` for ${p.delivery.liveUrl}` : ''}: updates, fixes and improvements, with a set number of hours each month.`,
+  };
+  r.options = [{ ...newOption(pkg.id === 'custom' ? 'Monthly support' : `${pkg.name} support`), timeline: 'Ongoing, billed monthly', lines: [packageLine(pkg, hours, rate)] }];
+  r.schedule = [{ label: 'Billed monthly in advance', percent: 100 }];
+  r.text = { ...packageTexts(pkg), terms: RETAINER_TERMS.join('\n'), note: '' };
+  r.needs = defaultNeeds(r.answers);
+  r.delivery = { ...r.delivery, kickoff: start, channel: p.delivery.channel, liveUrl: p.delivery.liveUrl, adminUrl: p.delivery.adminUrl, warrantyDays: 0 };
+  r.retainer = {
+    ...defaultRetainer({ start, rate, fromQuote: p.id, fromNumber: p.meta.number }),
+    pkg: pkg.id, dailyHours: pkg.daily, weekendEmergency: pkg.emergency, response: pkg.response,
+    // Extra hours at your pay-as-you-go rate; the plan's savings compared with it; the yearly offer from your price list.
+    overageRate: pkg.id === 'custom' ? rate : pkgSettings.payg, paygRate: pkgSettings.payg, freeMonths: pkgSettings.freeMonths,
+  };
+  r.meta.ref = p.meta.number;
+  r.costRate = p.costRate;
+  quotes[r.id] = r;
+  saveQuotes(quotes);
+  openQuote(r);
+  requestAnimationFrame(() => $('#s-retainer').scrollIntoView({ behavior: 'smooth', block: 'start' }));
+  toast(`Created retainer quote ${r.meta.number}. Check the terms, then send it.`);
+});
+
+function renderRetainer() {
+  const r = state.retainer;
+  if (!r) return;
+  const now = today();
+  // Months up to a week ahead, so next month can be invoiced in advance.
+  const months = retainerMonths(state, addDays(now, 7));
+  const current = months.find((m) => now >= m.start && now <= m.end) ?? null;
+
+  const from = r.fromQuote ? quotes[r.fromQuote] : undefined;
+  const fromBox = $('#q-ret-from');
+  fromBox.hidden = !r.fromNumber;
+  if (r.fromNumber) {
+    const link = el('button', { type: 'button', className: 'q-link', textContent: `project ${r.fromNumber}` });
+    link.addEventListener('click', () => { if (from) openQuote(from); });
+    fromBox.replaceChildren('Follows ', from ? link : `project ${r.fromNumber}`, from?.project.title ? ` (${from.project.title})` : '', '.');
+  }
+  $('#q-ret-terms').replaceChildren(...retainerTermsText(state).map((t) => el('li', { textContent: t })));
+  const plan = retainerPlan(state);
+  const free = Math.max(0, Math.min(11, Math.round(r.freeMonths) || 0));
+  const saved = r.paygRate ? planSavings(plan.hours, plan.beforeTax, r.paygRate) : 0;
+  $('#q-ret-billing-summary').textContent = [
+    r.billing === 'yearly' ? `Billed yearly: ${money(yearlyPrice(plan.fee, free))} for 12 months${free ? ` (${free} free)` : ''}. Create the yearly invoice under Months below.` : free ? `The quote also offers yearly prepay: ${money(yearlyPrice(plan.fee, free))} for 12 months (${free} free).` : 'No yearly offer on the quote.',
+    saved ? `The quote shows the client saves ${money(saved)} a month vs pay-as-you-go at ${money(r.paygRate)}/hr.` : '',
+  ].filter(Boolean).join(' ');
+  $('#q-ret-discount-summary').textContent = plan.discount ? `${money(plan.subtotal)} − ${money(plan.discount)} discount = ${money(plan.beforeTax)} a month${plan.tax ? ` before ${state.pricing.taxLabel || 'tax'}` : ''}. Shown on the quote and every monthly invoice.` : 'No discount. Enter a percentage or a fixed amount taken off every month.';
+  document.querySelectorAll<HTMLElement>('[data-rollover]').forEach((x) => { x.hidden = x.dataset.rollover !== r.rolloverMode; });
+  document.querySelectorAll<HTMLElement>('[data-emergency-only]').forEach((x) => { x.hidden = !r.weekendEmergency; });
+  const line = billedOption(state).lines.find((l) => l.id === 'retainer');
+  renderPackageCards($('#q-ret-pkg-cards'), r.pkg, (p) => (p.id === r.pkg && line ? line.hours * line.rate : packagePrice(p.id, pkgSettings.prices, 20, state.settings.rate)), r.pkg === 'custom' ? line?.hours ?? 20 : 20, setPackage);
+  $('#q-ret-pkg-name2').textContent = packageOf(r.pkg).name;
+  renderRetainerNow(current);
+  renderLog(months, current);
+  renderMonths(months);
+  const dateInput = $<HTMLInputElement>('#q-log-date');
+  if (!dateInput.value) dateInput.value = now < r.start ? r.start : now;
+}
+
+function renderRetainerNow(m: RetainerMonth | null) {
+  const r = state.retainer!;
+  const plan = retainerPlan(state);
+  const box = $('#q-ret-now');
+  if (!plan.hours) { box.replaceChildren(el('p', { className: 'q-empty', textContent: 'Add the monthly hours in Pricing first.' })); return; }
+  if (!m) {
+    const text = r.endedOn && r.endedOn < today() ? `The retainer ended on ${niceDate(r.endedOn, 'long')}.` : `Starts on ${niceDate(r.start, 'long')}: ${hoursText(plan.hours)} hours a month.`;
+    box.replaceChildren(el('p', { className: 'q-empty', textContent: text }));
+    return;
+  }
+  const pct = m.available ? m.used / m.available : m.used ? 1 : 0;
+  const warn = pct >= (r.warnAt || 80) / 100;
+  const tone = m.over ? 'is-over' : warn ? 'is-warn' : '';
+  const bar = el('span', { className: `q-meter ${tone}` }, el('i'));
+  (bar.firstChild as HTMLElement).style.width = `${Math.min(100, Math.round(pct * 100))}%`;
+  const note = m.over
+    ? `${hoursText(m.over)} hrs over this month. Only bill them if the client approved: ${money(m.over * r.overageRate)} at ${money(r.overageRate)} an hour, added to the next invoice.`
+    : warn
+      ? `${Math.round(pct * 100)}% used, ${hoursText(m.remaining)} hrs left. Let the client know before going over.`
+      : r.rolloverMode === 'bank'
+        ? `${hoursText(m.remaining)} hrs left${m.carried ? `, including ${hoursText(m.carried)} banked from earlier months` : ''}. ${m.expired ? `Unused hours expire after ${niceDate(m.end)}, the end of this ${r.bankMonths}-month bank.` : `The bank runs until ${niceDate(m.bankEnd)}; unused hours then expire.`}`
+        : `${hoursText(m.remaining)} hrs left${m.carried ? `, including ${hoursText(m.carried)} carried from last month` : ''}. ${m.carryNext ? `Up to ${hoursText(m.carryNext)} unused hrs carry into next month.` : 'Unused hours expire'} ${m.carryNext ? '' : `on ${niceDate(m.end)}.`}`.trim();
+  box.replaceChildren(
+    el('div', { className: 'q-meter-head' }, el('strong', { textContent: `${hoursText(m.used)} of ${hoursText(m.available)} hrs used` }), el('span', { textContent: r.dailyHours ? `${m.label} · ${hoursText(r.dailyHours)} hrs × ${hoursText(m.included / r.dailyHours)} working days` : m.label })),
+    bar,
+    el('p', { className: `q-meter-note ${tone}`, textContent: note }),
+    ...(m.emergency ? [el('p', { className: 'q-meter-note', textContent: `Plus ${hoursText(m.emergency)} weekend emergency hrs, included in VIP.` })] : []));
+}
+
+function renderLog(months: RetainerMonth[], current: RetainerMonth | null) {
+  const r = state.retainer!;
+  const box = $('#q-ret-log');
+  if (!r.log.length) { box.replaceChildren(el('p', { className: 'q-empty', textContent: 'No hours logged yet.' })); return; }
+  const withHours = months.filter((m) => m.entries.length || m === current);
+  if (!withHours.some((m) => m.start === logMonth)) logMonth = (current ?? withHours[withHours.length - 1])?.start ?? '';
+  const pick = el('select', { className: 'q-in q-log-month', ariaLabel: 'Month' });
+  [...withHours].reverse().forEach((m) => pick.append(new Option(`${m.label} · ${hoursText(m.used)} hrs`, m.start)));
+  pick.value = logMonth;
+  pick.addEventListener('change', () => { logMonth = pick.value; renderRetainer(); });
+  const m = months.find((x) => x.start === logMonth);
+  const outside = r.log.filter((e) => e.date < r.start).length;
+  const rows = (m?.entries ?? []).map((e) => {
+    const date = el('input', { type: 'date', value: e.date, className: 'q-in', ariaLabel: 'Date' });
+    const task = el('input', { value: e.task, className: 'q-in', ariaLabel: 'Task' });
+    const hours = el('input', { type: 'number', min: '0', step: '0.25', value: String(e.hours), className: 'q-in q-num', ariaLabel: 'Hours' });
+    date.addEventListener('change', () => { if (!date.value || date.value < r.start) { date.value = e.date; toast(`Dates start from ${niceDate(r.start)}, when the retainer starts.`, true); return; } e.date = date.value; logMonth = monthFor(state, e.date)?.start ?? logMonth; renderSummary(); save(); });
+    task.addEventListener('input', () => { e.task = task.value; save(); });
+    hours.addEventListener('change', () => { e.hours = round2(Math.max(0, Number(hours.value) || 0)); renderSummary(); save(); });
+    const flag = el('input', { type: 'checkbox', checked: Boolean(e.emergency), ariaLabel: 'Weekend emergency' });
+    flag.addEventListener('change', () => { e.emergency = flag.checked; renderSummary(); save(); });
+    const flagLabel = el('label', { className: `q-log-flag${e.emergency ? ' is-on' : ''}`, title: 'VIP weekend emergency: included, not taken from the weekday hours' }, flag, 'Emergency');
+    // Only weekend entries (on VIP) can be emergencies; keep the tick visible on any entry already marked.
+    flagLabel.hidden = !e.emergency && !(r.weekendEmergency && isWeekend(e.date));
+    return el('div', { className: 'q-log-row' }, date, el('div', { className: 'q-log-task' }, task, flagLabel), hours,
+      iconButton('×', 'Delete this time entry', () => deleteWithUndo({
+        title: 'Delete this time entry?',
+        text: `${niceDate(e.date)} · ${hoursText(e.hours)} hrs · ${e.task || 'No description'}. It comes off the month’s hours and the client’s report.`,
+        done: 'Time entry deleted',
+        run: () => { r.log = r.log.filter((x) => x.id !== e.id); renderSummary(); save(); },
+      }), 'is-danger'));
+  });
+  box.replaceChildren(
+    el('div', { className: 'q-log-head' }, pick, el('span', { className: 'q-muted', textContent: m ? `${m.entries.length} entr${m.entries.length === 1 ? 'y' : 'ies'}` : '' })),
+    ...(rows.length ? rows : [el('p', { className: 'q-empty', textContent: 'No time logged this month yet.' })]),
+    ...(outside ? [el('p', { className: 'q-help q-warn-text', textContent: `${outside} entr${outside === 1 ? 'y is' : 'ies are'} dated before the start (${niceDate(r.start)}) and not counted.` })] : []));
+}
+
+/** What a month's invoice holds: the fee, plus last month's extra hours if they haven't been billed. */
+function retainerInvoiceDraft(m: RetainerMonth, extraOnly = false) {
+  const r = state.retainer!;
+  const plan = retainerPlan(state);
+  const months = retainerMonths(state, addDays(today(), 7));
+  const lines: InvoiceLine[] = [];
+  if (!extraOnly) {
+    lines.push({ title: `Monthly support · ${m.label}`, detail: `${hoursText(plan.hours)} hours of work${r.rolloverMode === 'bank' ? `, with a ${r.bankMonths}-month hour bank` : ''}, billed in advance`, amount: round2(plan.subtotal) });
+    if (plan.discount) lines.push({ title: `Discount${state.pricing.discountType === 'percent' ? ` (${state.pricing.discount}%)` : ''}`, detail: 'Retainer discount, every month', amount: -round2(plan.discount) });
+  }
+  const src = extraOnly ? m : months[m.index - 1];
+  // Last month's approved hours over the monthly hours. (VIP weekend emergencies are included, never billed.)
+  const extra = src && src.over > 0 && !state.invoices.some((i) => i.overFor === src.start) ? src : null;
+  if (extra) lines.push({ title: `Extra hours · ${extra.label}`, detail: `${hoursText(extra.over)} hrs at ${money(r.overageRate)} an hour, approved`, amount: round2(extra.over * r.overageRate) });
+  const tax = round2((extraOnly ? 0 : plan.tax) + (extra ? (extra.over * r.overageRate * (state.pricing.tax || 0)) / 100 : 0));
+  return { lines, tax, amount: round2(lines.reduce((s, l) => s + l.amount, 0) + tax), extra };
+}
+function createRetainerInvoice(m: RetainerMonth, extraOnly = false) {
+  const d = retainerInvoiceDraft(m, extraOnly);
+  if (!d.amount) { toast('Nothing to invoice for that month.', true); return; }
+  const now = today();
+  const days = Number(profile.paymentDays) || 0;
+  const inv: Invoice = {
+    id: uid(), number: nextInvoiceNumber(profile.invoicePrefix), milestone: extraOnly ? `Extra hours · ${m.label}` : `Monthly support · ${m.label}`,
+    percent: 100, amount: d.amount, tax: d.tax, currency: state.settings.currency, issued: now,
+    // Billed in advance: due on the month's first day, or within the usual days once the month has started.
+    due: !extraOnly && m.start > now ? m.start : addDays(now, days),
+    status: 'unpaid', payments: [], period: extraOnly ? undefined : m.start, overFor: d.extra?.start, overHours: d.extra?.over, lines: d.lines,
+  };
+  state.invoices.push(inv);
+  renderInvoices();
+  renderSummary();
+  save();
+  toast(`Created ${inv.number} for ${money(inv.amount)}${d.extra && !extraOnly ? `, including ${hoursText(d.extra.over)} extra hrs` : ''}`);
+  if (!profile.payment.trim()) toast('Tip: add how clients pay you in Business profile, so it shows on invoices.');
+}
+
+function renderMonths(months: RetainerMonth[]) {
+  const r = state.retainer!;
+  const box = $('#q-ret-months');
+  if (!months.length) { box.replaceChildren(el('p', { className: 'q-empty', textContent: `Months appear here from a week before the start (${niceDate(r.start, 'long')}).` })); return; }
+  const now = today();
+  const yearly = r.billing === 'yearly';
+  // Yearly billing: one invoice covers the next 12 months that aren't invoiced yet.
+  const yearRow: HTMLElement[] = [];
+  if (yearly) {
+    const first = firstUnbilledMonth();
+    const d = yearlyInvoiceDraft(first);
+    const b = el('button', { type: 'button', className: 'q-btn q-small', textContent: `Create yearly invoice (${money(d.amount)})` });
+    b.addEventListener('click', () => createYearlyInvoice(first));
+    yearRow.push(el('div', { className: 'q-ret-year' }, el('span', { textContent: `Next yearly invoice covers ${niceDate(first)} to ${niceDate(addDays(addMonths(r.start, monthIndexOf(first) + 12), -1))}${r.freeMonths ? `, with ${r.freeMonths} months free` : ''}.` }), b));
+  }
+  box.replaceChildren(...yearRow, ...[...months].reverse().map((m) => {
+    const inv = state.invoices.find((i) => i.period === m.start || Boolean(i.periods?.includes(m.start)));
+    const extraBilled = state.invoices.find((i) => i.overFor === m.start);
+    const upcoming = m.start > now;
+    const st = inv ? invoiceStatus(inv) : null;
+    const chip = el('span', {
+      className: `q-chip-status is-${!inv ? 'draft' : st === 'paid' ? 'accepted' : inv.due < now ? 'declined' : 'sent'}`,
+      textContent: !inv ? (upcoming ? 'Starts soon' : 'Not invoiced') : `${inv.number} · ${st === 'paid' ? 'paid' : st === 'partial' ? 'part paid' : inv.due < now ? 'overdue' : 'unpaid'}`,
+    });
+    const done = m.end < now;
+    const usage = upcoming ? `Starts ${niceDate(m.start)}` : `${hoursText(m.used)} of ${hoursText(m.available)} hrs${m.carried ? ` (${hoursText(m.carried)} ${r.rolloverMode === 'bank' ? 'banked' : 'carried'})` : ''}${m.over ? ` · ${hoursText(m.over)} over${extraBilled ? ', billed' : ''}` : ''}${m.emergency ? ` · ${hoursText(m.emergency)} weekend emergency (included)` : ''}${done && m.expired ? ` · ${hoursText(m.expired)} expired` : ''}${r.rolloverMode === 'bank' && m.bankEnd === m.end ? ' · bank ends' : ''}`;
+    const tools: HTMLElement[] = [];
+    if (!inv && !yearly) {
+      const draft = retainerInvoiceDraft(m);
+      const b = el('button', { type: 'button', className: 'q-btn q-small', textContent: 'Create invoice' });
+      b.title = `${money(draft.amount)}${draft.extra ? `, including ${hoursText(draft.extra.over)} extra hrs from ${draft.extra.label}` : ''}`;
+      b.disabled = !draft.amount;
+      b.addEventListener('click', () => createRetainerInvoice(m));
+      tools.push(b);
+    }
+    if (m.over && !extraBilled && m.end < now) {
+      const b = el('button', { type: 'button', className: 'q-btn q-ghost q-small', textContent: 'Bill extra hours' });
+      b.title = `${hoursText(m.over)} hrs × ${money(r.overageRate)}. Or leave them for next month’s invoice.`;
+      b.addEventListener('click', () => createRetainerInvoice(m, true));
+      tools.push(b);
+    }
+    if (!upcoming) {
+      const view = el('button', { type: 'button', className: 'q-btn q-ghost q-small', textContent: 'Report' });
+      view.title = 'View the usage report';
+      view.addEventListener('click', () => showPdf(view, async (mod) => mod.buildUsageReportPdf(state, m.start, profile)));
+      const pdf = iconButton('↓', `Download the usage report for ${m.label}`, () => savePdf(pdf, async (mod) => mod.buildUsageReportPdf(state, m.start, profile)));
+      tools.push(view, pdf);
+    }
+    const row = el('div', { className: `q-ret-month${m.start === logMonth ? ' is-current' : ''}` },
+      el('div', { className: 'q-ret-month-main' }, el('strong', { textContent: m.label }), el('span', { textContent: usage })),
+      chip, el('div', { className: 'q-ret-month-tools' }, ...tools));
+    return row;
+  }));
+}
+
+/* Yearly prepay */
+const monthIndexOf = (start: string) => { const r = state.retainer!; let i = 0; while (addMonths(r.start, i) < start && i < 600) i += 1; return i; };
+/** The first month (from the start) that no invoice covers yet. */
+function firstUnbilledMonth() {
+  const r = state.retainer!;
+  for (let i = 0; i < 600; i++) {
+    const start = addMonths(r.start, i);
+    if (!state.invoices.some((inv) => inv.period === start || inv.periods?.includes(start))) return start;
+  }
+  return r.start;
+}
+/** 12 months from a month start: the fee for 12 months, any discount, the free months, and tax on what's paid. */
+function yearlyInvoiceDraft(first: string) {
+  const r = state.retainer!;
+  const plan = retainerPlan(state);
+  const free = Math.max(0, Math.min(11, Math.round(r.freeMonths) || 0));
+  const i = monthIndexOf(first);
+  const periods = Array.from({ length: 12 }, (_, k) => addMonths(r.start, i + k));
+  const end = addDays(addMonths(r.start, i + 12), -1);
+  const lines: InvoiceLine[] = [{ title: `Support · 12 months`, detail: `${niceDate(first)} to ${niceDate(end)}, ${hoursText(plan.hours)} hours a month`, amount: round2(plan.subtotal * 12) }];
+  if (plan.discount) lines.push({ title: `Discount${state.pricing.discountType === 'percent' ? ` (${state.pricing.discount}%)` : ''}`, detail: 'Every month', amount: -round2(plan.discount * 12) });
+  if (free) lines.push({ title: `Yearly prepay: ${free} month${free === 1 ? '' : 's'} free`, detail: 'Paid yearly in advance', amount: -round2(plan.beforeTax * free) });
+  const tax = round2(plan.tax * (12 - free));
+  return { lines, tax, amount: round2(lines.reduce((t, l) => t + l.amount, 0) + tax), periods, end };
+}
+function createYearlyInvoice(first: string) {
+  const d = yearlyInvoiceDraft(first);
+  const now = today();
+  const inv: Invoice = {
+    id: uid(), number: nextInvoiceNumber(profile.invoicePrefix), milestone: `Yearly support · ${niceDate(first)} – ${niceDate(d.end)}`,
+    percent: 100, amount: d.amount, tax: d.tax, currency: state.settings.currency, issued: now,
+    due: first > now ? first : addDays(now, Number(profile.paymentDays) || 0),
+    status: 'unpaid', payments: [], periods: d.periods, lines: d.lines,
+  };
+  state.invoices.push(inv);
+  renderInvoices();
+  renderSummary();
+  save();
+  toast(`Created ${inv.number} for ${money(inv.amount)}, covering 12 months`);
+}
+
+$<HTMLFormElement>('#q-ret-add').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const r = state.retainer;
+  if (!r) return;
+  const date = $<HTMLInputElement>('#q-log-date').value || today();
+  const hours = round2(Math.max(0, Number($<HTMLInputElement>('#q-log-hours').value) || 0));
+  const task = $<HTMLInputElement>('#q-log-task').value.trim();
+  if (!hours) { toast('Enter the hours worked.', true); return; }
+  if (date < r.start) { toast(`That’s before the retainer starts (${niceDate(r.start)}).`, true); return; }
+  if (r.endedOn && date > r.endedOn) { toast(`That’s after the retainer ended (${niceDate(r.endedOn)}).`, true); return; }
+  const before = monthFor(state, date);
+  const emergency = r.weekendEmergency && $<HTMLInputElement>('#q-log-emergency').checked;
+  r.log.push({ id: uid(), date, hours, task, ...(emergency ? { emergency: true } : {}) });
+  const after = monthFor(state, date);
+  logMonth = after?.start ?? logMonth;
+  $<HTMLInputElement>('#q-log-hours').value = '';
+  $<HTMLInputElement>('#q-log-task').value = '';
+  renderSummary();
+  save();
+  const limit = (r.warnAt || 80) / 100;
+  const pct = (m: RetainerMonth | null) => (m && m.available ? m.used / m.available : 0);
+  if (emergency) toast(`Added ${hoursText(hours)} weekend emergency hrs (included in VIP)`);
+  else if (after && after.over && !(before && before.over)) toast(`${after.label} is now ${hoursText(after.over)} hrs over. Check the client approved extra hours.`, true);
+  else if (after && pct(after) >= limit && pct(before) < limit) toast(`${Math.round(pct(after) * 100)}% of ${after.label}’s hours used. Let the client know.`);
+  else toast(`Added ${hoursText(hours)} hrs`);
+  $<HTMLInputElement>('#q-log-hours').focus();
+});
 
 /* ---------- Progress checklist ---------- */
 function renderProgress() {
@@ -621,8 +1607,19 @@ function renderProgress() {
     pricing: state.options.some((o) => o.lines.some((l) => !l.optional)),
     payment: state.schedule.reduce((s, m) => s + m.percent, 0) === 100,
     terms: Boolean(state.text.terms.trim()),
+    dates: Boolean(state.delivery.kickoff),
+    needs: state.needs.length > 0 && state.needs.every((n) => n.done),
+    retainer: Boolean(state.retainer?.start) && (state.retainer?.overageRate ?? 0) > 0,
   };
-  document.querySelectorAll<HTMLElement>('[data-check]').forEach((a) => a.classList.toggle('is-done', checks[a.dataset.check!]));
+  document.querySelectorAll<HTMLElement>('#q-jump a').forEach((a) => { const k = SECTION_CHECK[a.dataset.section!]; a.classList.toggle('is-done', Boolean(k && checks[k])); });
+  const anchors = [...document.querySelectorAll<HTMLElement>('[data-check]')];
+  anchors.forEach((a) => a.classList.toggle('is-done', checks[a.dataset.check!]));
+  // Only the steps that apply to this kind of quote (project or retainer) count.
+  const shownChecks = anchors.filter((a) => !a.hidden).map((a) => a.dataset.check!);
+  const done = shownChecks.filter((k) => checks[k]).length;
+  const all = shownChecks.length;
+  $('#q-progress-count').textContent = `${done} of ${all}`;
+  $('#q-progress-fill').style.width = `${Math.round((done / all) * 100)}%`;
 }
 
 /* ---------- Import ---------- */
@@ -635,6 +1632,7 @@ function applyAnswers(answers: Answers, ref = '') {
   // Start with the client's own choice: their team size, and essentials first if they picked it.
   state.options = [newOption('Option A', r.team, (r.choice === 'phase' || r.choice === 'both') && canPhase(answers))];
   state.active = 0;
+  state.needs = defaultNeeds(answers);
   recalc(false);
   state.project.title = projectTitle(answers);
   fillBound();
@@ -664,25 +1662,41 @@ $('#q-read').addEventListener('click', () => {
 
 /* ---------- PDFs ---------- */
 type PdfModule = typeof import('./quote-pdf');
-type Builder = (m: PdfModule) => ReturnType<PdfModule['buildQuotePdf']>;
-const quoteBuilder: Builder = async (m) => m.buildQuotePdf(state, profile);
+type Builder = (m: PdfModule) => Promise<{ doc: import('jspdf').jsPDF; filename: string }>;
+const quoteBuilder: Builder = async (m) => m.buildQuotePdf(state, profile, { hideRates: pkgSettings.hideRates });
 /** What the preview window's Download button saves (the quote, or the invoice being viewed). */
 let dialogBuilder: Builder = quoteBuilder;
+
+/**
+ * Loads the PDF code. If this page was opened before the site was rebuilt, the old file is gone:
+ * say so plainly and offer a reload (all work is already saved in this browser).
+ */
+async function loadPdf(): Promise<PdfModule | null> {
+  try {
+    return await import('./quote-pdf');
+  } catch (error) {
+    console.error(error);
+    toast('This page was updated since you opened it. Reload to continue (your work is saved).', true, { label: 'Reload', run: () => location.reload() });
+    return null;
+  }
+}
+const isIconButton = (b: HTMLElement) => b.classList.contains('q-icon-btn');
 
 /** Saves a PDF, with clear feedback on the button (and a toast if it fails). */
 async function savePdf(button: HTMLButtonElement, build: Builder) {
   const label = button.textContent;
-  button.textContent = 'Preparing…';
+  if (!isIconButton(button)) button.textContent = 'Preparing…';
   button.disabled = true;
+  const m = await loadPdf();
+  if (!m) { button.textContent = label; button.disabled = false; return; }
   try {
-    const m = await import('./quote-pdf');
     await m.download(build(m));
-    button.textContent = 'Downloaded';
+    if (!isIconButton(button)) button.textContent = 'Downloaded';
     toast('PDF downloaded. If nothing appears, use View and save it from the preview.');
   } catch (error) {
     console.error(error);
-    button.textContent = 'Couldn’t create PDF';
-    toast('Couldn’t create the PDF. Try View instead.', true);
+    if (!isIconButton(button)) button.textContent = 'Couldn’t create PDF';
+    toast(`Couldn’t create the PDF${error instanceof Error && error.message ? ` (${error.message})` : ''}. Try View instead.`, true);
   }
   window.setTimeout(() => { button.textContent = label; button.disabled = false; }, 2200);
 }
@@ -691,10 +1705,11 @@ async function savePdf(button: HTMLButtonElement, build: Builder) {
 const dialog = $<HTMLDialogElement>('#q-dialog');
 let previewUrl = '';
 async function showPdf(button: HTMLButtonElement, build: Builder) {
-  const label = button.textContent;
-  button.textContent = 'Preparing…';
+  const label = button.innerHTML;
+  if (isIconButton(button)) button.setAttribute('aria-busy', 'true'); else button.textContent = 'Preparing…';
   try {
-    const m = await import('./quote-pdf');
+    const m = await loadPdf();
+    if (!m) return;
     const { url, filename } = await m.preview(build(m));
     if (previewUrl) URL.revokeObjectURL(previewUrl);
     previewUrl = url;
@@ -703,9 +1718,11 @@ async function showPdf(button: HTMLButtonElement, build: Builder) {
     else { $('#q-dialog-title').textContent = filename; $<HTMLIFrameElement>('#q-frame').src = url; dialog.showModal(); }
   } catch (error) {
     console.error(error);
-    toast('Couldn’t create the PDF.', true);
+    toast(`Couldn’t create the PDF${error instanceof Error && error.message ? ` (${error.message})` : ''}.`, true);
+  } finally {
+    button.innerHTML = label;
+    button.removeAttribute('aria-busy');
   }
-  button.textContent = label;
 }
 ['#q-download', '#q-mobile-download'].forEach((sel) => $(sel).addEventListener('click', () => savePdf($<HTMLButtonElement>(sel), quoteBuilder)));
 $('#q-dialog-download').addEventListener('click', () => savePdf($<HTMLButtonElement>('#q-dialog-download'), dialogBuilder));
@@ -786,7 +1803,7 @@ $<HTMLInputElement>('#q-restore').addEventListener('change', async (e) => {
 });
 
 /* ---------- Render ---------- */
-function renderPricing() { renderOptionTabs(); renderTeam(); renderLines(); renderSummary(); renderInvoices(); }
+function renderPricing() { renderOptionTabs(); renderTeam(); renderLines(); renderSummary(); renderInvoices(); renderTimeline(); }
 function renderEditor() {
   fillBound();
   $('#q-dirty').hidden = true;
@@ -794,5 +1811,9 @@ function renderEditor() {
   renderSchedule();
   renderLibrary();
   renderPricing();
+  renderNeeds();
+  renderChanges();
+  renderDelivery();
 }
+renderPackageRates();
 setView(view);

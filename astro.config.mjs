@@ -10,6 +10,7 @@ const githubBase = repository.toLowerCase() === `${owner.toLowerCase()}.github.i
   : `/${repository}`;
 
 export default defineConfig({
+  devToolbar: { enabled: false },
   site:
     githubPages ? `https://${owner.toLowerCase()}.github.io` : (
       process.env.PUBLIC_SITE_URL ||

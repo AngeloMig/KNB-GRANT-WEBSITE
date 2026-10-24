@@ -1,7 +1,7 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import { CURRENCIES, LINE_PRESETS } from '../data/pricing';
-import { STATUSES } from '../data/quote-model';
+import { ROLLOVER_MODES, STATUSES } from '../data/quote-model';
 ---
 <BaseLayout title="Quotation Builder | Grant Dev14" description="Private tool for preparing project quotations." noindex>
   <div class="wrap quote-page">
@@ -24,10 +24,12 @@ import { STATUSES } from '../data/quote-model';
     <!-- Dashboard -->
     <section class="q-dash" id="v-dashboard" aria-label="Quotes" hidden>
       <div class="q-stats" id="q-stats"></div>
+      <div class="q-alerts" id="q-alerts" aria-label="Things to look at"></div>
       <div class="q-dash-bar">
         <div class="q-filters" id="q-filters" role="group" aria-label="Filter by status">
           <button type="button" data-filter="all" aria-pressed="true">All</button>
           {STATUSES.map((s) => <button type="button" data-filter={s.id} aria-pressed="false">{s.label}</button>)}
+          <button type="button" data-filter="retainer" aria-pressed="false">Retainers</button>
         </div>
         <input type="search" id="q-search" placeholder="Search client, project or number" aria-label="Search quotes" />
       </div>
@@ -40,8 +42,16 @@ import { STATUSES } from '../data/quote-model';
     </section>
 
     <!-- Editor -->
+    <div class="q-context" id="q-context" hidden>
+      <button type="button" class="q-back" data-view="dashboard" aria-label="Back to all quotes">← All quotes</button>
+      <div class="q-context-main">
+        <span class="q-avatar" id="q-ctx-avatar" aria-hidden="true"></span>
+        <div><strong id="q-ctx-client"></strong><span id="q-ctx-sub"></span></div>
+      </div>
+    </div>
     <div class="q-layout" id="v-editor" hidden>
       <div class="q-main">
+        <nav class="q-jump" id="q-jump" aria-label="Sections"></nav>
         <section class="q-card" id="s-import" aria-labelledby="q-h-import">
           <header class="q-head"><span class="q-step">01</span><h2 id="q-h-import">Start from the client’s estimate</h2></header>
           <label class="q-drop" id="q-drop">
@@ -151,64 +161,227 @@ import { STATUSES } from '../data/quote-model';
           <dl class="q-totals" id="q-totals"></dl>
         </section>
 
+        <section class="q-card" id="s-retainer" aria-labelledby="q-h-retainer" hidden>
+          <header class="q-head"><span class="q-step">05</span><h2 id="q-h-retainer">Retainer</h2></header>
+          <p class="q-ret-from" id="q-ret-from"></p>
+          <h3 class="q-sub-head">Package</h3>
+          <p class="q-help">Sets the hours, the price line and the response time. VIP includes weekend emergency calls at no extra charge. Change the hours in Pricing for a custom package.</p>
+          <div class="q-pkgs" id="q-ret-pkg-cards" role="radiogroup" aria-label="Support package"></div>
+          <div class="q-pkg-rates" data-pkg-rates></div>
+          <div class="q-pdf-row">
+            <span class="q-pdf-row-label"><strong id="q-ret-pkg-name2">Basic</strong> package PDF</span>
+            <button type="button" class="q-btn q-ghost q-small" data-package-pdf="view">View</button><button type="button" class="q-btn q-small" data-package-pdf="download">Download</button>
+            <span class="q-pdf-row-label q-pdf-row-gap">All packages PDF</span>
+            <button type="button" class="q-btn q-ghost q-small" data-packages-pdf="view">View</button><button type="button" class="q-btn q-ghost q-small" data-packages-pdf="download">Download</button>
+          </div>
+
+          <h3 class="q-sub-head">Price & billing</h3>
+          <div class="q-ret-discount">
+            <label>Discount<input type="number" min="0" step="any" data-bind="pricing.discount" /></label>
+            <label>Discount type<select data-bind="pricing.discountType"><option value="percent">Percent (%)</option><option value="amount">Fixed amount / month</option></select></label>
+            <p class="q-ret-rollover-note" id="q-ret-discount-summary"></p>
+          </div>
+          <div class="q-ret-discount q-gap-top">
+            <label>Billing<select data-bind="retainer.billing"><option value="monthly">Monthly in advance</option><option value="yearly">Yearly in advance (prepay)</option></select></label>
+            <label>Months free if paid yearly<input type="number" min="0" max="11" step="1" data-bind="retainer.freeMonths" /></label>
+            <label>Compare with pay-as-you-go ($/hr)<input type="number" min="0" step="any" data-bind="retainer.paygRate" /></label>
+          </div>
+          <p class="q-help q-gap-top" id="q-ret-billing-summary"></p>
+
+          <h3 class="q-sub-head">Terms</h3>
+          <p class="q-help">The monthly hours and fee come from the pricing above. These terms print on the quote under “How the retainer works”.</p>
+          <div class="q-grid q-grid-4">
+            <label>Starts on<input type="date" data-bind="retainer.start" /></label>
+            <label>Extra hours rate<input type="number" min="0" step="any" data-bind="retainer.overageRate" /></label>
+            <label>Warn me at (% used)<input type="number" min="10" max="100" step="5" data-bind="retainer.warnAt" /></label>
+            <label>Minimum term (months)<input type="number" min="0" step="1" data-bind="retainer.minMonths" /></label>
+          </div>
+          <div class="q-ret-rollover q-gap-top">
+            <label>Unused hours<select data-bind="retainer.rolloverMode">{ROLLOVER_MODES.map((m) => <option value={m.id}>{m.label}</option>)}</select></label>
+            <label data-rollover="next">Carry up to (hours)<input type="number" min="0" step="any" data-bind="retainer.rollover" /></label>
+            <label data-rollover="bank">Bank length (months)<input type="number" min="2" max="12" step="1" data-bind="retainer.bankMonths" /></label>
+            <label data-rollover="bank">Bank premium (% of fee)<input type="number" min="0" step="1" data-bind="retainer.rolloverPremium" /></label>
+            <p class="q-ret-rollover-note" data-rollover="none">Simplest and best for you: each month’s hours are used that month or expire.</p>
+            <p class="q-ret-rollover-note" data-rollover="next">Unused hours carry into the next month only, up to this limit.</p>
+            <p class="q-ret-rollover-note" data-rollover="bank">Unused hours build up through each bank period and expire at its end. The premium is added to the price as its own line.</p>
+          </div>
+          <div class="q-grid q-grid-4 q-gap-top">
+            <label>Notice to end (days)<input type="number" min="0" step="1" data-bind="retainer.noticeDays" /></label>
+            <label class="q-span-3">Response time<input data-bind="retainer.response" /></label>
+          </div>
+          <ul class="q-ret-terms" id="q-ret-terms"></ul>
+
+          <h3 class="q-sub-head">This month</h3>
+          <div class="q-ret-now" id="q-ret-now"></div>
+
+          <h3 class="q-sub-head">Hours log</h3>
+          <p class="q-help">Add time as you work. Hours carried from last month are used first.</p>
+          <form class="q-ret-add" id="q-ret-add">
+            <input type="date" class="q-in" id="q-log-date" aria-label="Date" required />
+            <input type="number" class="q-in q-num" id="q-log-hours" min="0.25" step="0.25" placeholder="Hrs" aria-label="Hours" required />
+            <input class="q-in" id="q-log-task" placeholder="What you did (shown on the client’s report)" aria-label="Task" required />
+            <label class="q-log-emergency" data-emergency-only title="VIP weekend emergency: included, not taken from the weekday hours"><input type="checkbox" id="q-log-emergency" />Emergency</label>
+            <button type="submit" class="q-btn q-small">Add time</button>
+          </form>
+          <div class="q-ret-log" id="q-ret-log"></div>
+
+          <h3 class="q-sub-head">Months, invoices & reports</h3>
+          <p class="q-help">Each month is billed in advance. Extra hours from the month before are added to the next invoice. Send the usage report at the end of each month.</p>
+          <div class="q-ret-months" id="q-ret-months"></div>
+          <div class="q-ret-end"><label>Retainer ended on (optional)<input type="date" data-bind="retainer.endedOn" /></label></div>
+        </section>
+
+        <section class="q-card" id="s-dates" aria-labelledby="q-h-dates">
+          <header class="q-head"><span class="q-step">05</span><h2 id="q-h-dates">Timeline & dates</h2></header>
+          <p class="q-help">Real dates from the kick-off date. They appear on the quote, the kick-off pack and the payment milestones.</p>
+          <div class="q-kickoff-row">
+            <label>Kick-off date<input type="date" data-bind="delivery.kickoff" /></label>
+            <button type="button" class="q-link" id="q-kickoff-monday">Next available Monday</button>
+          </div>
+          <div class="q-timeline" id="q-timeline"></div>
+        </section>
+
         <section class="q-card" id="s-payment" aria-labelledby="q-h-pay">
-          <header class="q-head"><span class="q-step">05</span><h2 id="q-h-pay">Payments & invoices</h2></header>
-          <p class="q-help">Milestones apply to every option. Invoices use the accepted option (or the one you’re editing).</p>
-          <div class="q-schedule" id="q-schedule"></div>
-          <div class="q-schedule-foot"><button type="button" class="q-btn q-ghost" id="q-add-milestone">+ Add milestone</button><p class="q-status" id="q-schedule-status" role="status"></p></div>
+          <header class="q-head"><span class="q-step">06</span><h2 id="q-h-pay">Payments & invoices</h2></header>
+          <p class="q-help" data-project-only>Each milestone has a due point in the project, so its date follows the timeline. Invoices use the accepted option (or the one you’re editing). Record full or partial payments, each with its own receipt.</p>
+          <p class="q-help" data-retainer-only>Monthly invoices are created from the Retainer section below. Record full or partial payments here, each with its own receipt.</p>
+          <div class="q-schedule" id="q-schedule" data-project-only></div>
+          <div class="q-schedule-foot" data-project-only><button type="button" class="q-btn q-ghost" id="q-add-milestone">+ Add milestone</button><p class="q-status" id="q-schedule-status" role="status"></p></div>
           <div class="q-invoices" id="q-invoices"></div>
         </section>
 
+        <section class="q-card" id="s-needs" aria-labelledby="q-h-needs">
+          <header class="q-head"><span class="q-step">07</span><h2 id="q-h-needs">What we need from the client</h2></header>
+          <p class="q-help">Built from their answers. Tick items off as they arrive. Shown on the quote and the kick-off pack with due dates. Ask for logins through the platform’s invite feature or a password manager, never by email.</p>
+          <div class="q-needs" id="q-needs"></div>
+          <div class="q-schedule-foot"><button type="button" class="q-btn q-ghost" id="q-add-need">+ Add item</button><button type="button" class="q-link" id="q-reset-needs">Rebuild from scope</button></div>
+        </section>
+
         <section class="q-card" id="s-terms" aria-labelledby="q-h-terms">
-          <header class="q-head"><span class="q-step">06</span><h2 id="q-h-terms">Included, not included & terms</h2></header>
+          <header class="q-head"><span class="q-step">08</span><h2 id="q-h-terms">Included, not included & terms</h2></header>
           <p class="q-help">One item per line. <code>{'{validDays}'}</code> becomes the validity period.</p>
           <div class="q-grid">
-            <label>What’s included<textarea rows="7" data-bind="text.included"></textarea></label>
-            <label>Not included<textarea rows="7" data-bind="text.excluded"></textarea></label>
+            <label><span data-project-only>What’s included</span><span data-retainer-only>What’s covered each month</span><textarea rows="7" data-bind="text.included"></textarea></label>
+            <label><span data-project-only>Not included</span><span data-retainer-only>Not covered</span><textarea rows="7" data-bind="text.excluded"></textarea></label>
           </div>
           <div class="q-stack q-gap-top">
             <label>Terms<textarea rows="8" data-bind="text.terms"></textarea></label>
             <label>Note to the client (optional)<textarea rows="3" data-bind="text.note" placeholder="e.g. Thanks for the call on Tuesday. Here’s the quote we discussed…"></textarea></label>
           </div>
         </section>
+
+        <section class="q-card" id="s-changes" aria-labelledby="q-h-changes">
+          <header class="q-head"><span class="q-step">09</span><h2 id="q-h-changes">Change orders</h2></header>
+          <p class="q-help">For extra work the client asks for after accepting. Send the change-order PDF, mark it approved when they agree, then invoice it. Approved changes add to the project total and push the launch date.</p>
+          <div class="q-changes" id="q-changes"></div>
+          <p class="q-change-summary" id="q-change-summary"></p>
+          <button type="button" class="q-btn q-ghost" id="q-add-change">+ New change order</button>
+        </section>
+
+        <section class="q-card" id="s-delivery" aria-labelledby="q-h-delivery">
+          <header class="q-head"><span class="q-step">10</span><h2 id="q-h-delivery">Delivery</h2></header>
+          <h3 class="q-sub-head">Kick-off pack</h3>
+          <p class="q-help">A welcome PDF for the client once they accept: timeline with dates, payments, what you need from them, and how you’ll work together.</p>
+          <div class="q-grid">
+            <label>Where you’ll talk<input data-bind="delivery.channel" placeholder="e.g. Email, Slack or WhatsApp" /></label>
+            <label>Progress updates<input data-bind="delivery.updates" placeholder="e.g. A short update every Friday" /></label>
+          </div>
+          <div class="q-doc-actions"><button type="button" class="q-btn q-ghost" id="q-kickoff-view">View kick-off pack</button><button type="button" class="q-btn" id="q-kickoff-pdf">Download kick-off pack</button></div>
+
+          <h3 class="q-sub-head">Launch, warranty & handover</h3>
+          <div class="q-grid q-grid-4">
+            <label>Launched on<input type="date" data-bind="delivery.launchedOn" /></label>
+            <label>Bug-fix period (days)<input type="number" min="0" data-bind="delivery.warrantyDays" /></label>
+            <label>Live website<input data-bind="delivery.liveUrl" placeholder="https://…" /></label>
+            <label>Admin login page<input data-bind="delivery.adminUrl" placeholder="https://…/admin" /></label>
+          </div>
+          <div class="q-warranty-row"><p class="q-warranty" id="q-warranty"></p><button type="button" class="q-link" id="q-launched-today">Launched today</button></div>
+          <div class="q-grid q-gap-top">
+            <label>Useful links (one per line, “Label: link”)<textarea rows="4" data-bind="delivery.links" placeholder="Training video: https://…&#10;How to add products: https://…"></textarea></label>
+            <label>Accounts & access handed over (one per line)<textarea rows="4" data-bind="delivery.access" placeholder="Shopify: store owner is you; Grant’s collaborator access removed&#10;Domain: stays in your registrar account"></textarea></label>
+          </div>
+          <p class="q-help q-warn-text">Never write passwords here. List who owns each account and how access was handed over.</p>
+          <label class="q-gap-top q-block">Notes for the client<textarea rows="3" data-bind="delivery.notes" placeholder="e.g. Back up your theme before installing new apps."></textarea></label>
+          <div class="q-doc-actions"><button type="button" class="q-btn q-ghost" id="q-handover-view">View handover document</button><button type="button" class="q-btn" id="q-handover-pdf">Download handover document</button></div>
+
+          <h3 class="q-sub-head">Ongoing support</h3>
+          <p class="q-help">Offer monthly help once the bug-fix period ends. This creates a separate retainer quote for the same client, with the retainer terms filled in, ready to send.</p>
+          <div class="q-ret-existing" id="q-ret-existing"></div>
+          <div class="q-pkgs" id="q-ret-pkgs" role="radiogroup" aria-label="Support package"></div>
+          <div class="q-pkg-rates" data-pkg-rates></div>
+          <div class="q-ret-start q-gap-top">
+            <label>Hours a month<input type="number" min="1" step="1" id="q-ret-hours" /></label>
+            <label>Hourly rate<input type="number" min="0" step="any" id="q-ret-rate" /></label>
+            <label>Monthly price<input type="number" min="0" step="any" id="q-ret-price" /></label>
+            <label>Starts on<input type="date" id="q-ret-date" /></label>
+            <div class="q-ret-fee"><span>Monthly fee</span><strong id="q-ret-fee"></strong></div>
+          </div>
+          <div class="q-ret-discount q-gap-top">
+            <label>Discount<input type="number" min="0" step="any" id="q-ret-discount" value="0" /></label>
+            <label>Discount type<select id="q-ret-discount-type"><option value="percent">Percent (%)</option><option value="amount">Fixed amount / month</option></select></label>
+            <p class="q-ret-rollover-note" id="q-ret-discount-note">Optional. Applies to every month of the retainer.</p>
+          </div>
+          <div class="q-doc-actions"><button type="button" class="q-btn" id="q-ret-create">Create retainer quote</button></div>
+          <div class="q-pdf-row">
+            <span class="q-pdf-row-label"><strong id="q-ret-pkg-name">Basic</strong> package PDF</span>
+            <button type="button" class="q-btn q-ghost q-small" data-package-pdf="view">View</button><button type="button" class="q-btn q-small" data-package-pdf="download">Download</button>
+            <span class="q-pdf-row-label q-pdf-row-gap">All packages PDF</span>
+            <button type="button" class="q-btn q-ghost q-small" data-packages-pdf="view">View</button><button type="button" class="q-btn q-ghost q-small" data-packages-pdf="download">Download</button>
+          </div>
+          <p class="q-help q-gap-top">Send the chosen package on its own, or all packages so the client can compare. Each package is priced at its own rate.</p>
+        </section>
+
       </div>
 
       <aside class="q-summary" aria-label="Quotation summary">
-        <div class="q-summary-card">
-          <div class="q-status-row">
-            <label>Status<select id="q-status-select">{STATUSES.map((s) => <option value={s.id}>{s.label}</option>)}</select></label>
-            <label>Follow up on<input type="date" data-bind="followUp" /></label>
+        <div class="q-side">
+          <div class="q-side-top">
+            <select id="q-status-select" aria-label="Status">{STATUSES.map((s) => <option value={s.id}>{s.label}</option>)}</select>
+            <label class="q-follow" title="Follow-up reminder date"><span>Follow up</span><input type="date" data-bind="followUp" /></label>
           </div>
-          <label class="q-accepted" id="q-accepted-wrap" hidden>Accepted option<select id="q-accepted"></select></label>
-          <p class="tiny-heading" id="q-total-label">Quotation total</p>
-          <p class="q-total" id="q-total"></p>
-          <p class="q-sub" id="q-sub"></p>
+          <label class="q-accepted" id="q-accepted-wrap" hidden><span>Accepted option</span><select id="q-accepted"></select></label>
+
+          <div class="q-side-total">
+            <p class="q-side-label" id="q-total-label">Quotation total</p>
+            <p class="q-total" id="q-total"></p>
+            <p class="q-sub" id="q-sub"></p>
+            <a class="q-btn q-start" id="q-start" href="#s-import">Upload the estimate</a>
+          </div>
           <dl class="q-facts" id="q-facts"></dl>
+
           <div class="q-actions">
             <button class="q-download" id="q-download" type="button">Download PDF</button>
-            <button class="q-btn q-ghost" id="q-preview" type="button">Preview</button>
+            <button class="q-icon-btn" id="q-preview" type="button" title="Preview PDF" aria-label="Preview PDF"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.6"/></svg></button>
+            <button class="q-icon-btn" id="q-copy-email" type="button" title="Copy email to client" aria-label="Copy email to client"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><rect x="8.5" y="8.5" width="11" height="11" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M15.5 5.5v-.5a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v7.5a2 2 0 0 0 2 2h.5" fill="none" stroke="currentColor" stroke-width="1.6"/></svg></button>
+            <a class="q-icon-btn" id="q-mail" href="#" title="Open email to client" aria-label="Open email to client"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><rect x="3" y="5.5" width="18" height="13" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="m3.5 7 8.5 6.5L20.5 7" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg></a>
           </div>
-          <div class="q-email">
-            <button class="q-btn q-ghost" id="q-copy-email" type="button">Copy email</button>
-            <a class="q-btn q-ghost" id="q-mail" href="#">Open in email</a>
-          </div>
+
+          <details class="q-side-section q-profit" id="q-profit">
+            <summary><span class="q-side-label" id="q-profit-label">Profit check</span><strong id="q-profit-peek"></strong></summary>
+            <p class="q-side-note">Private: never shown on any PDF.</p>
+            <label class="q-cost"><span>You pay extra developers / hr</span><input type="number" min="0" step="1" data-bind="costRate" /></label>
+            <dl id="q-margin"></dl>
+            <p class="q-margin-note" id="q-margin-note"></p>
+          </details>
+
+          <details class="q-side-section q-progress-wrap" id="q-progress-wrap">
+            <summary><span class="q-side-label">Progress</span><span class="q-progress-bar" aria-hidden="true"><i id="q-progress-fill"></i></span><strong id="q-progress-count"></strong></summary>
+            <nav class="q-progress" aria-label="Sections">
+              <a href="#s-import" data-check="import"><i></i>Estimate imported</a>
+              <a href="#s-client" data-check="client"><i></i>Client details</a>
+              <a href="#s-scope" data-check="scope"><i></i>Scope</a>
+              <a href="#s-pricing" data-check="pricing"><i></i>Pricing</a>
+              <a href="#s-dates" data-check="dates" data-project-only><i></i>Kick-off date set</a>
+              <a href="#s-retainer" data-check="retainer" data-retainer-only><i></i>Retainer terms</a>
+              <a href="#s-payment" data-check="payment" data-project-only><i></i>Payments add up to 100%</a>
+              <a href="#s-needs" data-check="needs"><i></i>Everything received from client</a>
+              <a href="#s-terms" data-check="terms"><i></i>Terms</a>
+              <a href="#s-changes" class="q-nav-only" data-project-only>Change orders</a>
+              <a href="#s-delivery" class="q-nav-only" data-project-only>Delivery & handover</a>
+              <a href="#s-retainer" class="q-nav-only" data-retainer-only>Hours log & reports</a>
+            </nav>
+          </details>
         </div>
-
-        <details class="q-profit" id="q-profit" open>
-          <summary>Profit check <span>private, never in the PDF</span></summary>
-          <label class="q-cost">What you pay extra developers / hr<input type="number" min="0" step="1" data-bind="costRate" /></label>
-          <dl id="q-margin"></dl>
-          <p class="q-margin-note" id="q-margin-note"></p>
-        </details>
-
-        <nav class="q-progress" aria-label="Sections">
-          <a href="#s-import" data-check="import"><i></i>Estimate imported</a>
-          <a href="#s-client" data-check="client"><i></i>Client details</a>
-          <a href="#s-scope" data-check="scope"><i></i>Scope</a>
-          <a href="#s-pricing" data-check="pricing"><i></i>Pricing</a>
-          <a href="#s-payment" data-check="payment"><i></i>Payments add up to 100%</a>
-          <a href="#s-terms" data-check="terms"><i></i>Terms</a>
-        </nav>
       </aside>
     </div>
   </div>
@@ -221,6 +394,19 @@ import { STATUSES } from '../data/quote-model';
       <div><button type="button" class="q-btn" id="q-dialog-download">Download PDF</button><button type="button" class="q-btn q-ghost" id="q-dialog-close">Close</button></div>
     </div>
     <iframe id="q-frame" title="PDF preview"></iframe>
+  </dialog>
+
+  <dialog class="q-confirm" id="q-confirm" aria-labelledby="q-confirm-title" aria-describedby="q-confirm-text">
+    <form method="dialog">
+      <div class="q-confirm-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22"><path d="M4 7h16M9.5 7V5a1 1 0 0 1 1-1h3a1 1 0 0 1 1 1v2m-8 0 .8 12a1.5 1.5 0 0 0 1.5 1.4h6.4a1.5 1.5 0 0 0 1.5-1.4L18 7" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <h2 id="q-confirm-title">Delete?</h2>
+      <p id="q-confirm-text"></p>
+      <ul id="q-confirm-list"></ul>
+      <div class="q-confirm-actions">
+        <button type="submit" class="q-btn q-ghost" value="cancel" autofocus>Cancel</button>
+        <button type="submit" class="q-btn q-danger-btn" value="ok" id="q-confirm-ok">Delete</button>
+      </div>
+    </form>
   </dialog>
 
   <dialog class="q-dialog q-profile-dialog" id="q-profile" aria-labelledby="q-profile-title">

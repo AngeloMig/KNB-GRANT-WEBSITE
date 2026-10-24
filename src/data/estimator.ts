@@ -173,13 +173,16 @@ export const steps: Step[] = [
   },
   {
     id: 'hours', kind: 'single', label: 'Support',
-    question: 'How much help each month?',
+    question: 'Which support plan fits?',
+    help: 'Not sure? Medium suits most growing stores. You can move up or down a plan with a month’s notice.',
     when: (a) => type(a) === 'support',
+    // Option ids are the plan's monthly hours (VIP is daily), matching the plans in the quote builder.
     options: [
-      { id: '5', label: 'Around 5 hours', hint: 'Small tweaks, peace of mind' },
-      { id: '10', label: 'Around 10 hours', hint: 'Regular updates' },
-      { id: '20', label: 'Around 20 hours', hint: 'Ongoing improvements' },
-      { id: '40', label: '40+ hours', hint: 'Like a part-time developer' },
+      { id: '20', label: 'Basic · 20 hours a month', hint: 'Updates and small fixes' },
+      { id: '40', label: 'Medium · 40 hours a month', hint: 'Most popular · regular improvements' },
+      { id: '80', label: 'Large · 80 hours a month', hint: 'Ongoing projects, priority replies' },
+      { id: 'vip', label: 'VIP · 8 hours a day, Mon–Fri', hint: 'Dedicated developer, weekend emergencies' },
+      { id: 'unsure', label: 'Not sure yet', hint: 'Grant will recommend one' },
     ],
   },
   {
@@ -308,11 +311,31 @@ export const formatWeeks = (w: number) => {
   if (w < 3) return `${Math.round(w * 2) / 2} wk`;
   return `${Math.round(w)} wk`;
 };
+/** A support plan (the same plans as the quote builder's packages, without prices). */
+export interface SupportPlan { id: 'basic' | 'medium' | 'large' | 'vip' | 'custom'; name: string; hours: number; daily: number; reply: string; recommended?: boolean }
+const SUPPORT_PLANS: Record<string, SupportPlan> = {
+  '20': { id: 'basic', name: 'Basic', hours: 20, daily: 0, reply: 'Replies within 1 business day' },
+  '40': { id: 'medium', name: 'Medium', hours: 40, daily: 0, reply: 'Replies the same business day' },
+  '80': { id: 'large', name: 'Large', hours: 80, daily: 0, reply: 'Priority replies within 4 business hours' },
+  // 8 hours × the average 21.67 working days in a month.
+  vip: { id: 'vip', name: 'VIP', hours: 173, daily: 8, reply: 'Replies within 1 hour during working hours' },
+};
+/** The plan for an answer; "not sure" starts on Medium, and older estimates (5 or 10 hours) are a custom plan. */
+export function supportPlan(answer: unknown): SupportPlan {
+  const id = String(answer ?? '');
+  if (SUPPORT_PLANS[id]) return SUPPORT_PLANS[id];
+  if (id === 'unsure' || !id) return { ...SUPPORT_PLANS['40'], recommended: true };
+  const hours = Number(id) || 20;
+  return { id: 'custom', name: 'Custom', hours, daily: 0, reply: 'Replies within 1 business day' };
+}
+
 export interface Estimate {
   mode: 'none' | 'weeks' | 'monthly';
   low: number;
   high: number;
   hours?: number;
+  /** Ongoing support: the plan chosen. */
+  support?: SupportPlan;
   phases: Phase[];
   drivers: { label: string; weeks: number }[];
   /** Every driver, not just the top four (used for pricing). */
@@ -548,8 +571,16 @@ export function estimate(a: Answers): Estimate {
   if (!t) return empty;
 
   if (t === 'support') {
-    const hours = Number(pick(a, 'hours') || 10);
-    return { ...empty, mode: 'monthly', hours, notes: ['Support is usually a monthly retainer with a set number of hours. Unused time doesn’t usually roll over, so start small and adjust.'] };
+    const plan = supportPlan(pick(a, 'hours'));
+    const notes = [
+      plan.recommended ? 'Medium is a good starting point for most stores: about a day of work every week. Grant will confirm the right plan on a short call.' : '',
+      plan.daily ? 'A dedicated developer for 8 hours every working day, Monday to Friday.' : `About ${Math.round((plan.hours / 4.33) * 2) / 2} hours of work a week, for updates, fixes and improvements.`,
+      `${plan.reply}.`,
+      plan.daily ? 'Weekend emergencies are included: if the site goes down or checkout stops working on a Saturday or Sunday, it gets fixed.' : '',
+      'Unused hours don’t roll over to the next month. You can move up or down a plan with a month’s notice.',
+      'Paying yearly in advance gets 2 months free.',
+    ].filter(Boolean);
+    return { ...empty, mode: 'monthly', hours: plan.hours, support: plan, notes };
   }
 
   const m = model(a)!;
