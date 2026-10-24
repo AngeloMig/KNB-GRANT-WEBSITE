@@ -12,8 +12,8 @@ const plans = PACKAGES.filter((p) => p.id !== 'custom');
   <div class="wrap estimate-page">
     <SectionTitle title="ESTIMATE" detail="Plan your project in about a minute" as="h1" />
     <section class="intro-split estimate-intro">
-      <div class="intro-aside is-in" data-reveal="load" style="--reveal-index:0"><span class="tiny-heading">Project estimator</span><p>A realistic guide, not a quote.<br />Grant confirms after a quick chat.</p><p class="estimate-promise">About 2 minutes · No sign-up</p></div>
-      <div><p class="lead is-in" data-reveal="load" style="--reveal-index:1">What are you building?</p><p class="intro-support is-in" data-reveal="load" style="--reveal-index:2">Answer 8–10 quick questions. The timeline updates as you go, shows what’s driving it, and turns into a brief you can send to Grant in one click. Your answers are saved on this device, so you can come back to them.</p></div>
+      <div class="intro-aside is-in" data-reveal="load" style="--reveal-index:0"><span class="tiny-heading">Project estimator</span><p>A realistic guide, not a quote.<br />Grant confirms after a quick chat.</p><p class="estimate-promise">About 2 minutes · No account needed</p></div>
+      <div><p class="lead is-in" data-reveal="load" style="--reveal-index:1">What are you building?</p><p class="intro-support is-in" data-reveal="load" style="--reveal-index:2">Start with your name and email, then answer 8–10 quick questions. The timeline updates as you go, shows what’s driving it, and turns into a brief you can send to Grant in one click. Your answers are saved on this device, so you can come back to them.</p></div>
     </section>
 
     <p class="wiz-restored" hidden><span></span> <button type="button" class="wiz-reset">Start over</button></p>
@@ -29,8 +29,19 @@ const plans = PACKAGES.filter((p) => p.id !== 'custom');
         </div>
 
         <form class="wiz-form" novalidate>
-          {steps.map((step, stepIndex) => (
-            <fieldset class="wiz-step" data-step={step.id} data-kind={step.kind} hidden={stepIndex > 0}>
+          <fieldset class="wiz-step wiz-start" data-step="contact" data-kind="contact">
+            <legend class="wiz-eyebrow">Start</legend>
+            <h2 class="wiz-question" tabindex="-1">First, who’s the estimate for?</h2>
+            <p class="wiz-help">So Grant can follow up on your project. Just a name and an email: no account, no newsletter.</p>
+            <div class="wiz-contact-grid wiz-start-grid">
+              <label><span>Your name <i aria-hidden="true">*</i></span><input name="c-name" autocomplete="name" required /></label>
+              <label><span>Email <i aria-hidden="true">*</i></span><input type="email" name="c-email" autocomplete="email" inputmode="email" required /></label>
+            </div>
+            <input type="text" name="_honey" class="wiz-honey" tabindex="-1" autocomplete="off" aria-hidden="true" />
+            <p class="wiz-start-note" role="status" aria-live="polite"></p>
+          </fieldset>
+          {steps.map((step) => (
+            <fieldset class="wiz-step" data-step={step.id} data-kind={step.kind} hidden>
               <legend class="wiz-eyebrow">{step.label}{step.optional && <span> · optional</span>}</legend>
               <h2 class="wiz-question" tabindex="-1">{step.question}</h2>
               {step.help && <p class="wiz-help">{step.help}</p>}
@@ -79,13 +90,11 @@ const plans = PACKAGES.filter((p) => p.id !== 'custom');
             <dl class="wiz-review-list"></dl>
             <div class="wiz-contact" data-email={FORM_INBOX} data-cc={FORM_CC}>
               <p class="wiz-contact-title">Send it to Grant</p>
+              <p class="wiz-sending-as"><span class="wiz-as-text"></span> <button type="button" class="wiz-edit wiz-as-edit">Change</button></p>
               <div class="wiz-contact-grid">
-                <label><span>Your name <i aria-hidden="true">*</i></span><input name="c-name" autocomplete="name" required /></label>
-                <label><span>Email <i aria-hidden="true">*</i></span><input type="email" name="c-email" autocomplete="email" required /></label>
                 <label>Company<input name="c-company" autocomplete="organization" /></label>
                 <label>Current website<input name="c-website" autocomplete="url" placeholder="example.com" /></label>
               </div>
-              <input type="text" name="_honey" class="wiz-honey" tabindex="-1" autocomplete="off" aria-hidden="true" />
               <button type="button" class="wiz-submit">Send to Grant <Arrow diagonal /></button>
               <p class="wiz-send-status" role="status" aria-live="polite"></p>
               <p class="wiz-send-alt">Your details go only to Grant. Prefer something else? <a class="wiz-send" href={`mailto:${profile.email}`} data-email={profile.email}>Email it instead</a> · <button type="button" class="wiz-copy">Copy brief</button> · <button type="button" class="wiz-share">Copy share link</button></p>
@@ -172,7 +181,9 @@ const plans = PACKAGES.filter((p) => p.id !== 'custom');
     const contactBox = wizard.querySelector<HTMLElement>('.wiz-contact')!;
     const submit = contactBox.querySelector<HTMLButtonElement>('.wiz-submit')!;
     const sendStatus = contactBox.querySelector<HTMLElement>('.wiz-send-status')!;
-    const field = (name: string) => contactBox.querySelector<HTMLInputElement>(`[name="${name}"]`)!;
+    const field = (name: string) => wizard.querySelector<HTMLInputElement>(`[name="${name}"]`)!;
+    const startNote = wizard.querySelector<HTMLElement>('.wiz-start-note')!;
+    const sendingAs = contactBox.querySelector<HTMLElement>('.wiz-as-text')!;
     const restored = document.querySelector<HTMLElement>('.wiz-restored')!;
     const pdfButton = summary.querySelector<HTMLButtonElement>('.wiz-pdf')!;
     const monthsLine = summary.querySelector('.wiz-months')!;
@@ -180,17 +191,22 @@ const plans = PACKAGES.filter((p) => p.id !== 'custom');
     const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     let answers: Answers = {};
-    let at = 'type';
-    // Contact details (review step), and one reference per brief.
+    let at = 'contact';
+    // Contact details (name and email on the first step, the rest on the review), and one reference per brief.
     let contact = { name: '', email: '', company: '', website: '' };
-    const ref = `EST-${new Date().toLocaleDateString('en-CA').replace(/-/g, '')}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+    // The email Grant was already told about when this person started, so it's sent once.
+    let captured = '';
+    const newRef = () => `EST-${new Date().toLocaleDateString('en-CA').replace(/-/g, '')}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+    // Saved with the progress, so the "started" email and the final brief share it across reloads.
+    let ref = newRef();
     let sent = false;
     let brief = '';
     let shown = { low: 0, high: 0 };
     let estimateSummary = '';
     let lastResult: Estimate | null = null;
     // The first step is server-rendered visible, so it doesn't animate in or shift the layout on load.
-    let lastShownStep = steps[0].id;
+    let lastShownStep = 'contact';
+    const emailOk = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
     // "About 1½–2 months" under the weeks (4.345 weeks in a month).
     const half = (m: number) => (m % 1 ? `${Math.floor(m) || ''}½` : `${m}`);
@@ -202,9 +218,10 @@ const plans = PACKAGES.filter((p) => p.id !== 'custom');
     };
 
     const visibleSteps = () => steps.filter((step) => !step.when || step.when(answers));
-    const order = () => [...visibleSteps().map((step) => step.id), 'review'];
+    const order = () => ['contact', ...visibleSteps().map((step) => step.id), 'review'];
     const section = (id: string) => form.querySelector<HTMLElement>(`[data-step="${id}"]`)!;
     const stepById = (id: string) => steps.find((step) => step.id === id);
+    const labelOf = (id: string) => (id === 'contact' ? 'You' : stepById(id)?.label ?? id);
 
     // Only answers from steps that still apply count (e.g. store features drop out if you switch to Webflow).
     const effective = (): Answers => {
@@ -243,6 +260,7 @@ const plans = PACKAGES.filter((p) => p.id !== 'custom');
     };
 
     const answered = (id: string) => {
+      if (id === 'contact') return Boolean(contact.name) && emailOk(contact.email);
       const step = stepById(id);
       if (!step || step.optional || step.kind === 'range' || step.kind === 'text') return true;
       const value = answers[id];
@@ -356,7 +374,7 @@ const plans = PACKAGES.filter((p) => p.id !== 'custom');
       const progress = isReview ? 100 : Math.round((index / (ids.length - 1)) * 100);
       fill.style.transform = `scaleX(${progress / 100})`;
       track.setAttribute('aria-valuenow', String(progress));
-      dots.innerHTML = ids.slice(0, -1).map((id, i) => `<li class="${i < index ? 'is-done' : i === index ? 'is-current' : ''}"><button type="button" data-go="${id}" ${i <= index || answered(id) ? '' : 'disabled'} aria-label="${stepById(id)?.label}">${stepById(id)?.label}</button></li>`).join('');
+      dots.innerHTML = ids.slice(0, -1).map((id, i) => `<li class="${i < index ? 'is-done' : i === index ? 'is-current' : ''}"><button type="button" data-go="${id}" ${i <= index || answered(id) ? '' : 'disabled'} aria-label="${labelOf(id)}">${labelOf(id)}</button></li>`).join('');
       back.disabled = index === 0;
       next.hidden = isReview;
       const step = stepById(at);
@@ -370,9 +388,10 @@ const plans = PACKAGES.filter((p) => p.id !== 'custom');
       // Some help text depends on earlier answers (e.g. the one-developer timeline on the speed-up step).
       if (step?.helpFor) { const help = section(at).querySelector('.wiz-help'); const text = step.helpFor(answers); if (help && text) help.textContent = text; }
       next.disabled = !isReview && !answered(at);
-      next.firstChild!.textContent = index === ids.length - 2 ? 'See my brief ' : step?.optional && !answered(at) ? 'Skip ' : 'Continue ';
+      next.firstChild!.textContent = at === 'contact' ? 'Start the estimate ' : index === ids.length - 2 ? 'See my brief ' : step?.optional && !answered(at) ? 'Skip ' : 'Continue ';
       if (step?.optional && step.kind === 'multi') next.firstChild!.textContent = (answers[at] as string[] | undefined)?.length ? 'Continue ' : 'Skip ';
       wizard.classList.toggle('is-review', isReview);
+      renderSendingAs();
       lastShownStep = at;
       renderSummary();
       saveProgress();
@@ -391,6 +410,7 @@ const plans = PACKAGES.filter((p) => p.id !== 'custom');
       const ids = order();
       const index = ids.indexOf(at) + delta;
       if (index < 0 || index >= ids.length || switching) return;
+      if (at === 'contact' && delta > 0) captureLead();
       if (reduce) { go(ids[index], delta); return; }
       // The current question fades out first, then the next one slides in.
       switching = true;
@@ -483,23 +503,74 @@ const plans = PACKAGES.filter((p) => p.id !== 'custom');
       window.setTimeout(() => { copy.textContent = 'Copy brief'; }, 2200);
     });
 
-    /* ---------- Contact details and sending ---------- */
+    /* ---------- Contact details, the early lead, and sending ---------- */
     const readContact = () => {
       contact = { name: field('c-name').value.trim(), email: field('c-email').value.trim(), company: field('c-company').value.trim(), website: field('c-website').value.trim() };
     };
-    contactBox.addEventListener('input', () => { readContact(); renderSummary(); saveProgress(); sendStatus.textContent = ''; sendStatus.dataset.tone = ''; });
-    // The summary's button takes people to the review step, ready to type their details.
+    function renderSendingAs() {
+      sendingAs.textContent = answered('contact') ? `From ${contact.name} · ${contact.email}` : 'Add your name and email first.';
+    }
+    const focusContact = () => { field(contact.name ? 'c-email' : 'c-name').focus({ preventScroll: true }); };
+    wizard.addEventListener('input', (event) => {
+      if (!(event.target as HTMLInputElement).name?.startsWith('c-')) return;
+      readContact();
+      startNote.textContent = '';
+      sendStatus.textContent = ''; sendStatus.dataset.tone = '';
+      if (at === 'contact') next.disabled = !answered('contact');
+      renderSendingAs();
+      renderSummary();
+      saveProgress();
+    });
+    // Say why Continue is greyed out, once they've left the email field.
+    field('c-email').addEventListener('blur', () => {
+      if (contact.email && !emailOk(contact.email)) startNote.textContent = 'That email doesn’t look right. Grant needs it to reply.';
+    });
+    section('contact').addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter' || !(event.target as HTMLElement).matches('input')) return;
+      event.preventDefault();
+      if (answered('contact')) step(1);
+      else { startNote.textContent = !contact.name ? 'Please add your name.' : 'Please add a valid email.'; focusContact(); }
+    });
+    contactBox.querySelector('.wiz-as-edit')!.addEventListener('click', () => { go('contact', -1); focusContact(); });
+
+    /**
+     * Tells Grant someone started, so the lead isn't lost if they leave halfway.
+     * Once per email; the full brief follows with the same reference if they finish.
+     */
+    function captureLead() {
+      if (!answered('contact') || captured === contact.email || field('_honey').value) return;
+      captured = contact.email;
+      saveProgress();
+      fetch(formEndpoint(contactBox.dataset.email!), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        keepalive: true,
+        body: JSON.stringify({
+          _subject: `New estimator lead: ${contact.name}`,
+          _cc: contactBox.dataset.cc || undefined,
+          _template: 'table',
+          _captcha: 'false',
+          _honey: field('_honey').value,
+          name: contact.name,
+          email: contact.email,
+          reference: ref,
+          status: 'Started the estimator. If they finish, the full brief follows with the same reference.',
+          ...sourceFields(),
+        }),
+      }).catch(() => { captured = ''; });
+    }
+
+    // The summary's button takes people to the review step (or to their name and email first).
     toSend.addEventListener('click', () => {
-      if (at !== 'review') { const ids = order(); const missing = ids.slice(0, -1).find((id) => !answered(id)); go(missing ?? 'review', 1); if (missing) return; }
-      window.setTimeout(() => { contactBox.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' }); field(contact.name ? 'c-email' : 'c-name').focus({ preventScroll: true }); }, 60);
+      if (at !== 'review') { const ids = order(); const missing = ids.slice(0, -1).find((id) => !answered(id)); go(missing ?? 'review', 1); if (missing) { if (missing === 'contact') focusContact(); return; } }
+      window.setTimeout(() => { contactBox.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' }); submit.focus({ preventScroll: true }); }, 60);
     });
     submit.addEventListener('click', async () => {
       readContact();
-      const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contact.email);
-      if (!contact.name || !emailOk) {
-        sendStatus.dataset.tone = 'error';
-        sendStatus.textContent = !contact.name ? 'Please add your name.' : 'Please add a valid email, so Grant can reply.';
-        field(!contact.name ? 'c-name' : 'c-email').focus();
+      if (!answered('contact')) {
+        go('contact', -1);
+        startNote.textContent = !contact.name ? 'Please add your name, so Grant knows who to reply to.' : 'Please add a valid email, so Grant can reply.';
+        focusContact();
         return;
       }
       if (sent) { sendStatus.dataset.tone = 'ok'; sendStatus.textContent = 'Already sent. Grant will be in touch soon.'; return; }
@@ -546,7 +617,7 @@ const plans = PACKAGES.filter((p) => p.id !== 'custom');
     /* ---------- Saved progress and share links ---------- */
     const STORE = 'estimate-progress-v1';
     const saveProgress = () => {
-      try { localStorage.setItem(STORE, JSON.stringify({ answers: effective(), at, contact, savedAt: Date.now() })); } catch { /* storage unavailable */ }
+      try { localStorage.setItem(STORE, JSON.stringify({ answers: effective(), at, contact, captured, ref, savedAt: Date.now() })); } catch { /* storage unavailable */ }
     };
     /** Puts saved answers back into the form. */
     const applyAnswers = (saved: Answers) => {
@@ -579,27 +650,38 @@ const plans = PACKAGES.filter((p) => p.id !== 'custom');
       ['c-name', 'c-email', 'c-company', 'c-website'].forEach((n) => { field(n).value = ''; });
       answers = {};
       contact = { name: '', email: '', company: '', website: '' };
+      captured = '';
+      ref = newRef();
+      startNote.textContent = '';
       steps.forEach((s) => { if (s.kind === 'range' && s.range) { const input = section(s.id).querySelector<HTMLInputElement>('input')!; input.value = String(s.range.initial); input.dispatchEvent(new Event('input', { bubbles: true })); } });
       restored.hidden = true;
       history.replaceState(null, '', location.pathname);
-      go('type', -1);
+      go('contact', -1);
     });
     /** A shared link wins; otherwise answers saved on this device. */
     const restore = () => {
       const shared = new URLSearchParams(location.search).get('brief');
       const fromLink = shared ? decodeShare(shared) : null;
-      let saved: { answers?: Answers; at?: string; contact?: typeof contact } | null = null;
+      let saved: { answers?: Answers; at?: string; contact?: typeof contact; captured?: string; ref?: string } | null = null;
       try { saved = JSON.parse(localStorage.getItem(STORE) || 'null'); } catch { saved = null; }
-      const data = fromLink ? { answers: fromLink, at: 'review' } : saved;
-      if (!data?.answers || !Object.keys(data.answers).length) return;
-      applyAnswers(data.answers);
-      if (!fromLink && saved?.contact) {
+      // Name and email come back even before any answer, so the first step is already filled in.
+      if (saved?.contact) {
         contact = { ...contact, ...saved.contact };
+        captured = saved.captured ?? '';
+        if (saved.ref && /^EST-\d{8}-[A-Z0-9]{4}$/.test(saved.ref)) ref = saved.ref;
         field('c-name').value = contact.name; field('c-email').value = contact.email; field('c-company').value = contact.company; field('c-website').value = contact.website;
       }
+      const data = fromLink ? { answers: fromLink, at: answered('contact') ? 'review' : 'contact' } : saved;
+      if (!data?.answers || !Object.keys(data.answers).length) {
+        if (fromLink) { at = 'contact'; lastShownStep = 'contact'; }
+        return;
+      }
+      applyAnswers(data.answers);
       syncOptions();
       const ids = order();
       at = data.at && ids.includes(data.at) ? data.at : ids.find((id) => !answered(id)) ?? 'review';
+      // Name and email come first, also for answers saved before that step existed.
+      if (!answered('contact')) at = 'contact';
       lastShownStep = at;
       restored.querySelector('span')!.textContent = fromLink ? 'You opened a shared estimate. Change anything you like.' : 'Welcome back: your answers were saved on this device.';
       restored.hidden = false;

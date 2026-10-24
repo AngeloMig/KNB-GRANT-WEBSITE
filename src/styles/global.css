@@ -6507,6 +6507,30 @@ html:active-view-transition-type(grow)::view-transition-new(root) {
   outline: 2px solid var(--ink);
   outline-offset: -1px;
 }
+/* Estimator: name and email first */
+.wiz-start-grid {
+  max-width: 640px;
+  margin-top: 30px;
+}
+.wiz-start-grid input {
+  padding: 15px 16px;
+  font-size: 17px;
+}
+.wiz-start-note {
+  min-height: 1.4em;
+  margin-top: 10px;
+  font-size: 13px;
+  color: var(--warn);
+}
+.wiz-sending-as {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  margin: 0 0 14px;
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
 .wiz-honey {
   position: absolute;
   left: -9999px;
