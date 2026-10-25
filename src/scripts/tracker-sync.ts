@@ -23,6 +23,7 @@ import {
   paidTotal,
   retainerMonths,
   retainerPlan,
+  validUntil,
   type Profile,
   type QuoteState,
 } from '../data/quote-model';
@@ -151,6 +152,41 @@ async function blobOf(built: Promise<{ doc: { output: (type: 'blob') => Blob }; 
   return doc.output('blob');
 }
 
+const clip = (text: string | undefined, max: number) => (text ?? '').replace(/\s+/g, ' ').trim().slice(0, max);
+const listOf = (text: string | undefined) => (text ?? '').split(/\n+/).map((l) => clip(l.replace(/^[-•*]\s*/, ''), 140)).filter(Boolean).slice(0, 12);
+
+/**
+ * What the tracker shows for a quote: each option with its total, the scope line by line, the recommended add-ons (the
+ * quote's optional extras), timeline, payment schedule and what's in or out. Kept under the tracker's 20 KB limit.
+ */
+function quoteDetails(q: QuoteState) {
+  const chosen = billedOption(q);
+  const money = (n: number) => Math.round(n * 100) / 100;
+  const options = q.options.slice(0, 3).map((o) => {
+    const t = optionTotals(q, o);
+    const line = (l: (typeof o.lines)[number]) => ({
+      title: clip(l.title, 90), detail: clip(l.detail, 100), qty: l.hours, unit: l.unit === 'fixed' ? 'x' : 'h', amount: money(l.hours * l.rate), ...(l.phase === 2 ? { phase: 2 } : {}),
+    });
+    return {
+      name: clip(o.name, 40), chosen: o.id === chosen.id, total: money(t.total), subtotal: money(t.subtotal), discount: money(t.discount), tax: money(t.tax), hours: t.hours,
+      timeline: clip(o.timeline, 80), team: o.team,
+      scope: o.lines.filter((l) => !l.optional).slice(0, 25).map(line),
+      addOns: o.lines.filter((l) => l.optional).slice(0, 15).map(line),
+    };
+  });
+  const details = {
+    number: q.meta.number, status: q.status, date: q.meta.date, validUntil: validUntil(q), estimateRef: /^EST-/.test(q.meta.ref || '') ? q.meta.ref : null,
+    title: clip(q.project.title, 120), summary: clip(q.project.summary, 600), currency: q.settings.currency, monthly: q.monthly,
+    options,
+    schedule: q.schedule.slice(0, 8).map((m) => ({ label: clip(m.label, 60), percent: m.percent, when: m.when ?? null, date: m.date ?? null })),
+    included: listOf(q.text.included), excluded: listOf(q.text.excluded),
+  };
+  // Stay under the tracker's size cap: drop the other options' line items first, then shorten.
+  if (JSON.stringify(details).length > 17_000) details.options.forEach((o) => { if (!o.chosen) { o.scope = []; o.addOns = []; } });
+  if (JSON.stringify(details).length > 17_000) details.options.forEach((o) => { o.scope = o.scope.slice(0, 12); o.addOns = o.addOns.slice(0, 6); });
+  return details;
+}
+
 function recordsFor(q: QuoteState, profile: Profile, hideRates: boolean): SyncRecord[] {
   const pdfs = () => import('./quote-pdf');
   const known = TRACKER_CURRENCIES.includes(q.settings.currency);
@@ -174,9 +210,9 @@ function recordsFor(q: QuoteState, profile: Profile, hideRates: boolean): SyncRe
       amount: money(plan.fee), paidAmount: null,
       issuedOn: q.meta.date || null, dueOn: null, paidOn: null,
       note: otherCurrency ?? (r.endedOn ? `Ended ${r.endedOn}` : r.start ? `Started ${r.start}` : null),
-      meta: month ? { month: month.label, hoursUsed: month.used, hoursAvailable: month.available, hoursOver: month.over, entries: log.length } : { entries: log.length },
+      meta: { details: quoteDetails(q), ...(month ? { month: month.label, hoursUsed: month.used, hoursAvailable: month.available, hoursOver: month.over } : {}), entries: log.length },
       pdfHash: hash({ ...base, core: { ...core, retainer: terms } }),
-      dataHash: hash({ status, fee: plan.fee, hours: plan.hours, used: month?.used, available: month?.available, endedOn: r.endedOn, start: r.start }),
+      dataHash: hash({ status, fee: plan.fee, hours: plan.hours, used: month?.used, available: month?.available, endedOn: r.endedOn, start: r.start, details: quoteDetails(q) }),
       fileName: `${q.meta.number}-support-plan.pdf`,
       pdf: async () => blobOf((await pdfs()).buildQuotePdf(q, profile, { hideRates })),
     });
@@ -187,9 +223,9 @@ function recordsFor(q: QuoteState, profile: Profile, hideRates: boolean): SyncRe
       externalId: `quote:${q.id}`, kind: 'quote', currency, status,
       title: `Quote ${q.meta.number}${q.project.title ? ` — ${q.project.title}` : ''}`,
       amount: money(totals.total), paidAmount: null,
-      issuedOn: q.meta.date || null, dueOn: null, paidOn: null, note: otherCurrency, meta: { option: billedOption(q).name, hours: totals.hours },
+      issuedOn: q.meta.date || null, dueOn: null, paidOn: null, note: otherCurrency, meta: { details: quoteDetails(q) },
       pdfHash: hash({ ...base, core, hideRates }),
-      dataHash: hash({ status, total: totals.total, title: q.project.title, date: q.meta.date }),
+      dataHash: hash({ status, details: quoteDetails(q) }),
       fileName: `${q.meta.number}.pdf`,
       pdf: async () => blobOf((await pdfs()).buildQuotePdf(q, profile, { hideRates })),
     });
@@ -255,17 +291,24 @@ function recordsFor(q: QuoteState, profile: Profile, hideRates: boolean): SyncRe
 /* ---------- sending ---------- */
 async function leadFor(q: QuoteState, cache: Map<string, Lead>): Promise<Lead> {
   const key = q.client.email.trim().toLowerCase();
-  const hit = cache.get(key);
+  const cacheKey = `${key}|${q.meta.ref || ''}`;
+  const hit = cache.get(cacheKey);
   if (hit) return hit;
-  const res = await api('/rest/v1/rpc/find_or_create_lead_for_client', {
-    method: 'POST',
-    ...json({ p_email: key, p_name: q.client.name, p_company: q.client.company, p_website: q.client.website }),
-  });
+  const args = { p_email: key, p_name: q.client.name, p_company: q.client.company, p_website: q.client.website };
+  const ref = /^EST-\d{8}-[A-Z0-9]{4}$/i.test(q.meta.ref || '') ? q.meta.ref : '';
+  let res: Response;
+  try {
+    // A quote built from an estimate PDF goes to that estimate's lead (by its reference), then by email (migration 060).
+    res = await api('/rest/v1/rpc/find_or_create_lead_for_quote', { method: 'POST', ...json({ ...args, p_estimate_ref: ref }) });
+  } catch (error) {
+    if (!/find_or_create_lead_for_quote|PGRST202|Could not find the function/i.test(String((error as Error).message))) throw error;
+    res = await api('/rest/v1/rpc/find_or_create_lead_for_client', { method: 'POST', ...json(args) });
+  }
   const id = String(await res.json());
   const rows = await (await api(`/rest/v1/inquiries?select=id,company_id,status&id=eq.${encodeURIComponent(id)}`)).json();
   if (!rows[0]) throw new Error('The tracker lead could not be read.');
   const lead = rows[0] as Lead;
-  cache.set(key, lead);
+  cache.set(cacheKey, lead);
   return lead;
 }
 
