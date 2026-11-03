@@ -1,0 +1,101 @@
+---
+// The homepage's closing call to action: the black band that ends the page, with "LET'S / TALK."
+// drawn in dots beside it (the same dot type as the hero). The cursor scatters the dots, which glow in
+// the colour of the project at the front of the hero's orbit, then spring back.
+import { withBase } from '../utils/paths';
+import Arrow from './Arrow.astro';
+---
+<section class="closing-cta" aria-labelledby="closing-cta-heading">
+  <div class="closing-cta-copy">
+    <h2 id="closing-cta-heading" data-lines data-reveal>Have a project<br />in mind?</h2>
+    <p data-reveal>Not sure what you need yet? Get a realistic timeline in two minutes, or tell me about it directly.</p>
+    <div class="closing-cta-actions" data-reveal>
+      <a class="closing-cta-primary" href={withBase('/estimate/')}>Get a free estimate <Arrow diagonal /></a>
+      <a class="closing-cta-ghost" href={withBase('/contact/')}>Get in touch</a>
+    </div>
+    <p class="closing-cta-audit" data-reveal>Already have a website? <a href={withBase('/contact/#audit')}>Get a free audit of it <Arrow diagonal /></a></p>
+  </div>
+  <div class="closing-cta-art" aria-hidden="true"><canvas class="closing-cta-dots"></canvas></div>
+</section>
+
+<script>
+  const root = document.documentElement;
+  const motion = root.classList.contains('motion');
+  const fine = matchMedia('(hover: hover) and (pointer: fine)').matches;
+  const canvas = document.querySelector<HTMLCanvasElement>('.closing-cta-dots');
+  if (canvas) {
+    const ctx = canvas.getContext('2d')!;
+    type Dot = { x: number; y: number; vx: number; vy: number; hx: number; hy: number };
+    let dots: Dot[] = [], W = 0, H = 0, gap = 6, px = -1e4, py = -1e4, awake = false, on = false;
+    new IntersectionObserver(([e]) => { on = e.isIntersecting; }).observe(canvas);
+    // Moving dots take the hero's current project colour (gold until the hero has set one).
+    const accent = () => { const h = root.style.getPropertyValue('--hero-hue'); return h ? `oklch(0.8 0.12 ${h})` : 'oklch(0.8 0.12 75)'; };
+    const draw = () => {
+      ctx.clearRect(0, 0, W, H);
+      const still = new Path2D(), moved = new Path2D(), r = gap * 0.36;
+      for (const d of dots) { const p = Math.abs(d.x - d.hx) + Math.abs(d.y - d.hy) > 2 ? moved : still; p.moveTo(d.x + r, d.y); p.arc(d.x, d.y, r, 0, 6.2832); }
+      ctx.fillStyle = '#f2f0ea'; ctx.fill(still);
+      ctx.fillStyle = accent(); ctx.fill(moved);
+    };
+    const build = async () => {
+      await document.fonts.load('800 200px "Big Shoulders Display"');
+      const b = canvas.getBoundingClientRect();
+      W = Math.floor(b.width); H = Math.floor(b.height);
+      if (!W || !H) return;
+      const dpr = Math.min(2, devicePixelRatio || 1);
+      canvas.width = W * dpr; canvas.height = H * dpr;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      const off = document.createElement('canvas'); off.width = W; off.height = H;
+      const o = off.getContext('2d')!;
+      const lines = ['LET’S', 'TALK.'];
+      let size = (H / 2) * 1.1;
+      o.font = `800 ${size}px "Big Shoulders Display"`;
+      size = Math.min(size, (size * W * 0.96) / Math.max(...lines.map((l) => o.measureText(l).width)));
+      o.font = `800 ${size}px "Big Shoulders Display"`;
+      o.textAlign = 'center'; o.textBaseline = 'middle';
+      lines.forEach((l, i) => o.fillText(l, W / 2, (H * (i + 0.5)) / 2));
+      const data = o.getImageData(0, 0, W, H).data;
+      gap = W < 500 ? 5 : 6;
+      dots = [];
+      for (let y = gap / 2; y < H; y += gap) for (let x = gap / 2; x < W; x += gap) {
+        if (data[((y | 0) * W + (x | 0)) * 4 + 3] > 128) dots.push({ hx: x, hy: y, x, y, vx: 0, vy: 0 });
+      }
+      draw();
+    };
+    build();
+    let width = innerWidth, timer = 0;
+    addEventListener('resize', () => { clearTimeout(timer); timer = window.setTimeout(() => { if (Math.abs(innerWidth - width) > 40) { width = innerWidth; build(); } }, 250); });
+    if (fine && motion) {
+      canvas.parentElement!.addEventListener('pointermove', (e) => { const b = canvas.getBoundingClientRect(); px = e.clientX - b.left; py = e.clientY - b.top; awake = true; });
+      canvas.parentElement!.addEventListener('pointerleave', () => { px = py = -1e4; });
+    }
+    const loop = () => {
+      if (on && awake) {
+        let moving = 0;
+        for (const d of dots) {
+          const dx = d.x - px, dy = d.y - py, dist = Math.hypot(dx, dy);
+          if (dist < 100 && dist > 0.1) { const f = (1 - dist / 100) * 3.6; d.vx += (dx / dist) * f; d.vy += (dy / dist) * f; }
+          d.vx += (d.hx - d.x) * 0.05; d.vy += (d.hy - d.y) * 0.05;
+          d.vx *= 0.82; d.vy *= 0.82;
+          d.x += d.vx; d.y += d.vy;
+          moving = Math.max(moving, Math.abs(d.vx) + Math.abs(d.vy));
+        }
+        draw();
+        if (moving < 0.02 && px < -1e3) awake = false;
+      }
+      requestAnimationFrame(loop);
+    };
+    if (motion) requestAnimationFrame(loop);
+  }
+</script>
+
+<style>
+  .closing-cta { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: center; }
+  /* Half the band's width, so the headline steps down a size to stay on two lines. */
+  .closing-cta-copy h2 { font-size: clamp(48px, 6.2vw, 110px); }
+  .closing-cta-dots { display: block; width: 100%; height: clamp(220px, 26vw, 420px); }
+  @media (max-width: 900px) {
+    .closing-cta { grid-template-columns: 1fr; gap: 36px; }
+    .closing-cta-dots { height: clamp(200px, 56vw, 340px); }
+  }
+</style>

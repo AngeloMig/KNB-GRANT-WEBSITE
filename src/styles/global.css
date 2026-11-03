@@ -8054,7 +8054,7 @@ html:active-view-transition-type(grow)::view-transition-new(root) {
   letter-spacing: -0.05em;
   line-height: 0.98;
 }
-.closing-cta > p {
+.closing-cta-copy > p {
   max-width: 46ch;
   margin: 24px 0 34px;
   color: oklch(0.78 0 0);

@@ -1,0 +1,270 @@
+---
+// Design preview: five variants of the homepage's closing call to action ("Have a project in mind?").
+// Local preview only: in a build this route has no pages. Open http://localhost:4321/ideas/closing/.
+// Every variant keeps the same headline, buttons and audit link; only real content is used.
+import { withBase } from '../../utils/paths';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import Arrow from '../../components/Arrow.astro';
+import IdeaLegend from '../../components/IdeaLegend.astro';
+import { profile } from '../../data/profile';
+import { projects } from '../../data/projects';
+
+export function getStaticPaths() {
+  return import.meta.env.DEV ? [{ params: { preview: 'ideas' } }] : [];
+}
+
+const IDEAS = [[1, 'Dot-matrix “Let’s talk”'], [2, 'Quick-start choices'], [3, 'Project stack'], [4, 'Contact card'], [5, 'Giant moving line']] as const;
+// The estimator opens on the next question when a link carries answers (?brief=…).
+const brief = (answers: Record<string, string>) => `${withBase('/estimate/')}?brief=${Buffer.from(JSON.stringify(answers)).toString('base64url')}`;
+const choices = [
+  { label: 'A new website or store', hint: 'Custom themes and ecommerce builds', href: brief({ type: 'new' }) },
+  { label: 'Redesign my current site', hint: 'A new look for an existing website', href: brief({ type: 'redesign' }) },
+  { label: 'Move to a new platform', hint: 'Platform migrations and integrations', href: brief({ type: 'migration' }) },
+  { label: 'Speed and fixes', hint: 'Page speed, bugs and technical SEO', href: brief({ type: 'improvements' }) },
+  { label: 'Monthly help', hint: 'Ongoing support every month', href: brief({ type: 'support' }) },
+];
+const platforms = [...new Set(projects.map((p) => p.platform))].join(' & ');
+---
+<BaseLayout title="Closing section ideas | Grant Dev14" description="Local design preview." noindex>
+  <IdeaLegend ideas={IDEAS} links={[{ label: 'Compare with the current homepage', href: '/#closing-cta-heading' }]} />
+
+  <div class="wrap cx-page">
+    <header class="cx-page-head">
+      <span class="tiny-heading">Preview · closing section</span>
+      <p>Five ways to fill the empty right half of “Have a project in mind?”. Each one keeps the same headline, buttons and audit link.</p>
+    </header>
+
+    {[1, 2, 3, 4].map((n) => (
+      <>
+        <span class="idea-tag" id={`idea-${n}`}><b>{n}</b>{IDEAS[n - 1][1]}<em>{[
+          'the hero’s dot type again; move over it to scatter the dots',
+          'pick what you need and the estimator opens on the next question',
+          'a fanned stack of your live sites; hover to spread it',
+          'your email to copy, LinkedIn, and the time where you are',
+        ][n - 1]}</em></span>
+        <section class:list={['cx', `cx${n}`]} aria-labelledby={`cx${n}-h`}>
+          <div class="cx-copy">
+            <h2 id={`cx${n}-h`}>Have a project<br />in mind?</h2>
+            <p>Not sure what you need yet? Get a realistic timeline in two minutes, or tell me about it directly.</p>
+            <div class="closing-cta-actions">
+              <a class="closing-cta-primary" href={withBase('/estimate/')}>Get a free estimate <Arrow diagonal /></a>
+              <a class="closing-cta-ghost" href={withBase('/contact/')}>Get in touch</a>
+            </div>
+            <p class="closing-cta-audit">Already have a website? <a href={withBase('/contact/#audit')}>Get a free audit of it <Arrow diagonal /></a></p>
+          </div>
+
+          {n === 1 && <div class="cx1-art"><canvas class="cx1-dots" role="img" aria-label="Let’s talk."></canvas></div>}
+
+          {n === 2 && (
+            <div class="cx2-choices">
+              <p class="cx2-label">What do you need?</p>
+              <ul>{choices.map((c, i) => <li><a href={c.href}><span class="cx2-num">{String(i + 1).padStart(2, '0')}</span><span><strong>{c.label}</strong><small>{c.hint}</small></span><Arrow diagonal /></a></li>)}</ul>
+            </div>
+          )}
+
+          {n === 3 && (
+            <a class="cx3-stack" href={withBase('/#work')} aria-label={`See all ${projects.length} projects`}>
+              {projects.map((p, i) => <img src={withBase(`/images/projects/${p.slug}-640.webp`)} alt="" width="640" height="360" loading="lazy" style={`--i:${i - (projects.length - 1) / 2}`} />)}
+              <span class="cx3-caption">{projects.length} live projects · {platforms} <Arrow diagonal /></span>
+            </a>
+          )}
+
+          {n === 4 && (
+            <div class="cx4-card">
+              <div class="cx4-row">
+                <span class="cx4-key">Email</span>
+                <a class="cx4-big" href={`mailto:${profile.email}`}>{profile.email}</a>
+                <button type="button" class="cx4-copy" data-copy={profile.email}>Copy</button>
+              </div>
+              <div class="cx4-row">
+                <span class="cx4-key">LinkedIn</span>
+                <a class="cx4-big" href={profile.linkedin} target="_blank" rel="noopener noreferrer">grant-dev14 <Arrow diagonal /></a>
+              </div>
+              <div class="cx4-row">
+                <span class="cx4-key">Local time</span>
+                <span class="cx4-big"><span class="cx4-clock">--:--</span> <small>in the Philippines</small></span>
+              </div>
+              <p class="cx4-note"><i></i>Replies within 1 business day</p>
+              <a class="cx4-quote" href={withBase('/#reviews')}><q>He’s just an absolute weapon when it comes to Shopify.</q><small>Carlos · CEO & Owner, MDO Digital · <u>Watch the video</u></small></a>
+            </div>
+          )}
+        </section>
+      </>
+    ))}
+
+    <span class="idea-tag" id="idea-5"><b>5</b>{IDEAS[4][1]}<em>the headline runs across the band in huge type; the main button leans towards the cursor</em></span>
+  </div>
+  <section class="cx5" aria-labelledby="cx5-h">
+    <h2 id="cx5-h" class="sr-only">Have a project in mind?</h2>
+    <div class="cx5-line" aria-hidden="true"><div class="cx5-track">{[0, 1].map(() => <span>Have a project in mind? <i>●</i> Let’s build it <i>●</i>&nbsp;</span>)}</div></div>
+    <div class="wrap cx5-body">
+      <p>Not sure what you need yet? Get a realistic timeline in two minutes, or tell me about it directly.</p>
+      <div class="closing-cta-actions">
+        <a class="closing-cta-primary cx5-magnet" href={withBase('/estimate/')}>Get a free estimate <Arrow diagonal /></a>
+        <a class="closing-cta-ghost" href={withBase('/contact/')}>Get in touch</a>
+      </div>
+      <p class="closing-cta-audit">Already have a website? <a href={withBase('/contact/#audit')}>Get a free audit of it <Arrow diagonal /></a></p>
+    </div>
+  </section>
+</BaseLayout>
+
+<script>
+  const root = document.documentElement;
+  const motion = root.classList.contains('motion');
+  const fine = matchMedia('(hover: hover) and (pointer: fine)').matches;
+
+  // 1: "LET'S / TALK." in dots that scatter under the cursor and spring back.
+  {
+    const canvas = document.querySelector<HTMLCanvasElement>('.cx1-dots')!;
+    const ctx = canvas.getContext('2d')!;
+    type Dot = { x: number; y: number; vx: number; vy: number; hx: number; hy: number };
+    let dots: Dot[] = [], W = 0, H = 0, gap = 6, px = -1e4, py = -1e4, awake = true, on = false;
+    new IntersectionObserver(([e]) => { on = e.isIntersecting; }).observe(canvas);
+    const draw = () => {
+      ctx.clearRect(0, 0, W, H);
+      const still = new Path2D(), moved = new Path2D(), r = gap * 0.36;
+      for (const d of dots) { const p = Math.abs(d.x - d.hx) + Math.abs(d.y - d.hy) > 2 ? moved : still; p.moveTo(d.x + r, d.y); p.arc(d.x, d.y, r, 0, 6.2832); }
+      ctx.fillStyle = '#f2f0ea'; ctx.fill(still);
+      ctx.fillStyle = 'oklch(0.78 0.12 75)'; ctx.fill(moved);
+    };
+    const build = async () => {
+      await document.fonts.load('800 200px "Big Shoulders Display"');
+      const b = canvas.getBoundingClientRect();
+      W = Math.floor(b.width); H = Math.floor(b.height);
+      const dpr = Math.min(2, devicePixelRatio || 1);
+      canvas.width = W * dpr; canvas.height = H * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      const off = document.createElement('canvas'); off.width = W; off.height = H;
+      const o = off.getContext('2d')!;
+      const lines = ['LET’S', 'TALK.'];
+      let size = (H / 2) * 1.1;
+      o.font = `800 ${size}px "Big Shoulders Display"`;
+      size = Math.min(size, (size * W * 0.96) / Math.max(...lines.map((l) => o.measureText(l).width)));
+      o.font = `800 ${size}px "Big Shoulders Display"`; o.textAlign = 'center'; o.textBaseline = 'middle';
+      lines.forEach((l, i) => o.fillText(l, W / 2, (H * (i + 0.5)) / 2));
+      const data = o.getImageData(0, 0, W, H).data;
+      gap = W < 500 ? 5 : 6;
+      dots = [];
+      for (let y = gap / 2; y < H; y += gap) for (let x = gap / 2; x < W; x += gap) if (data[((y | 0) * W + (x | 0)) * 4 + 3] > 128) dots.push({ hx: x, hy: y, x, y, vx: 0, vy: 0 });
+      draw();
+    };
+    build();
+    if (fine && motion) {
+      canvas.addEventListener('pointermove', (e) => { const b = canvas.getBoundingClientRect(); px = e.clientX - b.left; py = e.clientY - b.top; awake = true; });
+      canvas.addEventListener('pointerleave', () => { px = py = -1e4; });
+    }
+    const loop = () => {
+      if (on && awake) {
+        let moving = 0;
+        for (const d of dots) {
+          const dx = d.x - px, dy = d.y - py, dist = Math.hypot(dx, dy);
+          if (dist < 100 && dist > 0.1) { const f = (1 - dist / 100) * 3.6; d.vx += (dx / dist) * f; d.vy += (dy / dist) * f; }
+          d.vx += (d.hx - d.x) * 0.05; d.vy += (d.hy - d.y) * 0.05; d.vx *= 0.82; d.vy *= 0.82; d.x += d.vx; d.y += d.vy;
+          moving = Math.max(moving, Math.abs(d.vx) + Math.abs(d.vy));
+        }
+        draw();
+        if (moving < 0.02 && px < -1e3) awake = false;
+      }
+      requestAnimationFrame(loop);
+    };
+    if (motion) requestAnimationFrame(loop);
+  }
+
+  // 4: copy the email in one click, and a live clock for the Philippines.
+  {
+    const copy = document.querySelector<HTMLButtonElement>('.cx4-copy')!;
+    copy.addEventListener('click', async () => {
+      try { await navigator.clipboard.writeText(copy.dataset.copy!); copy.textContent = 'Copied'; } catch { copy.textContent = 'Press ⌘C'; }
+      setTimeout(() => { copy.textContent = 'Copy'; }, 1800);
+    });
+    const clock = document.querySelector('.cx4-clock')!;
+    const fmt = new Intl.DateTimeFormat('en-AU', { hour: 'numeric', minute: '2-digit', timeZone: 'Asia/Manila' });
+    const tick = () => { clock.textContent = fmt.format(new Date()); };
+    tick();
+    setInterval(tick, 15000);
+  }
+
+  // 5: the main button leans a little towards the cursor while it's near.
+  {
+    const button = document.querySelector<HTMLElement>('.cx5-magnet')!;
+    if (fine && motion) {
+      const zone = button.closest('section')!;
+      zone.addEventListener('pointermove', (e) => {
+        const r = button.getBoundingClientRect();
+        const dx = e.clientX - (r.left + r.width / 2), dy = e.clientY - (r.top + r.height / 2);
+        const near = Math.hypot(dx, dy) < 180;
+        button.style.translate = near ? `${(dx * 0.22).toFixed(1)}px ${(dy * 0.3).toFixed(1)}px` : '0 0';
+      });
+      zone.addEventListener('pointerleave', () => { button.style.translate = '0 0'; });
+    }
+  }
+</script>
+
+<style>
+  .cx-page { padding-top: 120px; }
+  .cx-page-head { max-width: 620px; margin-bottom: 60px; }
+  .cx-page-head p { margin-top: 12px; color: var(--muted); font-size: 15px; line-height: 1.55; }
+
+  /* The current band, as a block so the five can stack on one page. */
+  .cx { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: center; margin-bottom: 110px; padding: clamp(56px, 7vw, 110px) clamp(28px, 4.5vw, 72px); border-radius: 28px; background: var(--ink); color: var(--bg); overflow: hidden; }
+  .cx h2 { margin: 0; font-size: clamp(48px, 6.4vw, 110px); font-weight: 500; letter-spacing: -0.05em; line-height: 0.98; }
+  .cx-copy > p:not(.closing-cta-audit) { max-width: 46ch; margin: 24px 0 34px; color: oklch(0.78 0 0); font-size: 17px; line-height: 1.55; }
+
+  /* 1 */
+  .cx1-dots { display: block; width: 100%; height: clamp(220px, 26vw, 420px); }
+
+  /* 2 */
+  .cx2-label { margin: 0 0 14px; font-size: 12px; font-weight: 600; letter-spacing: 0.01em; text-transform: uppercase; color: oklch(0.7 0 0); }
+  .cx2-choices ul { list-style: none; margin: 0; padding: 0; border-top: 1px solid oklch(1 0 0 / 0.16); }
+  .cx2-choices a { display: grid; grid-template-columns: 34px 1fr 24px; gap: 16px; align-items: center; padding: 16px 14px; border-bottom: 1px solid oklch(1 0 0 / 0.16); transition: background 0.3s, padding 0.4s var(--ease); }
+  .cx2-choices a:hover { background: oklch(1 0 0 / 0.07); padding-left: 22px; }
+  .cx2-num { font-size: 11px; color: oklch(0.6 0 0); }
+  .cx2-choices strong { display: block; font-size: 18px; font-weight: 500; }
+  .cx2-choices small { display: block; margin-top: 3px; font-size: 12px; color: oklch(0.7 0 0); }
+  .cx2-choices :global(.arrow-icon) { width: 20px; height: 20px; transition: transform 0.4s var(--ease); }
+  .cx2-choices a:hover :global(.arrow-icon) { transform: translate(3px, -3px); }
+
+  /* 3 */
+  .cx3-stack { position: relative; display: block; height: clamp(260px, 26vw, 400px); }
+  .cx3-stack img { position: absolute; left: 50%; top: 46%; width: min(72%, 420px); height: auto; aspect-ratio: 16 / 9; object-fit: cover; object-position: top; border-radius: 10px; box-shadow: 0 24px 50px oklch(0 0 0 / 0.5); translate: -50% -50%; transform: rotate(calc(var(--i) * 4deg)) translateX(calc(var(--i) * 10px)); transition: transform 0.7s var(--ease); }
+  .cx3-stack:hover img { transform: rotate(calc(var(--i) * 9deg)) translateX(calc(var(--i) * 70px)) translateY(calc(var(--i) * var(--i) * 6px)); }
+  .cx3-caption { position: absolute; left: 50%; bottom: 0; translate: -50% 0; display: inline-flex; gap: 10px; align-items: center; padding: 9px 16px; border-radius: 99px; background: oklch(1 0 0 / 0.1); font-size: 13px; white-space: nowrap; }
+  .cx3-caption :global(.arrow-icon) { width: 14px; height: 14px; }
+
+  /* 4 */
+  .cx4-card { padding: clamp(24px, 3vw, 40px); border-radius: 22px; background: oklch(1 0 0 / 0.06); border: 1px solid oklch(1 0 0 / 0.12); }
+  .cx4-row { display: grid; grid-template-columns: 100px 1fr auto; gap: 14px; align-items: center; padding-block: 16px; border-bottom: 1px solid oklch(1 0 0 / 0.12); }
+  .cx4-key { font-size: 12px; color: oklch(0.65 0 0); }
+  .cx4-big { display: inline-flex; align-items: center; gap: 8px; font-size: clamp(17px, 1.6vw, 22px); font-weight: 500; }
+  .cx4-big small { font-size: 13px; font-weight: 400; color: oklch(0.7 0 0); }
+  .cx4-big :global(.arrow-icon) { width: 16px; height: 16px; }
+  .cx4-copy { padding: 7px 14px; border: 1px solid oklch(1 0 0 / 0.4); border-radius: 99px; background: none; color: inherit; font: 500 12px Archivo, sans-serif; cursor: pointer; transition: background 0.25s, color 0.25s; }
+  .cx4-copy:hover { background: var(--bg); color: var(--ink); }
+  .cx4-note { display: flex; gap: 10px; align-items: center; margin: 18px 0 0; font-size: 13px; color: oklch(0.8 0 0); }
+  .cx4-note i { width: 8px; height: 8px; border-radius: 50%; background: oklch(0.78 0.16 145); box-shadow: 0 0 0 4px oklch(0.78 0.16 145 / 0.2); }
+  .cx4-quote { display: block; margin-top: 22px; padding: 16px 18px; border-radius: 14px; background: oklch(1 0 0 / 0.06); }
+  .cx4-quote q { display: block; font-size: 15px; font-weight: 500; line-height: 1.35; }
+  .cx4-quote small { display: block; margin-top: 6px; font-size: 12px; color: oklch(0.7 0 0); }
+
+  /* 5 */
+  .cx5 { margin: 0 0 -90px; padding-block: clamp(64px, 8vw, 120px) clamp(72px, 9vw, 130px); border-radius: 0 0 28px 28px; background: var(--ink); color: var(--bg); overflow: hidden; }
+  .cx5-line { overflow: hidden; }
+  .cx5-track { display: flex; width: max-content; }
+  :global(.motion) .cx5-track { animation: cx5-move 30s linear infinite; }
+  @keyframes cx5-move { to { transform: translateX(-50%); } }
+  .cx5-track span { font: 800 clamp(80px, 13vw, 220px)/1 "Big Shoulders Display", Impact, sans-serif; text-transform: uppercase; letter-spacing: -0.01em; white-space: nowrap; }
+  .cx5-track i { display: inline-block; margin-inline: 0.25em; font-size: 0.3em; font-style: normal; vertical-align: middle; color: oklch(0.78 0.12 75); }
+  .cx5-body { display: grid; justify-items: center; text-align: center; margin-top: 36px; }
+  .cx5-body > p:first-child { max-width: 46ch; margin: 0 0 30px; color: oklch(0.78 0 0); font-size: 17px; line-height: 1.55; }
+  .cx5-magnet { transition: translate 0.5s var(--ease), background 0.25s, color 0.25s; }
+
+  @media (max-width: 900px) {
+    .cx { grid-template-columns: 1fr; }
+    .cx3-stack img { width: 70%; }
+    .cx4-row { grid-template-columns: 1fr auto; }
+    .cx4-key { grid-column: 1 / -1; }
+  }
+  @media (max-width: 640px) {
+    .cx5 { margin-bottom: -60px; }
+    .cx3-stack:hover img { transform: rotate(calc(var(--i) * 6deg)) translateX(calc(var(--i) * 30px)); }
+  }
+</style>

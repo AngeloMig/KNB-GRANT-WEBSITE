@@ -21,6 +21,7 @@ const angle = (i: number) => (i <= projects.length / 2 ? i : i - projects.length
     <div class="ob-spin">{projects.map((p, i) => (
       <a class="ob-card" href={withBase(`/work/${p.slug}/`)} style={`--a:${angle(i)}deg`} data-angle={angle(i)} data-hue={hues[p.canvas] ?? 0} draggable="false">
         <span class="ob-bar" aria-hidden="true"><i></i><i></i><i></i><b>{host(p.url)}</b></span>
+        <span class="ob-shade" aria-hidden="true"></span>
         {hasFull(p.slug)
           ? <span class="ob-shot"><img src={withBase(`/images/projects/${p.slug}-full.webp`)} alt={`${p.name} homepage`} width="640" height="1807" loading={i < 2 ? 'eager' : 'lazy'} fetchpriority={i === 0 ? 'high' : undefined} decoding="async" draggable="false" /></span>
           : <img src={withBase(`/images/projects/${p.slug}-640.webp`)} alt={`${p.name} homepage`} width="640" height="360" loading={i < 2 ? 'eager' : 'lazy'} decoding="async" draggable="false" />}
@@ -36,10 +37,15 @@ const angle = (i: number) => (i <= projects.length / 2 ? i : i - projects.length
 
 <style>
   .ob { position: relative; }
-  .ob-ring { position: relative; height: calc(var(--card) * 0.66); perspective: 1800px; cursor: grab; touch-action: pan-y; user-select: none; }
+  .ob-ring { position: relative; height: calc(var(--card) * 0.66); perspective: 1800px; cursor: grab; touch-action: pan-y; -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; }
   .ob-ring:active { cursor: grabbing; }
-  .ob-spin { position: absolute; left: 50%; top: 0; width: var(--card); margin-left: calc(var(--card) / -2); transform-style: preserve-3d; }
+  .ob-spin { position: absolute; left: 50%; top: 0; width: var(--card); margin-left: calc(var(--card) / -2); transform-style: preserve-3d; will-change: transform; }
+  /* No grey tap flash, long-press menu or image drag on the cards. */
+  .ob-card, .ob-card img { -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; -webkit-user-drag: none; }
+  .ob-card::selection, .ob-card *::selection { background: transparent; }
   .ob-card { position: absolute; inset: 0 0 auto; display: block; border-radius: 12px; overflow: hidden; background: var(--bg); box-shadow: 0 30px 60px oklch(0 0 0 / 0.22); transform: rotateY(calc(var(--a) * var(--spread, 1))) translateZ(var(--r)); -webkit-user-drag: none; }
+  /* Dims cards that are turned away (an overlay's opacity is cheap to animate, unlike a filter). */
+  .ob-shade { position: absolute; z-index: 2; inset: 0; background: #000; opacity: 0; pointer-events: none; }
   .ob-bar { display: flex; align-items: center; gap: 5px; height: 24px; padding-inline: 10px; background: #f4f4f5; border-bottom: 1px solid #e4e4e7; }
   .ob-bar i { width: 7px; height: 7px; border-radius: 50%; background: #d4d4d8; }
   .ob-bar b { margin-inline: auto; padding: 2px 10px; border-radius: 5px; background: #e4e4e7; font-size: 10px; font-weight: 400; color: #52525b; }
@@ -56,7 +62,7 @@ const angle = (i: number) => (i <= projects.length / 2 ? i : i - projects.length
   :global(.ob-touch) .ob-card::after { content: none; }
   @keyframes ob-auto { to { transform: translateY(calc(-100% + var(--card) * 0.5625)); } }
   .ob-foot { position: relative; z-index: 3; display: grid; grid-template-columns: 48px 1fr 48px; align-items: center; gap: 20px; max-width: 640px; margin: 34px auto 0; padding-inline: var(--gutter); }
-  .ob-arrow { width: 48px; height: 48px; border-radius: 50%; border: 1px solid currentColor; background: none; color: inherit; font-size: 18px; cursor: pointer; transition: background 0.25s, color 0.25s; }
+  .ob-arrow { -webkit-tap-highlight-color: transparent; width: 48px; height: 48px; border-radius: 50%; border: 1px solid currentColor; background: none; color: inherit; font-size: 18px; cursor: pointer; transition: background 0.25s, color 0.25s; }
   .ob-arrow:hover { background: var(--ink); color: var(--bg); }
   .ob-captions { display: grid; text-align: center; }
   .ob-caption { grid-area: 1 / 1; display: grid; gap: 4px; opacity: 0; transform: translateY(6px); transition: opacity 0.4s, transform 0.5s var(--ease); pointer-events: none; }

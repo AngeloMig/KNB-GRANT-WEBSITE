@@ -8,6 +8,7 @@ import ProjectCard from './ProjectCard.astro';
 import Arrow from './Arrow.astro';
 import VideoReviews from './VideoReviews.astro';
 import ExperienceSection from './ExperienceSection.astro';
+import ClosingCta from './ClosingCta.astro';
 import { projects } from '../data/projects';
 const marqueeItems = ['Shopify', 'Webflow', 'WordPress', 'Migrations', 'Technical SEO', 'Integrations'];
 const services = [
@@ -31,15 +32,7 @@ const services = [
     <div class="services-list">{services.map((service, index) => <a class="service-row" data-reveal style={`--reveal-index:${index}`} href={withBase(service.href ?? '/contact/')}><h3>{service.name}</h3><div><p>{service.text}</p><span>{service.tags}</span></div><Arrow diagonal /></a>)}</div>
   </section>
   <ExperienceSection />
-  <section class="closing-cta" aria-labelledby="closing-cta-heading">
-    <h2 id="closing-cta-heading" data-lines data-reveal>Have a project<br />in mind?</h2>
-    <p data-reveal>Not sure what you need yet? Get a realistic timeline in two minutes, or tell me about it directly.</p>
-    <div class="closing-cta-actions" data-reveal>
-      <a class="closing-cta-primary" href={withBase('/estimate/')}>Get a free estimate <Arrow diagonal /></a>
-      <a class="closing-cta-ghost" href={withBase('/contact/')}>Get in touch</a>
-    </div>
-    <p class="closing-cta-audit" data-reveal>Already have a website? <a href={withBase('/contact/#audit')}>Get a free audit of it <Arrow diagonal /></a></p>
-  </section>
+  <ClosingCta />
 </div>
 <a class="mobile-cta" href={withBase('/estimate/')} aria-hidden="true" tabindex="-1">Get a free estimate <Arrow diagonal /></a>
 <script>
