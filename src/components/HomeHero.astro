@@ -355,8 +355,18 @@ import ProjectOrbit from './ProjectOrbit.astro';
       const base = Number(stageEl.style.opacity || 1);
       return [...obCards.map((c) => ({ r: c.getBoundingClientRect(), a: base * Number(c.style.opacity || 1) })), { r: obFoot.getBoundingClientRect(), a: base }];
     };
+    // Swap in a card's tall full-page screenshot once it's at the front (decoded first, so no flash).
+    const loadFull = (card: HTMLElement) => {
+      const img = card.querySelector<HTMLImageElement>('img[data-full]');
+      if (!img || img.dataset.loaded) return;
+      img.dataset.loaded = 'true';
+      const full = new Image();
+      full.src = img.dataset.full!;
+      full.decode().then(() => { img.src = full.src; img.height = 1807; }).catch(() => {});
+    };
     const orbit = new Orbit(ob, (card) => {
       hue = card.dataset.hue!;
+      loadFull(card);
       // Subtle: the name, the menu button and "Let's talk" take a deep shade of the project's colour,
       // and the header and hero a faint wash of it.
       name.tint(0.33, 0.07, Number(hue));
@@ -377,19 +387,20 @@ import ProjectOrbit from './ProjectOrbit.astro';
     // The ring's geometry, measured once (and again on resize) instead of every frame.
     let cw = 0, R = 0, cx = 0, horizon = 0, floor = 0, lastRot = NaN;
     const size = () => {
+      // Read every measurement first, then write, so the browser lays out the page only once.
       const r = track.getBoundingClientRect();
+      const ringBox = ring.getBoundingClientRect();
+      cw = card.offsetWidth; R = cw * 1.05;
       W = Math.floor(r.width); H = Math.floor(r.height);
       const dpr = Math.min(2, devicePixelRatio || 1);
       track.width = W * dpr; track.height = H * dpr;
       tctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      const ringBox = ring.getBoundingClientRect();
-      cw = card.offsetWidth; R = cw * 1.05;
       cx = ringBox.left - r.left + ringBox.width / 2;
       horizon = ringBox.top - r.top + ringBox.height / 2;
       floor = ringBox.top - r.top + cw * 0.5625 + 40;
       lastRot = NaN;
     };
-    size();
+    requestAnimationFrame(size);
     addEventListener('resize', size);
     if (fine) {
       stage.addEventListener('pointermove', (e) => { const r = track.getBoundingClientRect(); px = e.clientX - r.left; py = e.clientY - r.top; });

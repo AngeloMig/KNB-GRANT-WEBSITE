@@ -1,7 +1,7 @@
 ---
 // The homepage project orbit: every project as a browser card on a slowly turning 3D ring, with
 // arrows and a caption for the card at the front. HomeHero.astro's script brings it to life.
-// The front card shows the site's full-page screenshot (<slug>-full.webp), which scrolls on hover.
+// The front card swaps in the site's full-page screenshot (<slug>-full.webp), which scrolls on hover.
 import fs from 'node:fs';
 import { withBase } from '../utils/paths';
 import Arrow from './Arrow.astro';
@@ -22,9 +22,9 @@ const angle = (i: number) => (i <= projects.length / 2 ? i : i - projects.length
       <a class="ob-card" href={withBase(`/work/${p.slug}/`)} style={`--a:${angle(i)}deg`} data-angle={angle(i)} data-hue={hues[p.canvas] ?? 0} draggable="false">
         <span class="ob-bar" aria-hidden="true"><i></i><i></i><i></i><b>{host(p.url)}</b></span>
         <span class="ob-shade" aria-hidden="true"></span>
-        {hasFull(p.slug)
-          ? <span class="ob-shot"><img src={withBase(`/images/projects/${p.slug}-full.webp`)} alt={`${p.name} homepage`} width="640" height="1807" loading={i < 2 ? 'eager' : 'lazy'} fetchpriority={i === 0 ? 'high' : undefined} decoding="async" draggable="false" /></span>
-          : <img src={withBase(`/images/projects/${p.slug}-640.webp`)} alt={`${p.name} homepage`} width="640" height="360" loading={i < 2 ? 'eager' : 'lazy'} decoding="async" draggable="false" />}
+        {/* The light first-screen shot loads with the page; the tall full-page shot is swapped in later,
+            when the card comes to the front (HomeHero.astro), so it never slows the first load. */}
+        <span class="ob-shot"><img src={withBase(`/images/projects/${p.slug}-640.webp`)} data-full={hasFull(p.slug) ? withBase(`/images/projects/${p.slug}-full.webp`) : undefined} alt={`${p.name} homepage`} width="640" height="360" loading={i < 2 ? 'eager' : 'lazy'} fetchpriority={i === 0 ? 'high' : undefined} decoding="async" draggable="false" /></span>
       </a>
     ))}</div>
   </div>
