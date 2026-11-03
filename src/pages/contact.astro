@@ -34,6 +34,7 @@ const faqSchema = { '@context': 'https://schema.org', '@type': 'FAQPage', mainEn
           <label class="contact-span"><span>Current website <i aria-hidden="true">*</i></span><input name="website" autocomplete="url" inputmode="url" placeholder="yourstore.com" required /></label>
         </div>
         <input type="text" name="_honey" class="contact-honey" tabindex="-1" autocomplete="off" aria-hidden="true" />
+        <div class="form-human-check" data-human-check></div>
         <button type="submit" class="contact-submit">Get my free audit <Arrow diagonal /></button>
         <p class="contact-status" role="status" aria-live="polite"></p>
         <p class="contact-note">Your details go only to Grant.</p>
@@ -70,6 +71,7 @@ const faqSchema = { '@context': 'https://schema.org', '@type': 'FAQPage', mainEn
           <label class="contact-span"><span>Message <i aria-hidden="true">*</i></span><textarea name="message" rows="5" placeholder="What are you building, and what would make it a success?" required></textarea></label>
         </div>
         <input type="text" name="_honey" class="contact-honey" tabindex="-1" autocomplete="off" aria-hidden="true" />
+        <div class="form-human-check" data-human-check></div>
         <button type="submit" class="contact-submit">Send enquiry <Arrow diagonal /></button>
         <p class="contact-status" role="status" aria-live="polite"></p>
         <p class="contact-note">Your details go only to Grant, and he’s happy to sign an NDA before you share more. Prefer email? <a href={`mailto:${profile.email}?subject=Website%20project%20inquiry`}>{profile.email}</a></p>
@@ -101,6 +103,7 @@ const faqSchema = { '@context': 'https://schema.org', '@type': 'FAQPage', mainEn
   import { formEndpoint } from '../data/forms';
   import { sourceFields } from '../scripts/lead-source';
   import { sendLead } from '../scripts/leads';
+  import { humanCheck } from '../scripts/turnstile';
 
   /* ---------- Free audit and project enquiry ---------- */
   // Bots fill and send forms within moments of loading; people take longer. Sends quicker than this are dropped quietly.
@@ -116,6 +119,7 @@ const faqSchema = { '@context': 'https://schema.org', '@type': 'FAQPage', mainEn
     const kind = form.dataset.form as 'audit' | 'enquiry';
     const status = form.querySelector<HTMLElement>('.contact-status')!;
     const submit = form.querySelector<HTMLButtonElement>('.contact-submit')!;
+    const human = humanCheck(form.querySelector<HTMLElement>('[data-human-check]'));
     const value = (name: string) => (form.elements.namedItem(name) as HTMLInputElement | null)?.value.trim() ?? '';
     const say = (text: string, tone: 'ok' | 'error' | '' = '') => { status.textContent = text; status.dataset.tone = tone; };
     const draftNote = form.querySelector<HTMLElement>('.contact-draft')!;
@@ -183,7 +187,7 @@ const faqSchema = { '@context': 'https://schema.org', '@type': 'FAQPage', mainEn
         : { name: value('name'), email: value('email'), company: value('company') || '—', website: value('website') || '—', need: value('need') || (form.querySelector<HTMLInputElement>('input[name="need"]:checked')?.value ?? '—'), budget: value('budget'), timing: value('timing'), message: value('message') };
       const subject = kind === 'audit' ? `Free audit request: ${value('company')} (${value('website')})` : `New enquiry: ${value('name')}${value('company') ? `, ${value('company')}` : ''}`;
       // Also into the tracker's Inquiries inbox, in parallel; email below stays the backup either way.
-      void sendLead({ kind, _honey: value('_honey'), ...fields, ...sourceFields() });
+      void human.token().then((turnstile_token) => { void sendLead({ kind, _honey: value('_honey'), turnstile_token, ...fields, ...sourceFields() }); human.reset(); });
       try {
         const response = await fetch(formEndpoint(form.dataset.email!), {
           method: 'POST',

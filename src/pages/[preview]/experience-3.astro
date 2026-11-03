@@ -1,0 +1,295 @@
+---
+// Design preview: five ways to improve idea 3 (expandable roles) from /ideas/experience/, plus one
+// version that combines the best of them. Local preview only: in a build this route has no pages.
+// Open http://localhost:4321/ideas/experience-3/ while `npm run dev` runs.
+import { withBase } from '../../utils/paths';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import Arrow from '../../components/Arrow.astro';
+import IdeaLegend from '../../components/IdeaLegend.astro';
+import ExpLogo from './_ExpLogo.astro';
+import { roles, totalYears } from './_experience-data';
+
+export function getStaticPaths() {
+  return import.meta.env.DEV ? [{ params: { preview: 'ideas' } }] : [];
+}
+
+const IDEAS = [
+  [1, 'A · One open at a time, tinted'], [2, 'B · Side panel follows the open role'], [3, 'C · Timeline in the gutter'],
+  [4, 'D · Length bars'], [5, 'E · Open all and numbering'], [6, '★ Combined: A + B + D'],
+] as const;
+const maxMonths = Math.max(...roles.map((r) => r.months));
+// Roles that ran over the same months, e.g. Cardell Media and Dingus & Zazzy.
+const overlapsWith = (r: (typeof roles)[number]) => roles.filter((o) => o !== r && o.start < r.end && r.start < o.end).map((o) => o.company);
+const title = 'Good work comes<br />from experience.';
+---
+<BaseLayout title="Experience idea 3, refined | Grant Dev14" description="Local design preview." noindex>
+  <IdeaLegend ideas={IDEAS} links={[{ label: 'All 10 experience ideas', href: '/ideas/experience/' }, { label: 'Compare with the current homepage', href: '/#experience-heading' }]} />
+
+  <div class="wrap x3-page">
+    <header class="x3-page-head">
+      <span class="tiny-heading">Preview · idea 3, refined</span>
+      <p>Five improvements to the expandable roles, each shown on its own so you can judge it, then one version that puts the best three together. Click the rows to try them.</p>
+    </header>
+
+    <!-- A: one open at a time, tinted -->
+    <span class="idea-tag" id="idea-1"><b>A</b>One open at a time, tinted<em>opening a role closes the last one; the open role gets its company colour</em></span>
+    <section class="x3" aria-labelledby="x3a-h">
+      <div class="x3-intro" data-reveal><h2 id="x3a-h" data-lines set:html={title} /><a href={withBase('/about/')} class="text-link">The full story <Arrow diagonal /></a></div>
+      <div class="acc acc-tint" data-single data-reveal>{roles.map((r, i) => (
+        <details open={i === 0} style={r.style}>
+          <summary><h3 class="x3-logo"><ExpLogo {...r.logo} size={34} /></h3><p class="x3-role">{r.role}</p><span class="x3-when"><b>{r.length}</b>{r.dates}</span><i class="x3-plus" aria-hidden="true"></i></summary>
+          <div class="acc-panel"><div class="acc-inner">{r.summary && <p>{r.summary}</p>}<ul class="x3-tags">{r.focus.map((f) => <li>{f}</li>)}</ul></div></div>
+        </details>
+      ))}</div>
+    </section>
+
+    <!-- B: the sticky side shows the open role -->
+    <span class="idea-tag" id="idea-2"><b>B</b>Side panel follows the open role<em>the sticky left side shows the open role’s logo and time there in big type</em></span>
+    <section class="x3" aria-labelledby="x3b-h">
+      <div class="x3-intro" data-reveal>
+        <h2 id="x3b-h" data-lines set:html={title} /><a href={withBase('/about/')} class="text-link">The full story <Arrow diagonal /></a>
+        <div class="x3-now" aria-live="polite">{roles.map((r, i) => (
+          <div class:list={['x3-now-card', { 'is-active': i === 0 }]} style={r.style}>
+            <ExpLogo {...r.logo} size={44} />
+            <strong class="display">{r.length}</strong>
+            <span>{r.dates}</span>
+          </div>
+        ))}</div>
+      </div>
+      <div class="acc" data-single data-sync data-reveal>{roles.map((r, i) => (
+        <details open={i === 0}>
+          <summary><h3 class="x3-logo"><ExpLogo {...r.logo} size={34} /></h3><p class="x3-role">{r.role}</p><span class="x3-when">{r.dates}</span><i class="x3-plus" aria-hidden="true"></i></summary>
+          <div class="acc-panel"><div class="acc-inner">{r.summary && <p>{r.summary}</p>}<ul class="x3-tags">{r.focus.map((f) => <li>{f}</li>)}</ul></div></div>
+        </details>
+      ))}</div>
+    </section>
+
+    <!-- C: timeline in the gutter -->
+    <span class="idea-tag" id="idea-3"><b>C</b>Timeline in the gutter<em>start years on a line beside the rows; roles that ran together are marked</em></span>
+    <section class="x3" aria-labelledby="x3c-h">
+      <div class="x3-intro" data-reveal><h2 id="x3c-h" data-lines set:html={title} /><a href={withBase('/about/')} class="text-link">The full story <Arrow diagonal /></a></div>
+      <div class="acc acc-gutter" data-reveal>{roles.map((r, i) => (
+        <details open={i === 0} style={r.style}>
+          <summary>
+            <span class="x3-year display">{r.startYear}</span><span class="x3-dot" aria-hidden="true"></span>
+            <h3 class="x3-logo"><ExpLogo {...r.logo} size={34} /></h3>
+            <p class="x3-role">{r.role}{overlapsWith(r).length > 0 && <em class="x3-overlap">Same time as {overlapsWith(r).join(', ')}</em>}</p>
+            <span class="x3-when"><b>{r.length}</b>{r.dates}</span><i class="x3-plus" aria-hidden="true"></i>
+          </summary>
+          <div class="acc-panel"><div class="acc-inner">{r.summary && <p>{r.summary}</p>}<ul class="x3-tags">{r.focus.map((f) => <li>{f}</li>)}</ul></div></div>
+        </details>
+      ))}</div>
+    </section>
+
+    <!-- D: length bars -->
+    <span class="idea-tag" id="idea-4"><b>D</b>Length bars<em>a thin bar under each role shows how long it lasted, next to the others</em></span>
+    <section class="x3" aria-labelledby="x3d-h">
+      <div class="x3-intro" data-reveal><h2 id="x3d-h" data-lines set:html={title} /><a href={withBase('/about/')} class="text-link">The full story <Arrow diagonal /></a></div>
+      <div class="acc acc-bars" data-reveal>{roles.map((r, i) => (
+        <details open={i === 0} style={`${r.style};--len:${r.months / maxMonths};--i:${i}`}>
+          <summary>
+            <h3 class="x3-logo"><ExpLogo {...r.logo} size={34} /></h3><p class="x3-role">{r.role}</p>
+            <span class="x3-big display">{r.length}</span><i class="x3-plus" aria-hidden="true"></i>
+            <span class="x3-bar" aria-hidden="true"><i></i></span>
+          </summary>
+          <div class="acc-panel"><div class="acc-inner"><span class="x3-dates">{r.dates}</span>{r.summary && <p>{r.summary}</p>}<ul class="x3-tags">{r.focus.map((f) => <li>{f}</li>)}</ul></div></div>
+        </details>
+      ))}</div>
+    </section>
+
+    <!-- E: open all and numbering -->
+    <span class="idea-tag" id="idea-5"><b>E</b>Open all and numbering<em>a small header with a count and an “Open all” button; rows are numbered</em></span>
+    <section class="x3" aria-labelledby="x3e-h">
+      <div class="x3-intro" data-reveal><h2 id="x3e-h" data-lines set:html={title} /><a href={withBase('/about/')} class="text-link">The full story <Arrow diagonal /></a></div>
+      <div data-reveal>
+        <div class="x3-bar-head"><span>{String(roles.length).padStart(2, '0')} roles · {totalYears}+ years</span><button type="button" data-toggle-all aria-pressed="false">Open all</button></div>
+        <div class="acc acc-num">{roles.map((r, i) => (
+          <details open={i === 0}>
+            <summary><span class="x3-num">{String(i + 1).padStart(2, '0')}</span><h3 class="x3-logo"><ExpLogo {...r.logo} size={34} /></h3><p class="x3-role">{r.role}</p><span class="x3-when"><b>{r.length}</b>{r.dates}</span><i class="x3-plus" aria-hidden="true"></i></summary>
+            <div class="acc-panel"><div class="acc-inner">{r.summary && <p>{r.summary}</p>}<ul class="x3-tags">{r.focus.map((f) => <li>{f}</li>)}</ul></div></div>
+          </details>
+        ))}</div>
+      </div>
+    </section>
+
+    <!-- ★ Combined -->
+    <span class="idea-tag" id="idea-6"><b>★</b>Combined: A + B + D<em>my pick: one open at a time, the side panel follows it, length bars on every row</em></span>
+    <section class="x3" aria-labelledby="x3f-h">
+      <div class="x3-intro" data-reveal>
+        <h2 id="x3f-h" data-lines set:html={title} /><a href={withBase('/about/')} class="text-link">The full story <Arrow diagonal /></a>
+        <div class="x3-now" aria-live="polite">{roles.map((r, i) => (
+          <div class:list={['x3-now-card', { 'is-active': i === 0 }]} style={r.style}>
+            <ExpLogo {...r.logo} size={44} />
+            <strong class="display">{r.length}</strong>
+            <span>{r.role}<br />{r.dates}</span>
+          </div>
+        ))}</div>
+      </div>
+      <div class="acc acc-tint acc-bars" data-single data-sync data-reveal>{roles.map((r, i) => (
+        <details open={i === 0} style={`${r.style};--len:${r.months / maxMonths};--i:${i}`}>
+          <summary>
+            <h3 class="x3-logo"><ExpLogo {...r.logo} size={34} /></h3><p class="x3-role">{r.role}</p>
+            <span class="x3-when">{r.dates}</span><i class="x3-plus" aria-hidden="true"></i>
+            <span class="x3-bar" aria-hidden="true"><i></i></span>
+          </summary>
+          <div class="acc-panel"><div class="acc-inner">{r.summary && <p>{r.summary}</p>}<ul class="x3-tags">{r.focus.map((f) => <li>{f}</li>)}</ul></div></div>
+        </details>
+      ))}</div>
+    </section>
+  </div>
+</BaseLayout>
+
+<script>
+  const root = document.documentElement;
+  const easing = 'cubic-bezier(0.22, 1, 0.36, 1)';
+  const isOpen = (d: HTMLDetailsElement) => d.open && !d.classList.contains('is-closing');
+
+  // Smooth open and close: the panel's height eases and its content fades, instead of jumping.
+  const toggle = (details: HTMLDetailsElement, open: boolean) => {
+    if (isOpen(details) === open) return;
+    const panel = details.querySelector<HTMLElement>('.acc-panel')!;
+    const inner = details.querySelector<HTMLElement>('.acc-inner')!;
+    if (!root.classList.contains('motion')) { details.open = open; return; }
+    const from = panel.getBoundingClientRect().height;
+    panel.getAnimations().forEach((a) => a.cancel());
+    inner.getAnimations().forEach((a) => a.cancel());
+    if (open) {
+      details.classList.remove('is-closing');
+      details.open = true;
+      panel.animate([{ height: `${from}px` }, { height: `${inner.offsetHeight}px` }], { duration: 550, easing });
+      inner.animate([{ opacity: 0, transform: 'translateY(-8px)' }, { opacity: 1, transform: 'none' }], { duration: 500, delay: 80, easing, fill: 'backwards' });
+    } else {
+      details.classList.add('is-closing');
+      inner.animate([{ opacity: 1 }, { opacity: 0, transform: 'translateY(-6px)' }], { duration: 280, easing, fill: 'forwards' });
+      panel.animate([{ height: `${from}px` }, { height: '0px' }], { duration: 450, easing }).onfinish = () => {
+        details.open = false;
+        details.classList.remove('is-closing');
+        inner.getAnimations().forEach((a) => a.cancel());
+      };
+    }
+  };
+
+  document.querySelectorAll<HTMLElement>('.acc').forEach((acc) => {
+    const items = [...acc.querySelectorAll<HTMLDetailsElement>('details')];
+    const single = acc.hasAttribute('data-single');
+    const cards = acc.hasAttribute('data-sync') ? [...acc.closest('section')!.querySelectorAll<HTMLElement>('.x3-now-card')] : [];
+    items.forEach((details, i) => details.querySelector('summary')!.addEventListener('click', (e) => {
+      e.preventDefault();
+      const open = !isOpen(details);
+      if (open && single) items.forEach((other) => other !== details && toggle(other, false));
+      toggle(details, open);
+      if (open) cards.forEach((card, j) => card.classList.toggle('is-active', i === j));
+    }));
+    // E: open all / close all.
+    const all = acc.parentElement!.querySelector<HTMLButtonElement>('[data-toggle-all]');
+    all?.addEventListener('click', () => {
+      const open = all.getAttribute('aria-pressed') !== 'true';
+      items.forEach((d) => toggle(d, open));
+      all.setAttribute('aria-pressed', String(open));
+      all.textContent = open ? 'Close all' : 'Open all';
+    });
+  });
+</script>
+
+<style>
+  .x3-page { padding-top: 140px; }
+  .x3-page-head { max-width: 620px; margin-bottom: 70px; }
+  .x3-page-head p { margin-top: 12px; color: var(--muted); font-size: 15px; line-height: 1.55; }
+
+  .x3 { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-bottom: 150px; }
+  .x3-intro { position: sticky; top: 110px; align-self: start; }
+  .x3-intro h2 { font-weight: 500; letter-spacing: -0.03em; font-size: clamp(27px, 2.5vw, 36px); line-height: 1.2; }
+  .x3-intro > .text-link { margin-top: 27px; }
+
+  /* The base accordion (idea 3 as it is now). */
+  .acc details { border-top: 1px solid var(--line); }
+  .acc details:last-child { border-bottom: 1px solid var(--line); }
+  .acc summary { display: grid; grid-template-columns: 150px 1fr auto 18px; gap: 20px; align-items: center; padding-block: 18px; cursor: pointer; list-style: none; }
+  .acc summary::-webkit-details-marker { display: none; }
+  .x3-logo { display: flex; align-items: center; min-height: 34px; font-size: 16px; font-weight: 500; transition: transform 0.45s var(--ease); }
+  .x3-role { font-size: 12px; color: var(--muted); transition: color 0.3s; }
+  .acc summary:hover .x3-logo, .acc details[open]:not(.is-closing) .x3-logo { transform: translateX(6px); }
+  .acc summary:hover .x3-role, .acc details[open]:not(.is-closing) .x3-role { color: var(--ink); }
+  .x3-when { text-align: right; font-size: 10px; color: var(--muted); white-space: nowrap; }
+  .x3-when b { display: block; font-size: 14px; font-weight: 500; color: var(--ink); margin-bottom: 4px; }
+  .x3-plus { position: relative; width: 14px; height: 14px; }
+  .x3-plus::before, .x3-plus::after { content: ''; position: absolute; left: 0; right: 0; top: 50%; height: 1.5px; background: var(--ink); transition: transform 0.35s var(--ease); }
+  .x3-plus::after { transform: rotate(90deg); }
+  .acc details[open]:not(.is-closing) .x3-plus::after { transform: rotate(0); }
+  .acc-panel { overflow: hidden; }
+  .acc-inner { display: grid; gap: 14px; padding: 0 38px 26px 0; }
+  @media (min-width: 1280px) { .acc-inner { padding-left: 170px; } }
+  .acc-inner p { font-size: 14px; line-height: 1.55; max-width: 460px; }
+  .x3-tags { display: flex; flex-wrap: wrap; gap: 6px; list-style: none; padding: 0; margin: 0; }
+  .x3-tags li { font-size: 11px; padding: 5px 10px; border: 1px solid var(--line); border-radius: 99px; }
+
+  /* A: the open role sits on a soft tint of its company colour. */
+  .acc-tint details { border-radius: 14px; transition: background-color 0.45s var(--ease), border-color 0.45s; }
+  .acc-tint summary, .acc-tint .acc-inner { padding-inline: 18px; }
+  @media (min-width: 1280px) { .acc-tint .acc-inner { padding-left: 188px; } }
+  .acc-tint details[open]:not(.is-closing) { background: oklch(0.95 0.022 var(--hue)); border-color: transparent; }
+  .acc-tint details[open]:not(.is-closing) + details { border-top-color: transparent; }
+  .acc-tint details:last-child[open]:not(.is-closing) { border-bottom-color: transparent; }
+  .acc-tint .x3-tags li { background: var(--bg); border-color: transparent; }
+
+  /* B and ★: the sticky side shows the open role. */
+  .x3-now { position: relative; margin-top: 56px; max-width: 340px; min-height: 190px; }
+  .x3-now-card { position: absolute; inset: 0 auto auto 0; display: grid; gap: 14px; opacity: 0; transform: translateY(10px); transition: opacity 0.4s var(--ease), transform 0.6s var(--ease); pointer-events: none; }
+  .x3-now-card.is-active { opacity: 1; transform: none; }
+  .x3-now-card strong { font-size: clamp(44px, 4.6vw, 76px); line-height: 0.9; white-space: nowrap; color: oklch(0.45 0.07 var(--hue)); }
+  .x3-now-card span { font-size: 12px; color: var(--muted); line-height: 1.6; }
+
+  /* C: start years and dots on a line in the gutter. */
+  .acc-gutter details { border-top: 0; border-bottom: 0 !important; }
+  .acc-gutter summary { grid-template-columns: 44px 14px 150px 1fr auto 18px; column-gap: 16px; position: relative; }
+  .acc-gutter details { position: relative; }
+  .acc-gutter details::before { content: ''; position: absolute; left: 66px; top: 0; bottom: 0; width: 1px; background: var(--line); }
+  .acc-gutter details:first-child::before { top: 30px; }
+  .acc-gutter details:last-child::before { bottom: calc(100% - 30px); }
+  .acc-gutter details[open]:last-child::before { bottom: 0; }
+  .acc-gutter summary::after { content: ''; position: absolute; left: 90px; right: 0; bottom: 0; height: 1px; background: var(--line); }
+  .x3-year { font-size: 22px; color: var(--line); transition: color 0.35s; }
+  .acc-gutter details[open]:not(.is-closing) .x3-year, .acc-gutter summary:hover .x3-year { color: var(--ink); }
+  .x3-dot { position: relative; z-index: 1; width: 11px; height: 11px; border-radius: 50%; border: 1.5px solid oklch(0.55 0.07 var(--hue)); background: var(--bg); transition: background 0.35s, transform 0.35s var(--ease); }
+  .acc-gutter details[open]:not(.is-closing) .x3-dot { background: oklch(0.55 0.07 var(--hue)); transform: scale(1.25); }
+  .x3-overlap { display: block; width: fit-content; margin-top: 6px; padding: 2px 8px; border-radius: 99px; background: var(--surface); font-size: 10px; font-style: normal; color: var(--muted); }
+  .acc-gutter .acc-inner { padding-left: 90px; }
+  @media (min-width: 1280px) { .acc-gutter .acc-inner { padding-left: 256px; } }
+
+  /* D and ★: a bar under each row, as long as the role lasted. */
+  .acc-bars summary { position: relative; padding-bottom: 26px; }
+  .x3-bar { position: absolute; left: 0; right: 0; bottom: 12px; height: 3px; border-radius: 99px; background: var(--surface); overflow: hidden; }
+  .acc-tint .x3-bar { left: 18px; right: 18px; }
+  .x3-bar i { position: absolute; inset: 0 auto 0 0; width: calc(var(--len) * 100%); border-radius: inherit; background: oklch(0.58 0.07 var(--hue)); transform-origin: left; transition: transform 1s var(--ease) calc(var(--i) * 0.1s + 0.2s); }
+  :global(.motion) .acc-bars:not(:global(.is-in)) .x3-bar i { transform: scaleX(0); }
+  .acc-tint details[open]:not(.is-closing) .x3-bar { background: oklch(1 0 0 / 0.7); }
+  .x3-big { font-size: 26px; white-space: nowrap; }
+  .x3-dates { font-size: 11px; color: var(--muted); }
+
+  /* E: a header row with a count and "Open all", plus row numbers. */
+  .x3-bar-head { display: flex; justify-content: space-between; align-items: center; padding-bottom: 14px; font-size: 11px; color: var(--muted); }
+  .x3-bar-head button { padding: 7px 14px; border: 1px solid var(--ink); border-radius: 99px; background: none; font: 500 12px Archivo, sans-serif; cursor: pointer; transition: background 0.3s, color 0.3s; }
+  .x3-bar-head button:hover, .x3-bar-head button[aria-pressed='true'] { background: var(--ink); color: var(--bg); }
+  .acc-num summary { grid-template-columns: 28px 150px 1fr auto 18px; }
+  .x3-num { font-size: 10px; color: var(--muted); }
+  .acc-num summary:focus-visible { outline: 2px solid var(--ink); outline-offset: 4px; border-radius: 4px; }
+  @media (min-width: 1280px) { .acc-num .acc-inner { padding-left: 218px; } }
+
+  @media (max-width: 900px) {
+    .x3 { grid-template-columns: 1fr; gap: 32px; margin-bottom: 110px; }
+    .x3-intro { position: static; }
+    .x3-now { display: none; }
+  }
+  @media (max-width: 560px) {
+    .acc summary, .acc-num summary { grid-template-columns: 1fr auto; row-gap: 8px; }
+    .x3-role { grid-row: 2; grid-column: 1 / -1; }
+    .x3-when, .x3-num, .x3-big { display: none; }
+    .acc-inner, .acc-tint .acc-inner { padding-right: 0; }
+    .acc-gutter summary { grid-template-columns: 14px 1fr auto; }
+    .acc-gutter .x3-year { display: none; }
+    .acc-gutter .x3-role { grid-column: 2 / -1; }
+    .acc-gutter details::before { left: 5px; }
+    .acc-gutter summary::after { left: 30px; }
+    .acc-gutter .acc-inner { padding-left: 30px; }
+  }
+</style>

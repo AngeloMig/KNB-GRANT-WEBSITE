@@ -4102,46 +4102,6 @@ html.menu-closing,
   font-weight: 600;
 }
 
-.experience-section {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 40px;
-  margin-top: 110px;
-  padding-block: 0 70px;
-}
-.experience-intro h2 {
-  font-weight: 500;
-  letter-spacing: -0.03em;
-  font-size: clamp(27px, 2.5vw, 36px);
-  line-height: 1.2;
-}
-.experience-intro > .text-link {
-  margin-top: 27px;
-}
-.experience-item {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 20px;
-  border-top: 1px solid var(--line);
-  padding-block: 20px;
-}
-.experience-item h3 {
-  font-size: 16px;
-  font-weight: 500;
-}
-.experience-item p {
-  font-size: 11px;
-  margin-top: 7px;
-  color: var(--muted);
-  max-width: 250px;
-}
-.experience-item > span {
-  font-size: 10px;
-  white-space: nowrap;
-  color: var(--muted);
-  padding-top: 3px;
-}
 main {
   padding-bottom: 90px;
 }
@@ -4705,17 +4665,6 @@ main {
   .service-row h3 {
     font-size: 20px;
   }
-  .experience-section {
-    grid-template-columns: 0.8fr 1.2fr;
-    gap: 35px;
-  }
-  .experience-item {
-    flex-direction: column;
-    gap: 8px;
-  }
-  .experience-item > span {
-    padding: 0;
-  }
   .project-overview {
     gap: 40px;
   }
@@ -4877,32 +4826,6 @@ main {
   .service-row > .arrow-icon {
     grid-column: 2;
     grid-row: 1;
-  }
-  .experience-section {
-    grid-template-columns: 1fr;
-    gap: 34px;
-    margin-top: 68px;
-    padding-bottom: 20px;
-  }
-  .experience-intro h2 {
-    font-size: 29px;
-  }
-  .experience-item {
-    flex-direction: row;
-    gap: 15px;
-  }
-  .experience-item > span {
-    white-space: normal;
-    text-align: right;
-    max-width: 94px;
-    font-size: 9px;
-  }
-  .experience-item h3 {
-    font-size: 15px;
-  }
-  .experience-item p {
-    font-size: 10px;
-    max-width: 210px;
   }
   main {
     padding-bottom: 60px;
@@ -9240,4 +9163,12 @@ html:active-view-transition-type(grow)::view-transition-new(root) {
 }
 .q-card .q-audit-finding > textarea.q-in-detail {
   line-height: 1.45;
+}
+
+/* Cloudflare Turnstile slot on the forms (empty unless Cloudflare asks the visitor to tick a box) */
+.form-human-check:empty {
+  display: none;
+}
+.form-human-check {
+  margin: 10px 0 4px;
 }

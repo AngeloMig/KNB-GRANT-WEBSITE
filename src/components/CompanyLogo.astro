@@ -1,0 +1,22 @@
+---
+// A company's logo in one ink colour, so different brands sit together evenly. Wide logos are drawn
+// a little shorter so every logo carries about the same weight. Without a logo file, the company's
+// first word is set in the display type instead.
+import { withBase } from '../utils/paths';
+interface Props { name: string; logo?: { src: string; ratio: number; scale?: number }; size?: number; }
+const { name, logo, size = 34 } = Astro.props;
+const scale = logo?.scale ?? 1;
+const w = logo && Math.round(size * scale * logo.ratio ** 0.6);
+const h = logo && Math.round(size * scale * logo.ratio ** -0.4);
+---
+<span class="company-logo" style={`--logo-size:${size}px`}>
+  {logo
+    ? <img src={withBase(logo.src)} alt={name} width={w} height={h} loading="lazy" decoding="async" />
+    : <span class="company-logo-text"><span aria-hidden="true">{name.split(' ')[0]}</span><span class="sr-only">{name}</span></span>}
+</span>
+
+<style>
+  .company-logo { display: inline-flex; align-items: center; min-height: calc(var(--logo-size) * 0.6); }
+  .company-logo img { display: block; object-fit: contain; object-position: left center; filter: brightness(0); }
+  .company-logo-text { font: 800 calc(var(--logo-size) * 0.56)/1 "Big Shoulders Display", Impact, sans-serif; letter-spacing: 0.015em; text-transform: uppercase; white-space: nowrap; }
+</style>

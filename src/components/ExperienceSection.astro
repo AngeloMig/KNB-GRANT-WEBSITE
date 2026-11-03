@@ -1,0 +1,228 @@
+---
+// "Good work comes from experience": each role opens to show what the work was. The heading stays
+// in view while the roles scroll past, and the roles open and close smoothly when motion is on.
+import { withBase } from '../utils/paths';
+import Arrow from './Arrow.astro';
+import CompanyLogo from './CompanyLogo.astro';
+import { experience } from '../data/profile';
+
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const toMonth = (s: string) => { const [m, y] = s.trim().split(' '); return Number(y) * 12 + MONTHS.indexOf(m); };
+// "Jun 2022 — Sep 2026" → "4 yrs 3 mos"
+const timeInRole = (dates: string) => {
+  const [from, to] = dates.split('—');
+  const months = toMonth(to) - toMonth(from);
+  const y = Math.floor(months / 12), m = months % 12;
+  return [y && `${y} yr${y > 1 ? 's' : ''}`, m && `${m} mo${m > 1 ? 's' : ''}`].filter(Boolean).join(' ');
+};
+---
+<section class="experience-section" aria-labelledby="experience-heading">
+  <div class="experience-intro" data-reveal><h2 id="experience-heading" data-lines>Good work comes<br />from experience.</h2><a href={withBase('/about/')} class="text-link">The full story <Arrow diagonal /></a></div>
+  <div class="experience-list" data-reveal>{experience.map((item, index) => (
+    <details class="experience-role" open={index === 0}>
+      <summary>
+        <h3><CompanyLogo name={item.company} logo={item.logo} /></h3>
+        <p>{item.role}</p>
+        <span class="experience-when"><b>{timeInRole(item.dates)}</b>{item.dates}</span>
+        <i class="experience-toggle" aria-hidden="true"></i>
+      </summary>
+      <div class="experience-panel"><div class="experience-detail">
+        {item.summary && <p>{item.summary}</p>}
+        <ul>{item.tags.map((tag) => <li>{tag}</li>)}</ul>
+      </div></div>
+    </details>
+  ))}</div>
+</section>
+
+<script>
+  // Smooth open and close: the panel's height eases and its text fades in, instead of jumping.
+  // Without motion the browser's own toggle is left alone.
+  const easing = 'cubic-bezier(0.22, 1, 0.36, 1)';
+  document.querySelectorAll<HTMLDetailsElement>('.experience-role').forEach((role) => {
+    const panel = role.querySelector<HTMLElement>('.experience-panel')!;
+    const detail = role.querySelector<HTMLElement>('.experience-detail')!;
+    role.querySelector('summary')!.addEventListener('click', (e) => {
+      if (!document.documentElement.classList.contains('motion')) return;
+      e.preventDefault();
+      const from = panel.getBoundingClientRect().height;
+      panel.getAnimations().forEach((a) => a.cancel());
+      detail.getAnimations().forEach((a) => a.cancel());
+      if (role.open && !role.classList.contains('is-closing')) {
+        role.classList.add('is-closing');
+        detail.animate([{ opacity: 1 }, { opacity: 0, transform: 'translateY(-6px)' }], { duration: 280, easing, fill: 'forwards' });
+        panel.animate([{ height: `${from}px` }, { height: '0px' }], { duration: 450, easing }).onfinish = () => {
+          role.open = false;
+          role.classList.remove('is-closing');
+          detail.getAnimations().forEach((a) => a.cancel());
+        };
+      } else {
+        role.classList.remove('is-closing');
+        role.open = true;
+        panel.animate([{ height: `${from}px` }, { height: `${detail.offsetHeight}px` }], { duration: 550, easing });
+        detail.animate([{ opacity: 0, transform: 'translateY(-8px)' }, { opacity: 1, transform: 'none' }], { duration: 500, delay: 80, easing, fill: 'backwards' });
+      }
+    });
+  });
+</script>
+
+<style>
+  .experience-section {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 40px;
+    margin-top: 110px;
+    padding-block: 0 70px;
+  }
+  .experience-intro {
+    position: sticky;
+    top: 110px;
+    align-self: start;
+  }
+  .experience-intro h2 {
+    font-weight: 500;
+    letter-spacing: -0.03em;
+    font-size: clamp(27px, 2.5vw, 36px);
+    line-height: 1.2;
+  }
+  .experience-intro > .text-link {
+    margin-top: 27px;
+  }
+  .experience-role {
+    border-top: 1px solid var(--line);
+  }
+  .experience-role:last-child {
+    border-bottom: 1px solid var(--line);
+  }
+  summary {
+    display: grid;
+    grid-template-columns: 150px 1fr auto 18px;
+    gap: 20px;
+    align-items: center;
+    padding-block: 18px;
+    cursor: pointer;
+    list-style: none;
+  }
+  summary::-webkit-details-marker {
+    display: none;
+  }
+  summary h3 {
+    display: flex;
+    align-items: center;
+    min-height: 34px;
+    transition: transform 0.45s var(--ease);
+  }
+  summary p {
+    font-size: 12px;
+    color: var(--muted);
+    transition: color 0.3s;
+  }
+  .experience-role[open]:not(.is-closing) summary h3,
+  summary:hover h3 {
+    transform: translateX(6px);
+  }
+  .experience-role[open]:not(.is-closing) summary p,
+  summary:hover p {
+    color: var(--ink);
+  }
+  .experience-when {
+    text-align: right;
+    font-size: 10px;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+  .experience-when b {
+    display: block;
+    margin-bottom: 4px;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--ink);
+  }
+  .experience-toggle {
+    position: relative;
+    width: 14px;
+    height: 14px;
+  }
+  .experience-toggle::before,
+  .experience-toggle::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 50%;
+    height: 1.5px;
+    background: var(--ink);
+    transition: transform 0.35s var(--ease);
+  }
+  .experience-toggle::after {
+    transform: rotate(90deg);
+  }
+  .experience-role[open]:not(.is-closing) .experience-toggle::after {
+    transform: rotate(0);
+  }
+  .experience-panel {
+    overflow: hidden;
+  }
+  .experience-detail {
+    display: grid;
+    gap: 14px;
+    padding: 0 38px 26px 0;
+  }
+  .experience-detail p {
+    font-size: 14px;
+    line-height: 1.55;
+    max-width: 460px;
+  }
+  .experience-detail ul {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  .experience-detail li {
+    font-size: 11px;
+    padding: 5px 10px;
+    border: 1px solid var(--line);
+    border-radius: 99px;
+  }
+  @media (min-width: 1280px) {
+    .experience-detail {
+      padding-left: 170px;
+    }
+  }
+  @media (max-width: 900px) {
+    .experience-section {
+      grid-template-columns: 0.8fr 1.2fr;
+      gap: 35px;
+    }
+  }
+  @media (max-width: 640px) {
+    .experience-section {
+      grid-template-columns: 1fr;
+      gap: 34px;
+      margin-top: 68px;
+      padding-bottom: 20px;
+    }
+    .experience-intro {
+      position: static;
+    }
+    .experience-intro h2 {
+      font-size: 29px;
+    }
+    summary {
+      grid-template-columns: 1fr auto;
+      row-gap: 8px;
+    }
+    summary p {
+      grid-row: 2;
+      grid-column: 1 / -1;
+    }
+    .experience-when {
+      display: none;
+    }
+    .experience-detail {
+      padding-right: 0;
+    }
+  }
+</style>

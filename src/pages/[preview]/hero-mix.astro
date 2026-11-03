@@ -1,0 +1,18 @@
+---
+// Design preview: five ways to combine hero idea 3 (project orbit) with idea 10 (dot-matrix name).
+// Local preview only: in a build this route has no pages. Open http://localhost:4321/ideas/hero-mix/.
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import IdeaLegend from '../../components/IdeaLegend.astro';
+import HeroMix from './_HeroMix.astro';
+
+export function getStaticPaths() {
+  return import.meta.env.DEV ? [{ params: { preview: 'ideas' } }] : [];
+}
+
+const IDEAS = [[1, 'Dot name behind the orbit'], [2, 'Dots spell the project'], [3, 'Spin sends a wave'], [4, 'Halftone centre'], [5, 'Dotted track']] as const;
+---
+<BaseLayout title="Hero mix preview | Grant Dev14" description="Local design preview." noindex>
+  <IdeaLegend ideas={IDEAS} links={[{ label: 'All 10 hero ideas', href: '/ideas/hero/' }, { label: 'Compare with the current homepage', href: '/' }]} />
+
+  <HeroMix />
+</BaseLayout>

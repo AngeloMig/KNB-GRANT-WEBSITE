@@ -11,9 +11,11 @@ export interface Project {
   /** Phone status-bar colours, matched to the top of each mobile screenshot. */
   mobileBar: { bg: string; fg: string };
   agency?: string;
+  /** Kept in the data but left off the site for now. */
+  hidden?: boolean;
 }
 
-export const projects: Project[] = [
+const allProjects: Project[] = [
   {
     slug: "road-armor",
     name: "Road Armor",
@@ -32,6 +34,7 @@ export const projects: Project[] = [
   {
     slug: "feedbird",
     name: "Feedbird",
+    hidden: true,
     platform: "Webflow",
     category: "Marketing services",
     engagement: "Company project",
@@ -104,4 +107,21 @@ export const projects: Project[] = [
     overview:
       "Light My Bricks designs lighting kits engineered for specific LEGO® sets. The store helps fans find kits for their builds, browse new releases, and explore its learning centre and instructions.",
   },
+  {
+    slug: "tero",
+    name: "Tero",
+    platform: "Shopify",
+    category: "Wellness & audio",
+    engagement: "Company project",
+    agency: "MDO Digital",
+    url: "https://tero.au/",
+    canvas: "blue",
+    mobileBar: { bg: "#6b8f92", fg: "#fff" },
+    description:
+      "A listening app for the bath. A Shopify site for a studio recording audio made for warm water.",
+    overview:
+      "Tero is a studio for the bath, releasing spoken essays, stories, breathwork, narrated histories, and sound recorded to be heard in warm water. The site introduces the app, its library and releases, and lets listeners join to get access by email.",
+  },
 ];
+
+export const projects = allProjects.filter((project) => !project.hidden);

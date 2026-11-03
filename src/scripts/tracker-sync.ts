@@ -196,7 +196,7 @@ function recordsFor(q: QuoteState, profile: Profile, hideRates: boolean): SyncRe
   const base = { profile, client: q.client, number: q.meta.number };
   const out: SyncRecord[] = [];
   const { invoices, changes, delivery, needs, savedAt, ...core } = q;
-  void delivery; void needs; void savedAt;
+  void savedAt;
 
   if (q.monthly && q.retainer) {
     const r = q.retainer;
@@ -268,11 +268,52 @@ function recordsFor(q: QuoteState, profile: Profile, hideRates: boolean): SyncRe
       externalId: `change:${q.id}:${c.id}`, kind: 'other', currency, status,
       title: `Change order ${c.number}${c.title ? ` — ${c.title}` : ''}`,
       amount: money(changeTotals(q, c).total), paidAmount: null, issuedOn: c.date || null, dueOn: null, paidOn: null,
-      note: otherCurrency ?? (c.days ? `Adds ${c.days} working day${c.days === 1 ? '' : 's'}` : null), meta: null,
+      note: otherCurrency ?? (c.days ? `Adds ${c.days} working day${c.days === 1 ? '' : 's'}` : null),
+      // The tracker adds approved change orders to the quoted total.
+      meta: { changeOrder: true, days: c.days, approved: c.status === 'approved' },
       pdfHash: hash({ ...base, c }), dataHash: hash({ status, c }),
       fileName: `${q.meta.number}-${c.number}.pdf`,
       pdf: async () => blobOf((await pdfs()).buildChangeOrderPdf(q, c, profile)),
     });
+  }
+
+  // Kick-off pack once the quote is accepted (project quotes), handover once the site has launched.
+  if (q.status === 'accepted' && !q.monthly) {
+    out.push({
+      externalId: `kickoff:${q.id}`, kind: 'other', currency, status: 'sent',
+      title: `Kick-off pack — ${q.meta.number}`, amount: null, paidAmount: null,
+      issuedOn: q.delivery.kickoff || null, dueOn: null, paidOn: null, note: q.delivery.kickoff ? `Kick-off ${q.delivery.kickoff}` : null, meta: null,
+      pdfHash: hash({ ...base, core, delivery, needs }), dataHash: hash({ kickoff: q.delivery.kickoff, needs: needs.length }),
+      fileName: `${q.meta.number}-kickoff.pdf`,
+      pdf: async () => blobOf((await pdfs()).buildKickoffPdf(q, profile)),
+    });
+  }
+  if (q.delivery.launchedOn) {
+    const prices = loadPackageSettings().prices;
+    out.push({
+      externalId: `handover:${q.id}`, kind: 'other', currency, status: 'sent',
+      title: `Handover — ${q.meta.number}`, amount: null, paidAmount: null,
+      issuedOn: q.delivery.launchedOn, dueOn: null, paidOn: null, note: `Launched ${q.delivery.launchedOn}`, meta: null,
+      pdfHash: hash({ ...base, core, delivery, prices }), dataHash: hash({ launchedOn: q.delivery.launchedOn, delivery }),
+      fileName: `${q.meta.number}-handover.pdf`,
+      pdf: async () => blobOf((await pdfs()).buildHandoverPdf(q, profile, { prices })),
+    });
+  }
+  // Support plans: a usage report for every month with logged work (the current month updates as hours are logged).
+  if (q.monthly && q.retainer) {
+    for (const m of retainerMonths(q)) {
+      if (!m.entries.length) continue;
+      out.push({
+        externalId: `usage:${q.id}:${m.start}`, kind: 'other', currency, status: 'sent',
+        title: `Usage report — ${m.label}`, amount: null, paidAmount: null,
+        issuedOn: m.end < new Date().toLocaleDateString('en-CA') ? m.end : m.start, dueOn: null, paidOn: null,
+        note: `${Math.round(m.used * 10) / 10} of ${Math.round(m.available * 10) / 10} h used${m.over > 0 ? ` · ${Math.round(m.over * 10) / 10} h over` : ''}`,
+        meta: { report: m.label, hoursUsed: m.used, hoursAvailable: m.available, hoursOver: m.over, entries: m.entries.length },
+        pdfHash: hash({ ...base, m, terms: q.retainer }), dataHash: hash(m),
+        fileName: `${q.meta.number}-usage-${m.start}.pdf`,
+        pdf: async () => blobOf((await pdfs()).buildUsageReportPdf(q, m.start, profile)),
+      });
+    }
   }
 
   if (q.audit) {
@@ -351,6 +392,13 @@ async function upsertDocument(lead: Lead, r: SyncRecord, previous: string | unde
   }
 }
 
+async function markRemoved(externalId: string) {
+  const rows = await (await api(`/rest/v1/inquiry_documents?select=id,meta&source=eq.quote_builder&external_id=eq.${encodeURIComponent(externalId)}`)).json() as Array<{ id: string; meta: Record<string, unknown> | null }>;
+  for (const row of rows) {
+    await api(`/rest/v1/inquiry_documents?id=eq.${row.id}`, { method: 'PATCH', ...json({ status: 'void', meta: { ...(row.meta ?? {}), removed: true, removedAt: new Date().toISOString() } }) });
+  }
+}
+
 /** Moves the lead along when the quote does: sent → Quoted, accepted → Won. Never moves a lost lead. */
 async function advanceLead(lead: Lead, q: QuoteState) {
   const to = q.status === 'accepted' && ['new', 'replied', 'quoted'].includes(lead.status) ? 'won'
@@ -373,9 +421,14 @@ export function syncAll(): Promise<SyncState> {
     let synced = 0;
     let skipped = 0;
     try {
-      for (const q of Object.values(loadQuotes())) {
+      const all = loadQuotes();
+      const produced = new Set<string>();
+      const processedQuotes = new Set<string>();
+      for (const q of Object.values(all)) {
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(q.client.email.trim())) { skipped++; continue; }
+        processedQuotes.add(q.id);
         const records = recordsFor(q, profile, hideRates);
+        for (const r of records) produced.add(r.externalId);
         const changed = records.filter((r) => state.hashes[r.externalId] !== `${r.pdfHash}|${r.dataHash}`);
         const statusKey = `status:${q.id}`;
         if (!changed.length && state.hashes[statusKey] === q.status) continue;
@@ -388,6 +441,17 @@ export function syncAll(): Promise<SyncState> {
         }
         await advanceLead(lead, q);
         state.hashes[statusKey] = q.status;
+      }
+      // Gone from the quote builder: the quote was deleted, or an invoice/payment/change order inside a synced quote
+      // was removed. Mark it "Removed" in the tracker (kept as a record, out of the totals) — never for quotes that
+      // were merely skipped this time (no client email).
+      for (const key of Object.keys(state.hashes)) {
+        if (key.startsWith('status:') || produced.has(key)) continue;
+        const quoteId = key.split(':')[1];
+        if (all[quoteId] && !processedQuotes.has(quoteId)) continue;
+        await markRemoved(key);
+        delete state.hashes[key];
+        saveSync(state);
       }
       Object.assign(state, { lastSync: Date.now(), lastError: '', synced, skipped });
     } catch (error) {

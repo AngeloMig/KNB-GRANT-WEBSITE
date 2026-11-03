@@ -15,4 +15,7 @@ export const formEndpoint = (inbox: string) => `https://formsubmit.co/ajax/${inb
  * The tracker's Inquiries inbox. Every form also posts its lead here, so audits, enquiries and estimates (with the PDF)
  * show up in the tracker. Override with PUBLIC_LEADS_ENDPOINT in .env (e.g. a local tracker while testing).
  */
+/** Cloudflare Turnstile site key (public). Empty = the human check is off. See src/scripts/turnstile.ts. */
+export const TURNSTILE_SITE_KEY: string = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY || '';
+
 export const LEADS_ENDPOINT: string = import.meta.env.PUBLIC_LEADS_ENDPOINT || 'https://knb-attendance-tracker.vercel.app/api/leads';

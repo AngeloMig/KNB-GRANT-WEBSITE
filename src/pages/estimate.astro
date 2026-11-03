@@ -38,6 +38,7 @@ const plans = PACKAGES.filter((p) => p.id !== 'custom');
               <label><span>Email <i aria-hidden="true">*</i></span><input type="email" name="c-email" autocomplete="email" inputmode="email" required /></label>
             </div>
             <input type="text" name="_honey" class="wiz-honey" tabindex="-1" autocomplete="off" aria-hidden="true" />
+            <div class="form-human-check" data-human-check></div>
             <p class="wiz-start-note" role="status" aria-live="polite"></p>
           </fieldset>
           {steps.map((step) => (
@@ -153,6 +154,7 @@ const plans = PACKAGES.filter((p) => p.id !== 'custom');
   import { formEndpoint } from '../data/forms';
   import { sourceFields } from '../scripts/lead-source';
   import { sendLead } from '../scripts/leads';
+  import { humanCheck } from '../scripts/turnstile';
 
   const wizard = document.querySelector<HTMLElement>('[data-wizard]');
   if (wizard) {
@@ -184,6 +186,8 @@ const plans = PACKAGES.filter((p) => p.id !== 'custom');
     const sendStatus = contactBox.querySelector<HTMLElement>('.wiz-send-status')!;
     const field = (name: string) => wizard.querySelector<HTMLInputElement>(`[name="${name}"]`)!;
     const startNote = wizard.querySelector<HTMLElement>('.wiz-start-note')!;
+    // One widget on the first step; reset after each send, since a token works once.
+    const human = humanCheck(wizard.querySelector<HTMLElement>('[data-human-check]'));
     const sendingAs = contactBox.querySelector<HTMLElement>('.wiz-as-text')!;
     const restored = document.querySelector<HTMLElement>('.wiz-restored')!;
     const pdfButton = summary.querySelector<HTMLButtonElement>('.wiz-pdf')!;
@@ -547,8 +551,10 @@ const plans = PACKAGES.filter((p) => p.id !== 'custom');
           pdf_base64 = await estimatePdfBase64({ rows, result: lastResult, months: lastResult.mode === 'weeks' ? monthsText(lastResult.low, lastResult.high) : '', notes: String(live.notes || ''), email: send.dataset.email || '', answers: live, ref, contact });
         }
       } catch { pdf_base64 = undefined; }
+      const turnstile_token = await human.token();
+      human.reset();
       await sendLead({
-        kind: 'estimate', _honey: field('_honey').value,
+        kind: 'estimate', _honey: field('_honey').value, turnstile_token,
         name: contact.name, email: contact.email, company: contact.company, website: contact.website,
         reference: ref, estimate: estimateSummary, brief, budget: live.budget ? answerText('budget') : undefined,
         estimate_answers: answersByLabel, pdf_base64, ...sourceFields(),
@@ -581,7 +587,7 @@ const plans = PACKAGES.filter((p) => p.id !== 'custom');
         }),
       }).catch(() => { captured = ''; });
       // The tracker gets it too; the full brief later merges into this lead (same reference and email).
-      void sendLead({ kind: 'estimate', _honey: field('_honey').value, name: contact.name, email: contact.email, reference: ref, ...sourceFields() });
+      void human.token().then((turnstile_token) => { void sendLead({ kind: 'estimate', _honey: field('_honey').value, turnstile_token, name: contact.name, email: contact.email, reference: ref, ...sourceFields() }); human.reset(); });
     }
 
     // The summary's button takes people to the review step (or to their name and email first).

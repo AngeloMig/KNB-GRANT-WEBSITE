@@ -1,0 +1,509 @@
+---
+// The five orbit + dot-matrix hero combinations. Shows all five (the /ideas/hero-mix/ preview) or
+// just one (`only`), so a sample homepage can use a single mix as its hero.
+import { withBase } from '../../utils/paths';
+import Arrow from '../../components/Arrow.astro';
+import HeroCopy from './_HeroCopy.astro';
+import Orbit from './_Orbit.astro';
+interface Props { only?: number; tags?: boolean }
+const { only, tags = true } = Astro.props;
+const show = (n: number) => only === undefined || only === n;
+// On a sample homepage the developer line is the page's main heading, as on the real homepage.
+const Kicker = only === undefined ? 'p' : 'h1';
+const lead = 'Thoughtful websites, built to work beautifully. I’m Grant: I turn designs into custom websites and ecommerce for brands and agencies.';
+---
+<div class:list={['mx-set', { 'mx-solo': only !== undefined }]}>
+  <!-- 1: the dot name sits behind the orbit and takes the front project's colour -->
+  {show(1) && (
+  <section class="mx mx1" id="idea-1" aria-label="Mix 1: Dot name behind the orbit">
+    {tags && <span class="idea-tag mx-tag"><b>1</b>Dot name behind the orbit<em>the dots take the front project’s colour; move over them to scatter them</em></span>}
+    <div class="wrap"><HeroCopy headline="Thoughtful websites.<br />Built to work beautifully." align="center" quote={false} first /></div>
+    <div class="mx1-stage">
+      <canvas class="mx-dots" data-text="GRANT DEV14." data-follow="tint" role="img" aria-label="Grant Dev14."></canvas>
+      <Orbit />
+    </div>
+  </section>
+  )}
+
+  <!-- 2: the dots spell the name, then morph into each project's name as it comes to the front -->
+  {show(2) && (
+  <section class="mx mx2" id="idea-2" aria-label="Mix 2: Dots spell the project">
+    {tags && <span class="idea-tag mx-tag"><b>2</b>Dots spell the project<em>the dots morph into the name of whichever project is at the front</em></span>}
+    <div class="wrap"><HeroCopy headline="Thoughtful websites.<br />Built to work beautifully." align="center" quote={false} first={only !== undefined} /></div>
+    <div class="mx2-stage">
+      <Orbit card="clamp(220px, 26vw, 400px)" />
+      <canvas class="mx-dots mx2-dots" data-text="GRANT DEV14." data-follow="name" data-gap="5" role="img" aria-label="Project name"></canvas>
+    </div>
+  </section>
+  )}
+
+  <!-- 3: dark; spinning or dragging the orbit sends a wave through the dot name -->
+  {show(3) && (
+  <section class="mx mx3" id="idea-3" aria-label="Mix 3: Spin sends a wave">
+    {tags && <span class="idea-tag mx-tag"><b>3</b>Spin sends a wave<em>drag the orbit: the faster it spins, the bigger the ripple in your name</em></span>}
+    <div class="wrap mx3-top">
+      <Kicker class="tiny-heading">Shopify, Webflow & WordPress developer</Kicker>
+      <canvas class="mx-dots mx3-dots" data-text="GRANT DEV14." data-follow="wave" data-color="#f2f0ea" role="img" aria-label="Grant Dev14."></canvas>
+    </div>
+    <Orbit dark card="clamp(230px, 27vw, 420px)" />
+    <div class="wrap mx-row mx3-row">
+      <p class="mx-lead">{lead}</p>
+      <div class="mx-actions hero-actions"><a class="cta-primary" href={withBase('/estimate/')}>Get a free estimate <Arrow diagonal /></a><a class="cta-ghost" href={withBase('/#work')}>See my work</a></div>
+    </div>
+  </section>
+  )}
+
+  <!-- 4: the front project shown as a colour halftone of dots, with the orbit turning behind it -->
+  {show(4) && (
+  <section class="mx mx4" id="idea-4" aria-label="Mix 4: Halftone centre">
+    {tags && <span class="idea-tag mx-tag"><b>4</b>Halftone centre<em>the front project is drawn in dots; it re-forms as the orbit turns</em></span>}
+    <div class="wrap"><HeroCopy headline="Thoughtful websites.<br />Built to work beautifully." align="center" quote={false} first={only !== undefined} /></div>
+    <div class="mx4-stage">
+      <Orbit small card="clamp(150px, 15vw, 230px)" radius={2.7} />
+      <canvas class="mx-dots mx4-dots" data-follow="image" data-gap="6" role="img" aria-label="The front project's homepage, drawn in dots"></canvas>
+    </div>
+  </section>
+  )}
+
+  <!-- 5: dot name on top, and the cards ride a dotted track that turns with them -->
+  {show(5) && (
+  <section class="mx mx5" id="idea-5" aria-label="Mix 5: Dotted track">
+    {tags && <span class="idea-tag mx-tag"><b>5</b>Dotted track<em>spins in on load; the name takes each project’s colour; hover the front card to scroll its site</em></span>}
+    <div class="wrap mx5-top">
+      <Kicker class="tiny-heading">Shopify, Webflow & WordPress developer</Kicker>
+      <canvas class="mx-dots mx5-dots" data-text="GRANT DEV14." data-gap="5" role="img" aria-label="Grant Dev14."></canvas>
+    </div>
+    <div class="mx5-stage">
+      <canvas class="mx5-track" aria-hidden="true"></canvas>
+      <Orbit card="var(--mx5-card)" scroll />
+    </div>
+    <div class="wrap mx-row">
+      <p class="mx-lead">{lead}</p>
+      <div class="mx-actions hero-actions"><a class="cta-primary" href={withBase('/estimate/')}>Get a free estimate <Arrow diagonal /></a><a class="cta-ghost" href={withBase('/#work')}>See my work</a></div>
+      <a class="intro-quote" href={withBase('/#reviews')}><span class="review-avatar" aria-hidden="true">C</span><span><q>He’s just an absolute weapon when it comes to Shopify.</q><small>Carlos · CEO & Owner, MDO Digital</small></span></a>
+    </div>
+  </section>
+  )}
+</div>
+
+<script>
+  const root = document.documentElement;
+  const motion = root.classList.contains('motion');
+  const fine = matchMedia('(hover: hover) and (pointer: fine)').matches;
+  const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+  const ink = getComputedStyle(root).getPropertyValue('--ink').trim() || '#161616';
+  const accentOf = (hue: number | string, l = 0.5, c = 0.09) => `oklch(${l} ${c} ${hue})`;
+  const watch = (el: Element) => {
+    const state = { on: false };
+    new IntersectionObserver(([e]) => { state.on = e.isIntersecting; }, { threshold: 0 }).observe(el);
+    return state;
+  };
+
+  // ── The orbit: steps to the next project every few seconds; drag or swipe with momentum (it
+  // settles on the nearest project); arrows move one. onFront fires when the front project changes.
+  class Orbit {
+    rot = 0; vel = 0; delta = 0; front = -1;
+    cards: HTMLElement[];
+    constructor(el: HTMLElement, opts: { onFront?: (card: HTMLElement, i: number) => void; hideFront?: boolean; intro?: boolean; solid?: boolean } = {}) {
+      const ring = el.querySelector<HTMLElement>('.ob-ring')!;
+      const spin = el.querySelector<HTMLElement>('.ob-spin')!;
+      this.cards = [...el.querySelectorAll<HTMLElement>('.ob-card')];
+      const captions = [...el.querySelectorAll<HTMLElement>('.ob-caption')];
+      const step = 360 / this.cards.length;
+      const seen = watch(el);
+      let target: number | null = null, dragging = false, lastX = 0, moved = 0, pausedUntil = 0, hover = false, next = performance.now() + 3400, prev = 0;
+      if (!fine) el.classList.add('ob-touch');
+      // intro: when it first comes into view the orbit spins one and a half turns, slowing to a stop.
+      const SPIN = 540, INTRO = 2800;
+      let intro = !!opts.intro && motion, introAt = 0;
+      if (intro) this.rot = SPIN;
+      const endIntro = () => { intro = false; next = performance.now() + 3400; opts.onFront?.(this.cards[this.front], this.front); };
+      const frame = () => {
+        if (intro) {
+          if (seen.on && !introAt) introAt = performance.now();
+          if (introAt) {
+            const t = Math.min(1, (performance.now() - introAt) / INTRO);
+            this.rot = SPIN * (1 - t) ** 4;
+            if (t >= 1) { this.rot = 0; endIntro(); }
+          }
+        } else if (!dragging) {
+          if (target !== null) { this.rot += (target - this.rot) * (motion ? 0.1 : 1); if (Math.abs(target - this.rot) < 0.05) { this.rot = target; target = null; } }
+          else if (Math.abs(this.vel) > 0.05) { this.rot += this.vel; this.vel *= 0.93; }
+          else if (Math.abs(this.rot - Math.round(this.rot / step) * step) > 0.05) { this.vel = 0; target = Math.round(this.rot / step) * step; }
+          else if (motion && seen.on && !hover && performance.now() > Math.max(pausedUntil, next)) { target = (Math.round(this.rot / step) - 1) * step; next = performance.now() + 3400; }
+        }
+        this.delta = this.rot - prev; prev = this.rot;
+        spin.style.transform = `translateZ(calc(var(--r) * -1)) rotateY(${this.rot}deg)`;
+        this.cards.forEach((card, i) => {
+          const d = ((((i * step + this.rot) % 360) + 540) % 360) - 180;
+          const f = 1 - Math.abs(d) / 180;
+          if (opts.solid) {
+            // Solid cards (so what's behind them stays hidden), dimmed with distance; the back half fades out.
+            card.style.opacity = String(Math.max(0, Math.min(1, (170 - Math.abs(d)) / 70)));
+            card.style.filter = `brightness(${(0.62 + 0.38 * f ** 2).toFixed(3)})`;
+          } else card.style.opacity = opts.hideFront && Math.abs(d) < step * 0.6 ? String(Math.min(1, Math.abs(d) / (step * 0.6)) * 0.6) : String(0.18 + 0.82 * f ** 1.6);
+          card.style.pointerEvents = Math.abs(d) < step / 2 ? 'auto' : 'none';
+        });
+        const now = ((Math.round(-this.rot / step) % this.cards.length) + this.cards.length) % this.cards.length;
+        if (now !== this.front) {
+          this.cards[this.front]?.classList.remove('is-front');
+          this.front = now;
+          this.cards[now].classList.add('is-front');
+          captions.forEach((c, i) => c.classList.toggle('is-active', i === now));
+          if (!intro) opts.onFront?.(this.cards[now], now);
+        }
+        requestAnimationFrame(frame);
+      };
+      requestAnimationFrame(frame);
+      ring.addEventListener('pointerdown', (e) => { if (intro) { intro = false; introAt = 0; endIntro(); } dragging = true; lastX = e.clientX; moved = 0; this.vel = 0; target = null; ring.setPointerCapture(e.pointerId); });
+      ring.addEventListener('pointermove', (e) => { if (!dragging) return; const dx = e.clientX - lastX; lastX = e.clientX; moved += Math.abs(dx); this.rot += dx * 0.22; this.vel = dx * 0.22; });
+      const release = () => { dragging = false; pausedUntil = performance.now() + 2500; };
+      ring.addEventListener('pointerup', release);
+      ring.addEventListener('pointercancel', release);
+      ring.addEventListener('click', (e) => { if (moved > 6) e.preventDefault(); }, true);
+      ring.addEventListener('pointerenter', () => { hover = true; });
+      ring.addEventListener('pointerleave', () => { hover = false; });
+      el.querySelectorAll<HTMLButtonElement>('.ob-arrow').forEach((b) => b.addEventListener('click', () => {
+        this.vel = 0;
+        target = (Math.round(this.rot / step) - Number(b.dataset.dir)) * step;
+        pausedUntil = performance.now() + 4000;
+      }));
+    }
+  }
+
+  // ── The dot field: dots sampled from text or an image. Each dot springs back to its home; the
+  // cursor pushes dots away; new homes make the dots fly over (a morph). Draws only while on screen
+  // and while something is still moving.
+  type Dot = { x: number; y: number; vx: number; vy: number; hx: number; hy: number; s: number; ts: number; c: string };
+  type Target = { x: number; y: number; s: number; c: string };
+  class DotField {
+    ctx: CanvasRenderingContext2D;
+    dots: Dot[] = [];
+    W = 0; H = 0; gap: number; color: string; accent = 'oklch(0.6 0.15 255)'; colourful = false;
+    px = -1e4; py = -1e4; wave = 0; t = 0; awake = true;
+    lch = [0.16, 0, 0]; lchTo: number[] | null = null;
+    seen: { on: boolean } = { on: false };
+    constructor(public canvas: HTMLCanvasElement) {
+      this.ctx = canvas.getContext('2d')!;
+      this.gap = Number(canvas.dataset.gap) || 7;
+      this.color = canvas.dataset.color || ink;
+      this.seen = watch(canvas);
+      this.size();
+      if (fine) {
+        canvas.addEventListener('pointermove', (e) => { const r = canvas.getBoundingClientRect(); this.px = e.clientX - r.left; this.py = e.clientY - r.top; this.awake = true; });
+        canvas.addEventListener('pointerleave', () => { this.px = this.py = -1e4; });
+      } else if (motion) {
+        // Touch screens: a ripple sweeps through every few seconds.
+        (async () => { for (;;) { await sleep(2800); if (!this.seen.on || !this.dots.length) continue; const d = this.dots[(Math.random() * this.dots.length) | 0]; for (let k = 0; k < 24; k++) { this.px = d.hx + (k - 12) * 7; this.py = d.hy; this.awake = true; await sleep(16); } this.px = this.py = -1e4; } })();
+      }
+      const loop = () => { if (this.seen.on && (this.awake || this.wave)) this.step(); requestAnimationFrame(loop); };
+      if (motion) requestAnimationFrame(loop);
+    }
+    // Ease the dot colour to a new oklch colour (hue takes the short way round).
+    tint(l: number, c: number, h: number) {
+      if (!this.lch[1]) this.lch[2] = h;
+      this.lchTo = [l, c, h];
+      if (!motion) { this.lch = [l, c, h]; this.lchTo = null; this.color = `oklch(${l} ${c} ${h})`; this.draw(); return; }
+      this.awake = true;
+    }
+    size() {
+      const r = this.canvas.getBoundingClientRect();
+      this.W = Math.floor(r.width); this.H = Math.floor(r.height);
+      const dpr = Math.min(2, devicePixelRatio || 1);
+      this.canvas.width = this.W * dpr; this.canvas.height = this.H * dpr;
+      this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+    async textTargets(text: string): Promise<Target[]> {
+      await document.fonts.load('800 200px "Big Shoulders Display"');
+      const { W, H, gap } = this;
+      const off = document.createElement('canvas'); off.width = W; off.height = H;
+      const o = off.getContext('2d')!;
+      let lines = [text];
+      if (W < 640 && text.includes(' ')) { const mid = text.lastIndexOf(' ', Math.ceil(text.length / 2)) > 0 ? text.lastIndexOf(' ', Math.ceil(text.length / 2)) : text.indexOf(' '); lines = [text.slice(0, mid), text.slice(mid + 1)]; }
+      let size = (H / lines.length) * 1.12;
+      o.font = `800 ${size}px "Big Shoulders Display"`;
+      const widest = Math.max(...lines.map((l) => o.measureText(l).width));
+      size = Math.min(size, (size * W * 0.98) / widest);
+      o.font = `800 ${size}px "Big Shoulders Display"`;
+      o.textAlign = 'center'; o.textBaseline = 'middle';
+      lines.forEach((l, i) => o.fillText(l, W / 2, (H * (i + 0.5)) / lines.length + size * 0.04));
+      const data = o.getImageData(0, 0, W, H).data;
+      const out: Target[] = [];
+      for (let y = gap / 2; y < H; y += gap) for (let x = gap / 2; x < W; x += gap) if (data[((y | 0) * W + (x | 0)) * 4 + 3] > 128) out.push({ x, y, s: gap * 0.36, c: '' });
+      return out;
+    }
+    async imageTargets(src: string): Promise<Target[]> {
+      const img = new Image(); img.src = src; await img.decode();
+      const { W, H, gap } = this;
+      const cols = Math.floor(W / gap), rows = Math.floor(H / gap);
+      const off = document.createElement('canvas'); off.width = cols; off.height = rows;
+      const o = off.getContext('2d')!;
+      // Cover the box, anchored to the top of the screenshot.
+      const scale = Math.max(cols / img.width, rows / img.height);
+      o.drawImage(img, (cols - img.width * scale) / 2, 0, img.width * scale, img.height * scale);
+      const data = o.getImageData(0, 0, cols, rows).data;
+      const out: Target[] = [];
+      for (let j = 0; j < rows; j++) for (let i = 0; i < cols; i++) {
+        const k = (j * cols + i) * 4, r = data[k], g = data[k + 1], b = data[k + 2];
+        const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+        out.push({ x: i * gap + gap / 2, y: j * gap + gap / 2, s: gap * (0.28 + 0.24 * (1 - lum)), c: `rgb(${r},${g},${b})` });
+      }
+      return out;
+    }
+    set(targets: Target[], morph = true) {
+      if (!this.dots.length || !motion) {
+        this.dots = targets.map((t) => ({ x: t.x, y: t.y, vx: 0, vy: 0, hx: t.x, hy: t.y, s: t.s, ts: t.s, c: t.c }));
+      } else {
+        const order = morph ? targets.map((_, i) => i).sort(() => Math.random() - 0.5) : targets.map((_, i) => i);
+        const total = Math.max(targets.length, this.dots.length);
+        for (let i = 0; i < total; i++) {
+          const t = targets[order[i % targets.length]];
+          let d = this.dots[i];
+          if (!d) { const from = this.dots[(Math.random() * this.dots.length) | 0]; d = { ...from, vx: 0, vy: 0 }; this.dots.push(d); }
+          d.hx = t.x; d.hy = t.y; d.c = t.c;
+          d.ts = i < targets.length ? t.s : 0;
+        }
+      }
+      this.awake = true;
+      this.draw();
+    }
+    step() {
+      this.t++;
+      let moving = 0;
+      if (this.lchTo) {
+        const [l, c, h] = this.lch, [tl, tc, th] = this.lchTo;
+        const dh = ((th - h + 540) % 360) - 180;
+        this.lch = [l + (tl - l) * 0.06, c + (tc - c) * 0.06, (h + dh * 0.06 + 360) % 360];
+        this.color = `oklch(${this.lch[0].toFixed(3)} ${this.lch[1].toFixed(3)} ${this.lch[2].toFixed(1)})`;
+        if (Math.abs(tl - l) + Math.abs(tc - c) + Math.abs(dh) / 360 < 0.002) { this.lch = [...this.lchTo]; this.lchTo = null; }
+        moving = 1;
+      }
+      const R = 110;
+      for (const d of this.dots) {
+        const dx = d.x - this.px, dy = d.y - this.py, dist = Math.hypot(dx, dy);
+        if (dist < R && dist > 0.1) { const f = (1 - dist / R) * 5; d.vx += (dx / dist) * f; d.vy += (dy / dist) * f; }
+        if (this.wave) { d.vy += Math.sin(d.hx * 0.02 + this.t * 0.18) * this.wave * 0.9; d.vx += this.wave * 0.25; }
+        d.vx += (d.hx - d.x) * 0.06; d.vy += (d.hy - d.y) * 0.06;
+        d.vx *= 0.8; d.vy *= 0.8;
+        d.x += d.vx; d.y += d.vy;
+        d.s += (d.ts - d.s) * 0.12;
+        moving = Math.max(moving, Math.abs(d.vx) + Math.abs(d.vy), Math.abs(d.ts - d.s) * 4);
+      }
+      this.draw();
+      if (moving < 0.02 && this.px < -1e3) this.awake = false;
+    }
+    draw() {
+      const { ctx } = this;
+      ctx.clearRect(0, 0, this.W, this.H);
+      if (this.colourful) {
+        for (const d of this.dots) { if (d.s < 0.3) continue; ctx.fillStyle = d.c; ctx.beginPath(); ctx.arc(d.x, d.y, d.s, 0, 6.2832); ctx.fill(); }
+        return;
+      }
+      const still = new Path2D(), moved = new Path2D();
+      for (const d of this.dots) {
+        if (d.s < 0.3) continue;
+        const p = Math.abs(d.x - d.hx) + Math.abs(d.y - d.hy) > 2 ? moved : still;
+        p.moveTo(d.x + d.s, d.y); p.arc(d.x, d.y, d.s, 0, 6.2832);
+      }
+      ctx.fillStyle = this.color; ctx.fill(still);
+      ctx.fillStyle = this.accent; ctx.fill(moved);
+    }
+  }
+
+  // ── Mix 1: dot name behind the orbit, coloured by the front project.
+  if (document.querySelector('.mx1')) {
+    const section = document.querySelector<HTMLElement>('.mx1')!;
+    const field = new DotField(section.querySelector('canvas')!);
+    field.textTargets('GRANT DEV14.').then((t) => field.set(t, false));
+    new Orbit(section.querySelector('.ob')!, { onFront: (card) => { field.color = accentOf(card.dataset.hue!, 0.42, 0.08); field.accent = accentOf(card.dataset.hue!, 0.7, 0.12); field.draw(); } });
+  }
+
+  // ── Mix 2: the dots morph from your name into each front project's name.
+  if (document.querySelector('.mx2')) {
+    const section = document.querySelector<HTMLElement>('.mx2')!;
+    const field = new DotField(section.querySelector('canvas')!);
+    let first = true;
+    field.textTargets('GRANT DEV14.').then((t) => field.set(t, false));
+    new Orbit(section.querySelector('.ob')!, {
+      onFront: async (card) => {
+        if (first) { first = false; return; }
+        field.set(await field.textTargets(card.dataset.name!.toUpperCase()));
+        field.accent = accentOf(card.dataset.hue!, 0.55, 0.12);
+      },
+    });
+  }
+
+  // ── Mix 3: the orbit's spin speed drives a wave through the dot name.
+  if (document.querySelector('.mx3')) {
+    const section = document.querySelector<HTMLElement>('.mx3')!;
+    const field = new DotField(section.querySelector('canvas')!);
+    field.textTargets('GRANT DEV14.').then((t) => field.set(t, false));
+    const orbit = new Orbit(section.querySelector('.ob')!, { onFront: (card) => { field.accent = accentOf(card.dataset.hue!, 0.78, 0.13); section.style.setProperty('--glow', accentOf(card.dataset.hue!, 0.45, 0.1)); } });
+    const couple = () => {
+      field.wave = Math.max(-3, Math.min(3, orbit.delta * 0.9));
+      if (Math.abs(field.wave) < 0.02) field.wave = 0; else field.awake = true;
+      requestAnimationFrame(couple);
+    };
+    if (motion) requestAnimationFrame(couple);
+  }
+
+  // ── Mix 4: the front project as a colour halftone; it re-forms from dots as the orbit turns.
+  if (document.querySelector('.mx4')) {
+    const section = document.querySelector<HTMLElement>('.mx4')!;
+    const field = new DotField(section.querySelector('canvas')!);
+    field.colourful = true;
+    let first = true;
+    new Orbit(section.querySelector('.ob')!, {
+      hideFront: true,
+      onFront: async (card) => {
+        const targets = await field.imageTargets(card.querySelector('img')!.currentSrc || card.querySelector('img')!.src);
+        field.set(targets, !first);
+        first = false;
+      },
+    });
+  }
+
+  // ── Mix 5: dot name on top; the cards ride a dotted ring drawn under them that turns with them.
+  if (document.querySelector('.mx5')) {
+    const section = document.querySelector<HTMLElement>('.mx5')!;
+    const field = new DotField(section.querySelector('.mx5-dots')!);
+    field.textTargets('GRANT DEV14.').then((t) => field.set(t, false));
+    const stage = section.querySelector<HTMLElement>('.mx5-stage')!;
+    const track = section.querySelector<HTMLCanvasElement>('.mx5-track')!;
+    const tctx = track.getContext('2d')!;
+    let hue = '60';
+    const orbit = new Orbit(section.querySelector('.ob')!, {
+      intro: true,
+      solid: true,
+      onFront: (card) => {
+        hue = card.dataset.hue!;
+        // Subtle: the name, the menu button and "Let's talk" take a deep shade of the project's colour,
+        // and the header and hero a faint wash of it.
+        field.tint(0.33, 0.07, Number(hue));
+        root.classList.add('mx-tinted');
+        root.style.setProperty('--hero-wash', `oklch(0.982 0.009 ${hue})`);
+        root.style.setProperty('--hero-ink', `oklch(0.33 0.07 ${hue})`);
+      },
+    });
+    const seen = watch(stage);
+    const N = 150;
+    const off = Array.from({ length: N }, () => ({ x: 0, y: 0, vx: 0, vy: 0 }));
+    let px = -1e4, py = -1e4, W = 0, H = 0;
+    const size = () => {
+      const r = track.getBoundingClientRect();
+      W = Math.floor(r.width); H = Math.floor(r.height);
+      const dpr = Math.min(2, devicePixelRatio || 1);
+      track.width = W * dpr; track.height = H * dpr;
+      tctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    };
+    size();
+    addEventListener('resize', size);
+    if (fine) {
+      stage.addEventListener('pointermove', (e) => { const r = track.getBoundingClientRect(); px = e.clientX - r.left; py = e.clientY - r.top; });
+      stage.addEventListener('pointerleave', () => { px = py = -1e4; });
+    }
+    const card = section.querySelector<HTMLElement>('.ob-card')!;
+    const ring = section.querySelector<HTMLElement>('.ob-ring')!;
+    const draw = () => {
+      if (seen.on || !motion) {
+        const cw = card.offsetWidth, R = cw * 1.05, P = 1800;
+        const ringBox = ring.getBoundingClientRect(), box = track.getBoundingClientRect();
+        const cx = ringBox.left - box.left + ringBox.width / 2;
+        const horizon = ringBox.top - box.top + ringBox.height / 2;
+        const floor = ringBox.top - box.top + cw * 0.5625 + 40;
+        tctx.clearRect(0, 0, W, H);
+        for (let i = 0; i < N; i++) {
+          const a = ((i / N) * 360 + orbit.rot) * (Math.PI / 180);
+          const z = Math.cos(a) * R - R;
+          const k = P / (P - z);
+          let x = cx + Math.sin(a) * R * k;
+          let y = horizon + (floor - horizon) * k;
+          const o = off[i];
+          const dx = x + o.x - px, dy = y + o.y - py, dist = Math.hypot(dx, dy);
+          if (dist < 90 && dist > 0.1) { const f = (1 - dist / 90) * 4; o.vx += (dx / dist) * f; o.vy += (dy / dist) * f; }
+          o.vx += -o.x * 0.07; o.vy += -o.y * 0.07; o.vx *= 0.8; o.vy *= 0.8; o.x += o.vx; o.y += o.vy;
+          x += o.x; y += o.y;
+          const deg = Math.abs(((((i / N) * 360 + orbit.rot) % 360) + 540) % 360 - 180);
+          const near = deg < 22;
+          tctx.beginPath();
+          tctx.arc(x, y, (near ? 3.4 : 2) * k ** 1.5, 0, 6.2832);
+          tctx.fillStyle = near ? accentOf(hue, 0.55, 0.15) : `oklch(0.16 0 0 / ${Math.min(0.85, 0.25 + 0.7 * (k - 0.6)).toFixed(2)})`;
+          tctx.fill();
+        }
+      }
+      requestAnimationFrame(draw);
+    };
+    requestAnimationFrame(draw);
+  }
+
+  // Rebuild the dot fields when the window width changes (phones also fire resize when the address
+  // bar hides, which must not reload the page).
+  let resizeTimer = 0;
+  const startWidth = innerWidth;
+  addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = window.setTimeout(() => { if (Math.abs(innerWidth - startWidth) > 40) location.reload(); }, 400); });
+</script>
+
+<style>
+  .mx { position: relative; min-height: 100svh; padding-block: 96px 64px; overflow: hidden; display: flex; flex-direction: column; justify-content: center; }
+  .mx + .mx { border-top: 1px solid var(--line); }
+  /* On a sample homepage the header already sits above the hero, so it starts closer. */
+  .mx-solo .mx { min-height: calc(100svh - 150px); padding-top: 20px; }
+  .mx-solo .mx3 { margin-top: -40px; padding-top: 60px; }
+  .mx-tag { position: absolute; z-index: 30; left: var(--gutter); top: 22px; }
+  .mx-dots { display: block; width: 100%; touch-action: pan-y; }
+  .mx-row { position: relative; z-index: 3; display: grid; grid-template-columns: 1.1fr auto auto; gap: 24px 32px; align-items: center; margin-top: 34px; }
+  .mx-lead { max-width: 460px; font-size: 16px; line-height: 1.5; }
+  .mx-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+  .mx-row .intro-quote { margin: 0; }
+
+  /* 1 */
+  .mx1-stage { position: relative; margin-top: 30px; }
+  .mx1 .mx-dots { width: calc(100% - 2 * var(--gutter)); height: clamp(200px, 27vw, 440px); margin-inline: auto; }
+  .mx1 :global(.ob) { margin-top: calc(clamp(240px, 30vw, 460px) * -0.42); }
+
+  /* 2 */
+  /* The dot name sits between the orbit and its arrows. */
+  .mx2-stage { display: flex; flex-direction: column; margin-top: 34px; }
+  .mx2 :global(.ob) { display: contents; }
+  .mx2 :global(.ob-ring) { order: 1; }
+  .mx2-dots { order: 2; width: calc(100% - 2 * var(--gutter)); height: clamp(90px, 11vw, 180px); margin: 26px auto 0; }
+  .mx2 :global(.ob-foot) { order: 3; margin-top: 10px; }
+  .mx2 :global(.ob-caption strong) { display: none; }
+
+  /* 3 */
+  .mx3 { --glow: oklch(0.45 0.1 60); background: radial-gradient(ellipse 70% 60% at 50% 75%, color-mix(in oklch, var(--glow) 55%, transparent), transparent 70%), #0e0e0f; color: #f2f0ea; transition: background 0.8s; }
+  .mx3 .tiny-heading { color: oklch(1 0 0 / 0.65); }
+  .mx3-dots { height: clamp(180px, 24vw, 400px); margin-block: 18px 22px; }
+  .mx3 :global(.ob-card) { box-shadow: 0 30px 70px oklch(0 0 0 / 0.6); }
+  .mx3 .cta-primary { background: #f2f0ea; color: var(--ink); border-color: #f2f0ea; }
+  .mx3 .cta-ghost { border-color: oklch(1 0 0 / 0.45); color: inherit; }
+  .mx3 .mx-lead { color: oklch(1 0 0 / 0.75); }
+  .mx3-row { grid-template-columns: 1fr auto; }
+
+  /* 4 */
+  .mx4-stage { position: relative; margin-top: 34px; }
+  .mx4 :global(.ob-ring) { height: min(56vw, 440px); }
+  .mx4 :global(.ob-spin) { top: calc(min(56vw, 440px) / 2 - var(--card) * 0.31); }
+  .mx4-dots { position: absolute; z-index: 2; left: 50%; top: 0; width: min(780px, 74vw); height: min(calc(min(780px, 74vw) * 0.5625), 440px); translate: -50% 0; border-radius: 14px; background: var(--bg); box-shadow: 0 30px 80px oklch(0 0 0 / 0.14); }
+
+  /* 5 */
+  .mx5 { --mx5-card: clamp(270px, 36vw, 600px); background-color: var(--hero-wash, var(--bg)); transition: background-color 1.4s var(--ease); }
+  /* The header shares the hero's wash (full width), and its button and link take the deep shade. */
+  :global(html.mx-tinted) :global(.site-header) { background-color: var(--hero-wash); box-shadow: 0 0 0 100vmax var(--hero-wash); clip-path: inset(0 -100vmax); transition: background-color 1.4s var(--ease), box-shadow 1.4s var(--ease); }
+  :global(html.mx-tinted) :global(.menu-toggle) { background-color: var(--hero-ink); transition: background-color 1.4s var(--ease), transform 0.3s var(--ease); }
+  :global(html.mx-tinted) :global(.header-contact) { color: var(--hero-ink); transition: color 1.4s var(--ease); }
+  .mx5-dots { height: clamp(160px, 20vw, 330px); margin-top: 18px; }
+  /* The bigger orbit rises over the bottom of the name. */
+  .mx5-stage { position: relative; z-index: 1; margin-top: calc(var(--mx5-card) * -0.16); padding-bottom: 50px; }
+  .mx5-track { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+  .mx5 :global(.ob) { position: relative; z-index: 1; }
+
+  @media (max-width: 900px) {
+    .mx { min-height: auto; padding-block: 80px 56px; }
+    .mx-row, .mx3-row { grid-template-columns: 1fr; }
+    .mx1 :global(.ob) { margin-top: 16px; }
+    .mx5-stage { margin-top: 12px; }
+    .mx4-dots { width: 86vw; height: calc(86vw * 0.5625); }
+    .mx4 :global(.ob-ring) { height: calc(86vw * 0.5625 + 20px); }
+  }
+</style>

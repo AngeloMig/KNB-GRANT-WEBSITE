@@ -1,0 +1,46 @@
+---
+// The words every hero idea shares: the developer line, a headline, the short intro, both buttons and
+// the Carlos quote. Only the headline and layout change between ideas.
+import { withBase } from '../../utils/paths';
+import Arrow from '../../components/Arrow.astro';
+interface Props { headline: string; align?: 'left' | 'center'; light?: boolean; quote?: boolean; first?: boolean; }
+const { headline, align = 'left', light = false, quote = true, first = false } = Astro.props;
+const Kicker = first ? 'h1' : 'p';
+---
+<div class:list={['hc', `hc-${align}`, { 'hc-light': light }]}>
+  <Kicker class="tiny-heading hc-kicker">Shopify, Webflow & WordPress developer</Kicker>
+  <p class="hc-title" set:html={headline} />
+  <p class="hc-support">I’m Grant, a web developer turning designs into custom websites and ecommerce experiences for brands and agencies.</p>
+  <div class="hc-actions hero-actions">
+    <a class="cta-primary" href={withBase('/estimate/')}>Get a free estimate <Arrow diagonal /></a>
+    <a class="cta-ghost" href={withBase('/#work')}>See my work</a>
+  </div>
+  {quote && (
+    <a class="intro-quote hc-quote" href={withBase('/#reviews')}>
+      <span class="review-avatar" aria-hidden="true">C</span>
+      <span><q>He’s just an absolute weapon when it comes to Shopify.</q><small>Carlos · CEO & Owner, MDO Digital · <u>Watch the video</u></small></span>
+    </a>
+  )}
+</div>
+
+<style>
+  .hc { position: relative; z-index: 2; max-width: 560px; }
+  .hc-center { max-width: 980px; margin-inline: auto; text-align: center; }
+  .hc-center .hc-actions { justify-content: center; }
+  .hc-center .hc-quote { margin-inline: auto; text-align: left; }
+  .hc-title { margin-top: 18px; font-size: clamp(38px, 4.6vw, 76px); font-weight: 500; line-height: 1.02; letter-spacing: -0.04em; }
+  .hc-center .hc-title { font-size: clamp(40px, 5.4vw, 92px); }
+  .hc-support { margin-top: 20px; max-width: 440px; font-size: 15px; line-height: 1.55; color: var(--muted); }
+  .hc-center .hc-support { margin-inline: auto; }
+  .hc-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 28px; }
+  .hc-quote { margin-top: 22px; }
+
+  .hc-light { color: var(--bg); }
+  .hc-light .hc-support { color: oklch(1 0 0 / 0.68); }
+  .hc-light .cta-primary { background: var(--bg); color: var(--ink); border-color: var(--bg); }
+  .hc-light .cta-ghost { border-color: oklch(1 0 0 / 0.5); color: var(--bg); }
+  @media (hover: hover) { .hc-light .cta-ghost:hover { background: var(--bg); color: var(--ink); } }
+  .hc-light .hc-quote { background: oklch(1 0 0 / 0.08); }
+  .hc-light .hc-quote small { color: oklch(1 0 0 / 0.6); }
+  .hc-light .review-avatar { background: var(--bg); color: var(--ink); }
+</style>

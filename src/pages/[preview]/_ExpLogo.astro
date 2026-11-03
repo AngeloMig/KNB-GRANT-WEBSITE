@@ -1,0 +1,24 @@
+---
+// A company logo for the experience previews: the file from each company's website, in one ink
+// colour, with wide logos a little shorter so each one carries about the same weight. Without a
+// file (or with the "Matching wordmarks" switch on) the name is set in the site's display type.
+interface Props { name: string; label?: string; src?: string; ratio?: number; scale?: number; size?: number; light?: boolean; }
+const { name, label = name, src, ratio = 3, scale = 1, size = 34, light = false } = Astro.props;
+const w = Math.round(size * scale * ratio ** 0.6);
+const h = Math.round(size * scale * ratio ** -0.4);
+---
+<span class:list={['xp-logo', { 'is-light': light, 'has-img': src }]} style={`--logo-w:${w}px;--logo-h:${h}px;--logo-size:${size}px`}>
+  <span class="sr-only">{name}</span>
+  {src && <img class="xp-logo-img" src={src} alt="" width={w} height={h} />}
+  <span class="xp-logo-text" aria-hidden="true">{label}</span>
+</span>
+
+<style>
+  .xp-logo { display: inline-flex; align-items: center; min-height: calc(var(--logo-size) * 0.6); }
+  .xp-logo-text { font: 800 calc(var(--logo-size) * 0.56)/1 "Big Shoulders Display", Impact, sans-serif; letter-spacing: 0.015em; text-transform: uppercase; white-space: nowrap; }
+  .xp-logo-img { display: block; width: var(--logo-w); height: var(--logo-h); object-fit: contain; object-position: left center; filter: brightness(0); }
+  .has-img .xp-logo-text, :global(.xp-type) .xp-logo-img { display: none; }
+  :global(.xp-type) .has-img .xp-logo-text { display: inline; }
+  .is-light .xp-logo-img { filter: brightness(0) invert(1); }
+  .is-light .xp-logo-text { color: var(--bg); }
+</style>

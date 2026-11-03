@@ -1,0 +1,74 @@
+---
+// The project orbit from hero idea 3, as a piece the combination previews can reuse. The script on
+// the page that uses it brings it to life (see the Orbit class in hero-mix.astro).
+import fs from 'node:fs';
+import { withBase } from '../../utils/paths';
+import Arrow from '../../components/Arrow.astro';
+import { projects } from '../../data/projects';
+interface Props { card?: string; radius?: number; foot?: boolean; dark?: boolean; small?: boolean; scroll?: boolean }
+const { card = 'clamp(240px, 30vw, 460px)', radius = 1.05, foot = true, dark = false, small = false, scroll = false } = Astro.props;
+// scroll: the front card shows the site's full-page screenshot (<slug>-full.webp) and scrolls it on hover.
+const full = (slug: string) => scroll && fs.existsSync(`public/images/projects/${slug}-full.webp`);
+// The site's project-card tints, plus each one's hue for darker accents (dots, glows).
+const canvases: Record<string, [string, number]> = {
+  olive: ['oklch(0.79 0.025 105)', 105], lilac: ['oklch(0.91 0.017 295)', 295], violet: ['oklch(0.84 0.04 285)', 285],
+  rose: ['oklch(0.91 0.018 20)', 20], blue: ['oklch(0.84 0.02 245)', 245], clay: ['oklch(0.87 0.02 60)', 60],
+};
+const host = (url: string) => new URL(url).hostname.replace('www.', '');
+---
+<div class:list={['ob', { 'ob-dark': dark, 'ob-small': small, 'ob-scroll': scroll }]} style={`--card:${card};--r:calc(var(--card) * ${radius})`}>
+  <div class="ob-ring" aria-roledescription="carousel" aria-label="Projects">
+    <div class="ob-spin" style={`--step:${360 / projects.length}deg`}>{projects.map((p, i) => (
+      <a class="ob-card" href={withBase(`/work/${p.slug}/`)} style={`--i:${i}`} data-tint={canvases[p.canvas]?.[0]} data-hue={canvases[p.canvas]?.[1]} data-name={p.name} data-slug={p.slug} draggable="false">
+        <span class="ob-bar" aria-hidden="true"><i></i><i></i><i></i><b>{host(p.url)}</b></span>
+        {full(p.slug)
+          ? <span class="ob-shot"><img src={withBase(`/images/projects/${p.slug}-full.webp`)} alt={`${p.name} homepage`} width="640" height="1807" loading={i < 2 ? 'eager' : 'lazy'} draggable="false" /></span>
+          : <img src={withBase(`/images/projects/${p.slug}-640.webp`)} alt={`${p.name} homepage`} width="640" height="360" loading={i < 2 ? 'eager' : 'lazy'} draggable="false" />}
+      </a>
+    ))}</div>
+  </div>
+  {foot && (
+    <div class="ob-foot">
+      <button type="button" class="ob-arrow" data-dir="-1" aria-label="Previous project">←</button>
+      <div class="ob-captions" aria-live="polite">{projects.map((p, i) => <p class:list={['ob-caption', { 'is-active': i === 0 }]}><strong>{p.name}</strong><span>{p.platform} · {p.category}</span><a href={withBase(`/work/${p.slug}/`)}>View project <Arrow diagonal /></a></p>)}</div>
+      <button type="button" class="ob-arrow" data-dir="1" aria-label="Next project">→</button>
+    </div>
+  )}
+</div>
+
+<style>
+  .ob { position: relative; }
+  .ob-ring { position: relative; height: calc(var(--card) * 0.66); perspective: 1800px; cursor: grab; touch-action: pan-y; user-select: none; }
+  .ob-ring:active { cursor: grabbing; }
+  .ob-spin { position: absolute; left: 50%; top: 0; width: var(--card); margin-left: calc(var(--card) / -2); transform-style: preserve-3d; }
+  .ob-card { position: absolute; inset: 0 0 auto; display: block; border-radius: 12px; overflow: hidden; background: var(--bg); box-shadow: 0 30px 60px oklch(0 0 0 / 0.22); transform: rotateY(calc(var(--i) * var(--step))) translateZ(var(--r)); -webkit-user-drag: none; }
+  .ob-small .ob-card { border-radius: 8px; }
+  .ob-bar { display: flex; align-items: center; gap: 5px; height: 24px; padding-inline: 10px; background: #f4f4f5; border-bottom: 1px solid #e4e4e7; }
+  .ob-bar i { width: 7px; height: 7px; border-radius: 50%; background: #d4d4d8; }
+  .ob-bar b { margin-inline: auto; padding: 2px 10px; border-radius: 5px; background: #e4e4e7; font-size: 10px; font-weight: 400; color: #52525b; }
+  .ob-small .ob-bar { height: 16px; }
+  .ob-small .ob-bar b { display: none; }
+  .ob-card img { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: cover; object-position: top; pointer-events: none; }
+  /* Full-page screenshot in a 16:9 window: hovering the front card scrolls down the site, slowly. */
+  .ob-shot { position: relative; display: block; aspect-ratio: 16 / 9; overflow: hidden; }
+  .ob-shot img { height: auto; aspect-ratio: auto; transition: transform 1.1s var(--ease); }
+  .ob-card:global(.is-front):hover .ob-shot img { transform: translateY(calc(-100% + var(--card) * 0.5625)); transition: transform 16s cubic-bezier(0.37, 0, 0.63, 1); }
+  .ob-scroll .ob-card::after { content: 'Hover to scroll ↓'; position: absolute; right: 12px; bottom: 12px; padding: 5px 11px; border-radius: 99px; background: oklch(0.16 0 0 / 0.78); color: #fff; font-size: 11px; opacity: 0; transform: translateY(4px); transition: opacity 0.35s, transform 0.4s var(--ease); pointer-events: none; }
+  .ob-scroll .ob-card:global(.is-front)::after { opacity: 1; transform: none; transition-delay: 0.6s; }
+  .ob-scroll .ob-card:global(.is-front):hover::after { opacity: 0; transition-delay: 0s; }
+  /* Touch screens can't hover: the front card scrolls down and back on its own, slowly. */
+  :global(.ob-touch) .ob-card:global(.is-front) .ob-shot img { animation: ob-auto 16s 1.2s ease-in-out infinite alternate; }
+  :global(.ob-touch) .ob-card::after { content: none; }
+  @keyframes ob-auto { to { transform: translateY(calc(-100% + var(--card) * 0.5625)); } }
+  .ob-foot { position: relative; z-index: 3; display: grid; grid-template-columns: 48px 1fr 48px; align-items: center; gap: 20px; max-width: 640px; margin: 34px auto 0; padding-inline: var(--gutter); }
+  .ob-arrow { width: 48px; height: 48px; border-radius: 50%; border: 1px solid currentColor; background: none; color: inherit; font-size: 18px; cursor: pointer; transition: background 0.25s, color 0.25s; }
+  .ob-arrow:hover { background: var(--ink); color: var(--bg); }
+  .ob-dark .ob-arrow:hover { background: var(--bg); color: var(--ink); }
+  .ob-captions { display: grid; text-align: center; }
+  .ob-caption { grid-area: 1 / 1; display: grid; gap: 4px; opacity: 0; transform: translateY(6px); transition: opacity 0.4s, transform 0.5s var(--ease); pointer-events: none; }
+  .ob-caption.is-active { opacity: 1; transform: none; pointer-events: auto; }
+  .ob-caption strong { font-size: 20px; font-weight: 500; }
+  .ob-caption span { font-size: 12px; opacity: 0.7; }
+  .ob-caption a { display: inline-flex; align-items: center; justify-content: center; gap: 8px; margin-top: 6px; font-size: 13px; text-decoration: underline; text-underline-offset: 4px; }
+  .ob-caption a :global(.arrow-icon) { width: 16px; height: 16px; }
+</style>

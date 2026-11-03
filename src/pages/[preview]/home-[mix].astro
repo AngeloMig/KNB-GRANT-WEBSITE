@@ -1,0 +1,39 @@
+---
+// Sample homepages: the real homepage with one of the five orbit + dot-matrix heroes in place of the
+// current first screen. Local preview only: in a build this route has no pages.
+// Open http://localhost:4321/ideas/home-1/ to /ideas/home-5/ while `npm run dev` runs.
+import { withBase } from '../../utils/paths';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import HomeSections from '../../components/HomeSections.astro';
+import HeroMix from './_HeroMix.astro';
+
+const MIXES = ['Dot name behind the orbit', 'Dots spell the project', 'Spin sends a wave', 'Halftone centre', 'Dotted track'];
+
+export function getStaticPaths() {
+  return import.meta.env.DEV ? [1, 2, 3, 4, 5].map((n) => ({ params: { preview: 'ideas', mix: String(n) } })) : [];
+}
+
+const n = Number(Astro.params.mix);
+---
+<BaseLayout title={`Sample homepage ${n} | Grant Dev14`} description="Local design preview." noindex>
+  <HeroMix only={n} tags={false} />
+  <HomeSections />
+
+  <nav class="home-switch" aria-label="Sample homepages">
+    <span>Sample homepage</span>
+    {MIXES.map((name, i) => <a href={withBase(`/ideas/home-${i + 1}/`)} aria-current={i + 1 === n ? 'page' : undefined} title={name}>{i + 1}</a>)}
+    <a class="home-switch-live" href={withBase('/')}>Current</a>
+    <em>{MIXES[n - 1]}</em>
+  </nav>
+</BaseLayout>
+
+<style>
+  .home-switch { position: fixed; z-index: 40; left: 16px; bottom: 16px; display: flex; flex-wrap: wrap; align-items: center; gap: 4px; max-width: calc(100vw - 32px); padding: 6px 8px 6px 14px; border-radius: 99px; background: oklch(0.16 0 0 / 0.92); color: #fff; font-size: 12px; box-shadow: 0 10px 30px oklch(0 0 0 / 0.25); backdrop-filter: blur(8px); }
+  .home-switch span { margin-right: 6px; opacity: 0.7; }
+  .home-switch a { display: grid; place-items: center; min-width: 30px; height: 30px; padding-inline: 8px; border-radius: 99px; transition: background 0.2s; }
+  .home-switch a:hover { background: oklch(1 0 0 / 0.14); }
+  .home-switch a[aria-current='page'] { background: #fff; color: var(--ink); }
+  .home-switch .home-switch-live { margin-left: 4px; border: 1px solid oklch(1 0 0 / 0.3); }
+  .home-switch em { margin-inline: 8px 6px; font-style: normal; opacity: 0.8; }
+  @media (max-width: 640px) { .home-switch em, .home-switch span { display: none; } .home-switch { bottom: 84px; } }
+</style>

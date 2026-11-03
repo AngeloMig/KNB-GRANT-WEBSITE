@@ -7,9 +7,9 @@ import SectionTitle from '../components/SectionTitle.astro';
 import DeviceFrames from '../components/DeviceFrames.astro';
 import Arrow from '../components/Arrow.astro';
 import VideoReviews from '../components/VideoReviews.astro';
+import ExperienceSection from '../components/ExperienceSection.astro';
 import IdeaLegend from '../components/IdeaLegend.astro';
 import { projects } from '../data/projects';
-import { experience } from '../data/profile';
 
 export function getStaticPaths() {
   return import.meta.env.DEV ? [{ params: { preview: 'ideas' } }] : [];
@@ -183,10 +183,7 @@ const ribbon = [
       </div>
     </section>
 
-    <section class="experience-section" aria-labelledby="experience-heading">
-      <div class="experience-intro" data-reveal><h2 id="experience-heading" data-lines>Good work comes<br />from experience.</h2><a href={withBase('/about/')} class="text-link">The full story <Arrow diagonal /></a></div>
-      <div class="experience-list">{experience.map((item, index) => <div class="experience-item" data-reveal style={`--reveal-index:${index}`}><div><h3>{item.company}</h3><p>{item.role}</p></div><span>{item.dates}</span></div>)}</div>
-    </section>
+    <ExperienceSection />
 
     <p class="idea-tag-row idea-tag-gap"><span class="idea-tag" id="idea-18"><b>18</b>{tag(18).name}<em>the line at the very top</em></span><span class="idea-tag" id="idea-20"><b>20</b>{tag(20).name}<em>try it in the “20 ideas” panel</em></span></p>
     <section class="idea-close" aria-labelledby="idea-close-h">

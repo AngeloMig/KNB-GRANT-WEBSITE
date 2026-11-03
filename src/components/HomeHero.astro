@@ -1,0 +1,350 @@
+---
+// The homepage first screen: "GRANT DEV14." drawn in dots, with the project orbit rising over it on
+// a dotted track. On load the cards fan out from the front card and the dots settle into the name; whichever project is at the front gives the
+// name, the header and the menu button a subtle shade of its colour. The cursor scatters the dots.
+import { withBase } from '../utils/paths';
+import Arrow from './Arrow.astro';
+import ProjectOrbit from './ProjectOrbit.astro';
+---
+<section class="home-hero" aria-label="Introduction">
+  <div class="wrap home-hero-top">
+    <h1 class="tiny-heading">Shopify, Webflow & WordPress developer</h1>
+    <div class="home-hero-name">
+      <canvas class="home-hero-dots" role="img" aria-label="Grant Dev14."></canvas>
+      <p class="home-hero-fallback display" aria-hidden="true">GRANT DEV14.</p>
+    </div>
+  </div>
+  <div class="home-hero-stage">
+    <canvas class="home-hero-track" aria-hidden="true"></canvas>
+    <ProjectOrbit card="var(--hero-card)" />
+  </div>
+  <div class="wrap home-hero-row">
+    <p class="home-hero-lead">Thoughtful websites, built to work beautifully. I’m Grant: I turn designs into custom websites and ecommerce for brands and agencies.</p>
+    <div class="home-hero-actions hero-actions">
+      <a class="cta-primary" href={withBase('/estimate/')}>Get a free estimate <Arrow diagonal /></a>
+      <a class="cta-ghost" href="#work">See my work</a>
+    </div>
+    <a class="intro-quote" href="#reviews"><span class="review-avatar" aria-hidden="true">C</span><span><q>He’s just an absolute weapon when it comes to Shopify.</q><small>Carlos · CEO & Owner, MDO Digital · <u>Watch the video</u></small></span></a>
+  </div>
+  <noscript><style>.home-hero-fallback { visibility: visible !important; }</style></noscript>
+</section>
+
+<script>
+  const root = document.documentElement;
+  const motion = root.classList.contains('motion');
+  const fine = matchMedia('(hover: hover) and (pointer: fine)').matches;
+  const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+  const ink = getComputedStyle(root).getPropertyValue('--ink').trim() || '#161616';
+  const watch = (el: Element) => {
+    const state = { on: false };
+    new IntersectionObserver(([e]) => { state.on = e.isIntersecting; }, { threshold: 0 }).observe(el);
+    return state;
+  };
+
+  // ── The orbit: once it's on screen (after the intro loader) the cards fan out from behind the front
+  // card, then it steps to the next project every few seconds. Drag or swipe with momentum; it settles on the nearest project. Arrows move one.
+  class Orbit {
+    rot = 0; front = -1;
+    constructor(el: HTMLElement, onFront: (card: HTMLElement) => void) {
+      const ring = el.querySelector<HTMLElement>('.ob-ring')!;
+      const spin = el.querySelector<HTMLElement>('.ob-spin')!;
+      const cards = [...el.querySelectorAll<HTMLElement>('.ob-card')];
+      const angles = cards.map((c) => Number(c.dataset.angle));
+      const captions = [...el.querySelectorAll<HTMLElement>('.ob-caption')];
+      const step = 360 / cards.length;
+      const seen = watch(el);
+      if (!fine) el.classList.add('ob-touch');
+      let vel = 0, dragging = false, lastX = 0, moved = 0, pausedUntil = 0, hover = false, next = 0, last = performance.now();
+      // Every turn is a timed tween (same speed on any screen refresh rate): gentle in, gentle out.
+      const inOut = (t: number) => (t < 0.5 ? 4 * t ** 3 : 1 - (-2 * t + 2) ** 3 / 2);
+      const out = (t: number) => 1 - (1 - t) ** 3;
+      let tween: { from: number; to: number; start: number; dur: number; ease: (t: number) => number } | null = null;
+      const turnTo = (to: number, dur: number, ease = inOut) => {
+        if (!motion) { this.rot = to; tween = null; return; }
+        tween = { from: this.rot, to, start: performance.now(), dur, ease };
+      };
+      const nearest = () => Math.round(this.rot / step) * step;
+      const INTRO = 2200;
+      let intro = motion, introAt = 0, spread = motion ? 0 : 1;
+      const endIntro = () => { intro = false; spread = 1; spin.style.setProperty('--spread', '1'); el.style.opacity = ''; el.style.translate = ''; next = performance.now() + 3400; onFront(cards[this.front]); };
+      if (intro) { el.style.opacity = '0'; el.style.translate = '0 32px'; }
+      const frame = () => {
+        const time = performance.now(), dt = Math.min(3, (time - last) / 16.67);
+        last = time;
+        // Nothing to do while the hero is scrolled out of view.
+        if (!seen.on) { requestAnimationFrame(frame); return; }
+        if (intro) {
+          if (!introAt && !root.classList.contains('is-loading')) introAt = performance.now();
+          if (introAt) {
+            const t = Math.min(1, (performance.now() - introAt) / INTRO);
+            const e = 1 - (1 - t) ** 5;
+            spread = e;
+            spin.style.setProperty('--spread', e.toFixed(4));
+            el.style.opacity = String(out(Math.min(1, t / 0.6)));
+            el.style.translate = `0 ${(32 * (1 - e)).toFixed(1)}px`;
+            if (t >= 1) endIntro();
+          }
+        } else if (!dragging) {
+          if (tween) {
+            const t = Math.min(1, (time - tween.start) / tween.dur);
+            this.rot = tween.from + (tween.to - tween.from) * tween.ease(t);
+            if (t >= 1) tween = null;
+          }
+          else if (Math.abs(vel) > 0.08) { this.rot += vel * dt; vel *= 0.94 ** dt; }
+          else if (Math.abs(this.rot - nearest()) > 0.05) { vel = 0; turnTo(nearest(), 700, out); }
+          else if (motion && !hover && !document.hidden && time > Math.max(pausedUntil, next)) { turnTo(nearest() - step, 1400); next = time + 1400 + 3200; }
+        }
+        spin.style.transform = `translateZ(calc(var(--r) * -1)) rotateY(${this.rot}deg)`;
+        cards.forEach((card, i) => {
+          const d = ((((angles[i] * spread + this.rot) % 360) + 540) % 360) - 180;
+          const f = 1 - Math.abs(d) / 180;
+          // Solid cards, dimmed with distance; the back half fades out.
+          card.style.opacity = String(Math.max(0, Math.min(1, (170 - Math.abs(d)) / 70)));
+          card.style.filter = `brightness(${(0.62 + 0.38 * f ** 2).toFixed(3)})`;
+          const reachable = Math.abs(d) < step / 2;
+          card.style.pointerEvents = reachable ? 'auto' : 'none';
+          if (card.tabIndex !== (reachable ? 0 : -1)) card.tabIndex = reachable ? 0 : -1;
+        });
+        const now = ((Math.round(-this.rot / step) % cards.length) + cards.length) % cards.length;
+        if (now !== this.front) {
+          cards[this.front]?.classList.remove('is-front');
+          this.front = now;
+          cards[now].classList.add('is-front');
+          captions.forEach((c, i) => c.classList.toggle('is-active', i === now));
+          if (!intro) onFront(cards[now]);
+        }
+        requestAnimationFrame(frame);
+      };
+      requestAnimationFrame(frame);
+      ring.addEventListener('pointerdown', (e) => { if (intro) endIntro(); dragging = true; lastX = e.clientX; moved = 0; vel = 0; tween = null; ring.setPointerCapture(e.pointerId); });
+      ring.addEventListener('pointermove', (e) => { if (!dragging) return; const dx = e.clientX - lastX; lastX = e.clientX; moved += Math.abs(dx); this.rot += dx * 0.22; vel = dx * 0.22; });
+      const release = () => { dragging = false; pausedUntil = performance.now() + 2500; };
+      ring.addEventListener('pointerup', release);
+      ring.addEventListener('pointercancel', release);
+      ring.addEventListener('click', (e) => { if (moved > 6) e.preventDefault(); }, true);
+      ring.addEventListener('pointerenter', () => { hover = true; });
+      ring.addEventListener('pointerleave', () => { hover = false; });
+      ring.addEventListener('focusin', () => { hover = true; });
+      ring.addEventListener('focusout', () => { hover = false; });
+      el.querySelectorAll<HTMLButtonElement>('.ob-arrow').forEach((b) => b.addEventListener('click', () => {
+        if (intro) endIntro();
+        vel = 0;
+        // Quick clicks queue up: each one turns a further project from where the last was heading.
+        const from = tween ? tween.to : nearest();
+        turnTo(from - Number(b.dataset.dir) * step, 900);
+        pausedUntil = performance.now() + 4000;
+      }));
+    }
+  }
+
+  // ── The dot name: the letters are sampled into dots. Each dot springs back home; the cursor pushes
+  // dots away (on touch screens a ripple runs through every few seconds). The colour eases between shades.
+  type Dot = { x: number; y: number; vx: number; vy: number; hx: number; hy: number };
+  class DotName {
+    ctx: CanvasRenderingContext2D;
+    dots: Dot[] = [];
+    W = 0; H = 0; gap = 6; px = -1e4; py = -1e4; awake = true;
+    lch = [0.16, 0, 0]; lchTo: number[] | null = null; color = ink;
+    seen: { on: boolean } = { on: false };
+    // The first settle into the name uses a softer spring than the cursor scatter.
+    settling = false; settleEnd = 0;
+    constructor(public canvas: HTMLCanvasElement, public text: string, public ready: () => void) {
+      this.ctx = canvas.getContext('2d')!;
+      this.seen = watch(canvas);
+      if (fine) {
+        canvas.addEventListener('pointermove', (e) => { const r = canvas.getBoundingClientRect(); this.px = e.clientX - r.left; this.py = e.clientY - r.top; this.awake = true; });
+        canvas.addEventListener('pointerleave', () => { this.px = this.py = -1e4; });
+      } else if (motion) {
+        (async () => { for (;;) { await sleep(2800); if (!this.seen.on || !this.dots.length) continue; const d = this.dots[(Math.random() * this.dots.length) | 0]; for (let k = 0; k < 24; k++) { this.px = d.hx + (k - 12) * 7; this.py = d.hy; this.awake = true; await sleep(16); } this.px = this.py = -1e4; } })();
+      }
+      const loop = () => {
+        if (this.seen.on && this.awake && !root.classList.contains('is-loading')) {
+          if (this.settling && !this.settleEnd) this.settleEnd = performance.now() + 2200;
+          this.step();
+        }
+        requestAnimationFrame(loop);
+      };
+      if (motion) requestAnimationFrame(loop);
+      this.build();
+      let width = innerWidth, timer = 0;
+      addEventListener('resize', () => { clearTimeout(timer); timer = window.setTimeout(() => { if (Math.abs(innerWidth - width) > 40) { width = innerWidth; this.build(); } }, 250); });
+    }
+    async build() {
+      await document.fonts.load('800 200px "Big Shoulders Display"');
+      const r = this.canvas.getBoundingClientRect();
+      this.W = Math.floor(r.width); this.H = Math.floor(r.height);
+      if (!this.W || !this.H) return;
+      const dpr = Math.min(2, devicePixelRatio || 1);
+      this.canvas.width = this.W * dpr; this.canvas.height = this.H * dpr;
+      this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      const { W, H } = this;
+      this.gap = W < 640 ? 4 : W < 1100 ? 5 : 6;
+      const off = document.createElement('canvas'); off.width = W; off.height = H;
+      const o = off.getContext('2d')!;
+      const lines = W < 640 ? this.text.split(' ') : [this.text];
+      let size = (H / lines.length) * 1.12;
+      o.font = `800 ${size}px "Big Shoulders Display"`;
+      const widest = Math.max(...lines.map((l) => o.measureText(l).width));
+      size = Math.min(size, (size * W * 0.98) / widest);
+      o.font = `800 ${size}px "Big Shoulders Display"`;
+      o.textAlign = 'center'; o.textBaseline = 'middle';
+      lines.forEach((l, i) => o.fillText(l, W / 2, (H * (i + 0.5)) / lines.length + size * 0.04));
+      const data = o.getImageData(0, 0, W, H).data;
+      const gap = this.gap;
+      // The first time (with motion on), each dot starts a little way off and drifts home.
+      const scatter = motion && !this.dots.length ? 26 : 0;
+      if (scatter) this.settling = true;
+      this.dots = [];
+      for (let y = gap / 2; y < H; y += gap) for (let x = gap / 2; x < W; x += gap) {
+        if (data[((y | 0) * W + (x | 0)) * 4 + 3] > 128) this.dots.push({ hx: x, hy: y, x: x + (Math.random() - 0.5) * scatter * 2, y: y + (Math.random() - 0.5) * scatter * 2, vx: 0, vy: 0 });
+      }
+      this.awake = true;
+      this.draw();
+      this.ready();
+    }
+    // Ease the dot colour to a new oklch colour (hue takes the short way round).
+    tint(l: number, c: number, h: number) {
+      if (!this.lch[1]) this.lch[2] = h;
+      if (!motion) { this.lch = [l, c, h]; this.color = `oklch(${l} ${c} ${h})`; this.draw(); return; }
+      this.lchTo = [l, c, h];
+      this.awake = true;
+    }
+    step() {
+      let moving = 0;
+      if (this.lchTo) {
+        const [l, c, h] = this.lch, [tl, tc, th] = this.lchTo;
+        const dh = ((th - h + 540) % 360) - 180;
+        this.lch = [l + (tl - l) * 0.035, c + (tc - c) * 0.035, (h + dh * 0.035 + 360) % 360];
+        this.color = `oklch(${this.lch[0].toFixed(3)} ${this.lch[1].toFixed(3)} ${this.lch[2].toFixed(1)})`;
+        if (Math.abs(tl - l) + Math.abs(tc - c) + Math.abs(dh) / 360 < 0.002) { this.lch = [...this.lchTo]; this.lchTo = null; }
+        moving = 1;
+      }
+      const R = 110;
+      if (this.settling && this.settleEnd && performance.now() > this.settleEnd) this.settling = false;
+      const k = this.settling ? 0.022 : 0.05, damp = this.settling ? 0.86 : 0.82;
+      for (const d of this.dots) {
+        const dx = d.x - this.px, dy = d.y - this.py, dist = Math.hypot(dx, dy);
+        if (dist < R && dist > 0.1) { const f = (1 - dist / R) * 3.6; d.vx += (dx / dist) * f; d.vy += (dy / dist) * f; }
+        d.vx += (d.hx - d.x) * k; d.vy += (d.hy - d.y) * k;
+        d.vx *= damp; d.vy *= damp;
+        d.x += d.vx; d.y += d.vy;
+        moving = Math.max(moving, Math.abs(d.vx) + Math.abs(d.vy));
+      }
+      this.draw();
+      if (moving < 0.02 && this.px < -1e3) this.awake = false;
+    }
+    draw() {
+      const { ctx } = this;
+      ctx.clearRect(0, 0, this.W, this.H);
+      const still = new Path2D(), moved = new Path2D();
+      const rad = this.gap * 0.36;
+      for (const d of this.dots) {
+        const p = Math.abs(d.x - d.hx) + Math.abs(d.y - d.hy) > 2 ? moved : still;
+        p.moveTo(d.x + rad, d.y); p.arc(d.x, d.y, rad, 0, 6.2832);
+      }
+      ctx.fillStyle = this.color; ctx.fill(still);
+      // Dots on the move light up in the project's colour (grey until a project has set one).
+      ctx.fillStyle = this.lch[1] > 0.01 ? `oklch(0.6 0.14 ${this.lch[2].toFixed(1)})` : 'oklch(0.55 0 0)'; ctx.fill(moved);
+    }
+  }
+
+  const hero = document.querySelector<HTMLElement>('.home-hero');
+  if (hero) {
+    const fallback = hero.querySelector<HTMLElement>('.home-hero-fallback')!;
+    const name = new DotName(hero.querySelector('.home-hero-dots')!, 'GRANT DEV14.', () => { fallback.hidden = true; });
+    const stage = hero.querySelector<HTMLElement>('.home-hero-stage')!;
+    const track = hero.querySelector<HTMLCanvasElement>('.home-hero-track')!;
+    const tctx = track.getContext('2d')!;
+    let hue = '60';
+    const orbit = new Orbit(hero.querySelector('.ob')!, (card) => {
+      hue = card.dataset.hue!;
+      // Subtle: the name, the menu button and "Let's talk" take a deep shade of the project's colour,
+      // and the header and hero a faint wash of it.
+      name.tint(0.33, 0.07, Number(hue));
+      root.classList.add('hero-tinted');
+      root.style.setProperty('--hero-wash', `oklch(0.982 0.009 ${hue})`);
+      root.style.setProperty('--hero-ink', `oklch(0.33 0.07 ${hue})`);
+    });
+
+    // ── The dotted track: a ring of dots under the cards that turns with them; the dots under the
+    // front card light up in its colour, and the cursor nudges them aside.
+    const seen = watch(stage);
+    const N = 150;
+    const off = Array.from({ length: N }, () => ({ x: 0, y: 0, vx: 0, vy: 0 }));
+    let px = -1e4, py = -1e4, W = 0, H = 0;
+    const size = () => {
+      const r = track.getBoundingClientRect();
+      W = Math.floor(r.width); H = Math.floor(r.height);
+      const dpr = Math.min(2, devicePixelRatio || 1);
+      track.width = W * dpr; track.height = H * dpr;
+      tctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    };
+    size();
+    addEventListener('resize', size);
+    if (fine) {
+      stage.addEventListener('pointermove', (e) => { const r = track.getBoundingClientRect(); px = e.clientX - r.left; py = e.clientY - r.top; });
+      stage.addEventListener('pointerleave', () => { px = py = -1e4; });
+    }
+    const card = hero.querySelector<HTMLElement>('.ob-card')!;
+    const ring = hero.querySelector<HTMLElement>('.ob-ring')!;
+    const draw = () => {
+      if (seen.on) {
+        const cw = card.offsetWidth, R = cw * 1.05, P = 1800;
+        const ringBox = ring.getBoundingClientRect(), box = track.getBoundingClientRect();
+        const cx = ringBox.left - box.left + ringBox.width / 2;
+        const horizon = ringBox.top - box.top + ringBox.height / 2;
+        const floor = ringBox.top - box.top + cw * 0.5625 + 40;
+        tctx.clearRect(0, 0, W, H);
+        for (let i = 0; i < N; i++) {
+          const deg = (i / N) * 360 + orbit.rot;
+          const a = deg * (Math.PI / 180);
+          const k = P / (P - (Math.cos(a) * R - R));
+          const o = off[i];
+          let x = cx + Math.sin(a) * R * k, y = horizon + (floor - horizon) * k;
+          const dx = x + o.x - px, dy = y + o.y - py, dist = Math.hypot(dx, dy);
+          if (dist < 90 && dist > 0.1) { const f = (1 - dist / 90) * 4; o.vx += (dx / dist) * f; o.vy += (dy / dist) * f; }
+          o.vx += -o.x * 0.07; o.vy += -o.y * 0.07; o.vx *= 0.8; o.vy *= 0.8; o.x += o.vx; o.y += o.vy;
+          x += o.x; y += o.y;
+          const near = Math.abs((((deg % 360) + 540) % 360) - 180) < 22;
+          tctx.beginPath();
+          tctx.arc(x, y, (near ? 3.4 : 2) * k ** 1.5, 0, 6.2832);
+          tctx.fillStyle = near ? `oklch(0.55 0.15 ${hue})` : `oklch(0.16 0 0 / ${Math.min(0.85, 0.25 + 0.7 * (k - 0.6)).toFixed(2)})`;
+          tctx.fill();
+        }
+      }
+      if (motion) requestAnimationFrame(draw);
+    };
+    // Without motion the ring is drawn once, after the cards are laid out.
+    requestAnimationFrame(draw);
+  }
+</script>
+
+<style>
+  .home-hero { --hero-card: clamp(270px, 36vw, 600px); position: relative; overflow: hidden; padding-block: 0 64px; background-color: var(--hero-wash, var(--bg)); transition: background-color 1.4s var(--ease); }
+  .home-hero-name { display: grid; margin-top: 18px; }
+  .home-hero-name > * { grid-area: 1 / 1; }
+  .home-hero-dots { display: block; width: 100%; height: clamp(160px, 20vw, 330px); touch-action: pan-y; }
+  /* Shown only without JavaScript (the dots are drawn by script). */
+  .home-hero-fallback { visibility: hidden; display: grid; place-items: center; margin: 0; font-size: clamp(90px, 19vw, 320px); line-height: 1; text-align: center; }
+  /* The orbit rises over the bottom of the name. */
+  .home-hero-stage { position: relative; z-index: 1; margin-top: calc(var(--hero-card) * -0.16); padding-bottom: 50px; }
+  .home-hero-track { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+  .home-hero-stage :global(.ob) { position: relative; z-index: 1; }
+  .home-hero-row { position: relative; z-index: 3; display: grid; grid-template-columns: 1.1fr auto auto; gap: 24px 32px; align-items: center; margin-top: 34px; }
+  .home-hero-lead { max-width: 460px; font-size: 16px; line-height: 1.5; }
+  .home-hero-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+  .home-hero-row .intro-quote { margin: 0; }
+
+  /* The header shares the hero's wash (full width), and its menu button and "Let's talk" the deep shade. */
+  :global(html.hero-tinted .site-header) { background: transparent; isolation: isolate; }
+  :global(html.hero-tinted .site-header)::before { content: ''; position: absolute; z-index: -1; inset: 0 calc(50% - 50vw); background: var(--hero-wash); transition: background-color 1.4s var(--ease); }
+  :global(html.hero-tinted .menu-toggle) { background-color: var(--hero-ink); transition: background-color 1.4s var(--ease), transform 0.3s var(--ease); }
+  :global(html.hero-tinted .header-contact) { color: var(--hero-ink); transition: color 1.4s var(--ease); }
+
+  @media (max-width: 900px) {
+    .home-hero-row { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 640px) {
+    .home-hero-stage { margin-top: 12px; }
+  }
+</style>

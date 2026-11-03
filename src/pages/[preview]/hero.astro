@@ -1,0 +1,906 @@
+---
+// Design preview of ten homepage hero ideas. Local preview only: in a build this route has no pages.
+// Open http://localhost:4321/ideas/hero/ while `npm run dev` runs. Only real content is used: your
+// projects and their screenshots, the Carlos quote and video, and the site's own fonts and colours.
+import { withBase } from '../../utils/paths';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import SectionTitle from '../../components/SectionTitle.astro';
+import Arrow from '../../components/Arrow.astro';
+import IdeaLegend from '../../components/IdeaLegend.astro';
+import HeroCopy from './_HeroCopy.astro';
+import { projects } from '../../data/projects';
+
+export function getStaticPaths() {
+  return import.meta.env.DEV ? [{ params: { preview: 'ideas' } }] : [];
+}
+
+const IDEAS = [
+  [1, 'The Live Build'], [2, 'Type window'], [3, 'Project orbit'], [4, 'The desk'], [5, 'Design to live'],
+  [6, 'Departure board'], [7, 'Wall of work'], [8, 'Project names'], [9, 'Command palette'], [10, 'Dot-matrix name'],
+] as const;
+const img = (slug: string, size = '') => withBase(`/images/projects/${slug}${size}.webp`);
+const host = (url: string) => new URL(url).hostname.replace('www.', '');
+// The site's project-card tints, so backgrounds match each project.
+const tints: Record<string, string> = {
+  olive: 'oklch(0.79 0.025 105)', lilac: 'oklch(0.91 0.017 295)', violet: 'oklch(0.84 0.04 285)',
+  rose: 'oklch(0.91 0.018 20)', blue: 'oklch(0.84 0.02 245)', clay: 'oklch(0.87 0.02 60)',
+};
+const bySlug = (slug: string) => projects.find((p) => p.slug === slug)!;
+
+// 1: example code for each platform. It's illustrative, not taken from the client projects.
+const code: Record<string, string> = {
+  Shopify: `{% section 'hero-banner' %}\n\n<ul class="product-grid">\n  {% for product in collection.products limit: 8 %}\n    {% render 'product-card', product: product %}\n  {% endfor %}\n</ul>\n\n{{ 'theme.css' | asset_url | stylesheet_tag }}`,
+  WordPress: `<?php get_header(); ?>\n\n<main class="site-main">\n  <?php while ( have_posts() ) : the_post(); ?>\n    <?php get_template_part( 'parts/card' ); ?>\n  <?php endwhile; ?>\n</main>\n\n<?php get_footer(); ?>`,
+};
+const lang: Record<string, string> = { Shopify: 'Liquid', WordPress: 'PHP' };
+const build = ['road-armor', 'coptrz', 'tero', 'omenz'].map(bySlug).filter(Boolean).map((p) => ({ slug: p.slug, name: p.name, platform: p.platform, host: host(p.url), code: code[p.platform] ?? code.Shopify, lang: lang[p.platform] ?? 'HTML' }));
+
+// 2: a strip of screenshots that pans inside the letters (repeated so the loop is seamless).
+const strip = projects.map((p) => p.slug);
+const STRIP_W = 462, STRIP_H = 260;
+
+// 4: windows on the desk.
+const desk = [
+  { slug: 'road-armor', x: 2, y: 7, w: 22, depth: 0.12, rot: -2 },
+  { slug: 'tero', x: 76, y: 6, w: 22, depth: 0.2, rot: 2 },
+  { slug: 'light-my-bricks', x: 75, y: 62, w: 21, depth: 0.08, rot: -1.5 },
+  { slug: 'coptrz', x: 3, y: 63, w: 20, depth: 0.16, rot: 1.5 },
+].map((d) => ({ ...d, project: bySlug(d.slug) })).filter((d) => d.project);
+
+// 6: the departure board. Words flip through on the big board; the rows are your real projects.
+const flapWords = ['SHOPIFY', 'WEBFLOW', 'WORDPRESS'];
+const FLAPS = Math.max(...flapWords.map((w) => w.length));
+
+// 7: rows of screenshots for the tilted wall (each row starts on a different project).
+const wallRows = [0, 2, 4, 1].map((start) => [...projects.slice(start), ...projects.slice(0, start)]);
+
+// 9: the command palette. Each option opens the estimator on the next question (?brief=…).
+const brief = (answers: Record<string, string>) => `${withBase('/estimate/')}?brief=${Buffer.from(JSON.stringify(answers)).toString('base64url')}`;
+const palette = [
+  { label: 'A new website or store', hint: 'Custom themes and ecommerce builds', icon: '+', keywords: 'new build store shop launch start', href: brief({ type: 'new' }) },
+  { label: 'Redesign my current site', hint: 'A new look for an existing website', icon: '↻', keywords: 'redesign refresh revamp update look', href: brief({ type: 'redesign' }) },
+  { label: 'Move to a new platform', hint: 'Platform migrations and integrations', icon: '⇄', keywords: 'move migrate migration switch platform shopify webflow wordpress', href: brief({ type: 'migration' }) },
+  { label: 'Speed and fixes', hint: 'Page speed, bugs and technical SEO', icon: '⚡', keywords: 'speed fast slow fix bug seo performance', href: brief({ type: 'improvements' }) },
+  { label: 'Monthly help', hint: 'Ongoing support every month', icon: '◷', keywords: 'monthly support help maintenance retainer', href: brief({ type: 'support' }) },
+];
+---
+<BaseLayout title="Hero ideas preview | Grant Dev14" description="Local design preview." noindex>
+  <IdeaLegend ideas={IDEAS} links={[{ label: 'Homepage ideas 1–20', href: '/ideas/' }, { label: 'Compare with the current homepage', href: '/' }]} />
+
+  <!-- Current hero, for comparison -->
+  <div class="wrap hx-current">
+    <span class="idea-tag hx-tag-muted"><b>0</b>Current hero</span>
+    <SectionTitle title="PROJECTS" detail="A selection of web development work" id="top-title" />
+    <section class="intro-split" aria-label="Current introduction">
+      <div class="intro-aside"><p class="tiny-heading">Shopify, Webflow & WordPress developer</p><p>Custom websites & ecommerce<br />Based in the Philippines</p><p class="intro-trust"><strong>4+ years</strong> building Shopify stores at Rivyl<br />Trusted by Rivyl, MDO Digital & Modern Shelving</p></div>
+      <div class="intro-copy">
+        <p class="lead">Thoughtful websites. <br />Built to work beautifully.</p>
+        <p class="intro-support">I’m Grant, a web developer turning designs into custom websites and ecommerce experiences for brands and agencies.</p>
+      </div>
+    </section>
+  </div>
+
+  <!-- 1: The Live Build -->
+  <section class="hx hx1" id="idea-1" aria-label="Idea 1: The Live Build">
+    <span class="idea-tag hx-tag"><b>1</b>The Live Build<em>code types itself, then the finished site wipes in</em></span>
+    <div class="wrap hx1-grid">
+      <HeroCopy headline="Thoughtful websites.<br />Built to work beautifully." first />
+      <div class="hx1-device">
+        <div class="hx1-laptop" data-build={JSON.stringify(build)}>
+          <div class="laptop-lid"><div class="laptop-screen hx1-screen">
+            <span class="laptop-notch" aria-hidden="true"></span>
+            <div class="laptop-toolbar" aria-hidden="true"><i></i><i></i><i></i><span class="hx1-host">{build[0].host}</span></div>
+            <div class="hx1-stage">
+              <pre class="hx1-code" aria-hidden="true"><code></code><b class="hx1-caret"></b></pre>
+              {build.map((b, i) => <img class:list={['hx1-shot', { 'is-active': i === 0 }]} src={img(b.slug, '-960')} srcset={`${img(b.slug, '-960')} 960w, ${img(b.slug)} 1275w`} sizes="(max-width: 900px) 90vw, 50vw" alt={`${b.name} homepage`} width="960" height="540" loading={i === 0 ? 'eager' : 'lazy'} fetchpriority={i === 0 ? 'high' : undefined} />)}
+            </div>
+          </div></div>
+          <div class="laptop-base" aria-hidden="true"></div>
+        </div>
+        <p class="hx1-chip" aria-live="polite"><i></i><span class="hx1-chip-text">{build[0].name} · {build[0].platform} · {build[0].lang}</span></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2: Type window -->
+  <section class="hx2" id="idea-2" aria-label="Idea 2: Type window">
+    <div class="hx2-sticky">
+      <span class="idea-tag hx-tag"><b>2</b>Type window<em>your screenshots pan inside the letters; scroll to open it up</em></span>
+      <div class="hx2-full" aria-hidden="true"><img src={img('road-armor')} alt="" width="1275" height="717" loading="lazy" /></div>
+      <div class="wrap hx2-inner">
+        <p class="tiny-heading hx2-kicker">Shopify, Webflow & WordPress developer</p>
+        {[{ id: 'wide', vb: '0 0 1000 250', lines: [['BUILT TO WORK.', 222]] }, { id: 'narrow', vb: '0 0 600 470', lines: [['BUILT TO', 215], ['WORK.', 450]] }].map((v) => (
+          <svg class={`hx2-word hx2-word-${v.id}`} viewBox={v.vb} role="img" aria-label="Built to work.">
+            <defs><clipPath id={`hx2-clip-${v.id}`}>{v.lines.map(([t, y]) => <text x="0" y={y} textLength={v.id === 'wide' ? 1000 : 600} lengthAdjust="spacingAndGlyphs">{t}</text>)}</clipPath></defs>
+            <g clip-path={`url(#hx2-clip-${v.id})`}>
+              <rect width="100%" height="100%" fill="#161616" />
+              <g class="hx2-strip" style={`--strip:-${strip.length * STRIP_W}px`}>{[...strip, ...strip].map((slug, i) => <image href={img(slug, '-640')} x={i * STRIP_W} y="0" width={STRIP_W} height={v.id === 'wide' ? 250 : 470} preserveAspectRatio="xMidYMin slice" />)}</g>
+              <rect width="100%" height="100%" fill="#000" opacity="0.12" />
+            </g>
+            {v.lines.map(([t, y]) => <text class="hx2-outline" x="0" y={y} textLength={v.id === 'wide' ? 1000 : 600} lengthAdjust="spacingAndGlyphs" aria-hidden="true">{t}</text>)}
+          </svg>
+        ))}
+        <div class="hx2-row">
+          <p class="hx2-lead">Thoughtful websites, built to work beautifully. I’m Grant: I turn designs into custom websites and ecommerce for brands and agencies.</p>
+          <div class="hx2-actions">
+            <a class="cta-primary" href={withBase('/estimate/')}>Get a free estimate <Arrow diagonal /></a>
+            <a class="cta-ghost" href={withBase('/#work')}>See my work</a>
+          </div>
+          <a class="intro-quote" href={withBase('/#reviews')}><span class="review-avatar" aria-hidden="true">C</span><span><q>He’s just an absolute weapon when it comes to Shopify.</q><small>Carlos · CEO & Owner, MDO Digital</small></span></a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3: Project orbit -->
+  <section class="hx hx3" id="idea-3" aria-label="Idea 3: Project orbit" style={`--tint:${tints[projects[0].canvas]}`}>
+    <span class="idea-tag hx-tag"><b>3</b>Project orbit<em>drag or swipe to spin; the background takes the front project’s colour</em></span>
+    <div class="wrap hx3-top"><HeroCopy headline="Thoughtful websites.<br />Built to work beautifully." align="center" quote={false} /></div>
+    <div class="hx3-ring" aria-roledescription="carousel" aria-label="Projects">
+      <div class="hx3-spin" style={`--step:${360 / projects.length}deg`}>{projects.map((p, i) => (
+        <a class="hx3-card" href={withBase(`/work/${p.slug}/`)} style={`--i:${i}`} data-tint={tints[p.canvas]} draggable="false">
+          <span class="hx3-bar" aria-hidden="true"><i></i><i></i><i></i><b>{host(p.url)}</b></span>
+          <img src={img(p.slug, '-640')} alt={`${p.name} homepage`} width="640" height="360" loading={i < 2 ? 'eager' : 'lazy'} draggable="false" />
+        </a>
+      ))}</div>
+    </div>
+    <div class="wrap hx3-foot">
+      <button type="button" class="hx3-arrow" data-dir="-1" aria-label="Previous project">←</button>
+      <div class="hx3-captions" aria-live="polite">{projects.map((p, i) => <p class:list={['hx3-caption', { 'is-active': i === 0 }]}><strong>{p.name}</strong><span>{p.platform} · {p.category}</span><a href={withBase(`/work/${p.slug}/`)}>View project <Arrow diagonal /></a></p>)}</div>
+      <button type="button" class="hx3-arrow" data-dir="1" aria-label="Next project">→</button>
+    </div>
+  </section>
+
+  <!-- 4: The desk -->
+  <section class="hx hx4" id="idea-4" aria-label="Idea 4: The desk">
+    <span class="idea-tag hx-tag"><b>4</b>The desk<em>drag the windows by their top bar; play Carlos’s video</em></span>
+    <div class="hx4-desk">
+      {desk.map((d) => (
+        <figure class="hx4-win" style={`--x:${d.x}%;--y:${d.y}%;--w:${d.w}%;--depth:${d.depth};--rot:${d.rot}deg`}>
+          <div class="hx4-bar"><i></i><i></i><i></i><span>{host(d.project.url)}</span></div>
+          <a href={withBase(`/work/${d.slug}/`)} draggable="false"><img src={img(d.slug, '-640')} alt={`${d.project.name} homepage`} width="640" height="360" loading="lazy" draggable="false" /></a>
+        </figure>
+      ))}
+      <figure class="hx4-win hx4-video" style="--x:25.5%;--y:5%;--w:9%;--depth:0.24;--rot:-3deg">
+        <div class="hx4-bar"><i></i><i></i><i></i><span>Carlos · MDO Digital</span></div>
+        <div class="hx4-video-body">
+          <video preload="none" playsinline poster={withBase('/videos/carlos-mdo-digital.jpg')} data-src={withBase('/videos/carlos-mdo-digital.mp4')} width="1080" height="1350"></video>
+          <button type="button" class="hx4-play"><span aria-hidden="true">▶</span> Watch Carlos</button>
+        </div>
+      </figure>
+      <figure class="hx4-win hx4-note" style="--x:25%;--y:68%;--w:13%;--depth:0.1;--rot:3deg">
+        <blockquote>“He’s just an absolute weapon when it comes to Shopify.”</blockquote>
+        <figcaption>Carlos · CEO & Owner, MDO Digital</figcaption>
+      </figure>
+    </div>
+    <div class="wrap hx4-center"><HeroCopy headline="Thoughtful websites.<br />Built to work beautifully." align="center" quote={false} /></div>
+  </section>
+
+  <!-- 5: Design to live -->
+  <section class="hx hx5" id="idea-5" aria-label="Idea 5: Design to live">
+    <span class="idea-tag hx-tag"><b>5</b>Design to live<em>move over the blueprint to reveal the live site; click to open it fully</em></span>
+    <div class="wrap hx5-grid">
+      <HeroCopy headline="From design<br />to development." light />
+      <div class="hx5-frame">
+        <div class="hx5-bar" aria-hidden="true"><i></i><i></i><i></i><span class="hx5-host">{host(projects[0].url)}</span></div>
+        <div class="hx5-stage" role="img" aria-label="A website shown as a blueprint, with the finished site revealed under a spotlight">
+          {projects.map((p, i) => (
+            <div class:list={['hx5-pair', { 'is-active': i === 0 }]} data-host={host(p.url)} data-name={p.name}>
+              <img class="hx5-blue" src={img(p.slug, '-960')} alt="" width="960" height="540" loading={i === 0 ? 'eager' : 'lazy'} />
+              <img class="hx5-live" src={img(p.slug, '-960')} alt="" width="960" height="540" loading={i === 0 ? 'eager' : 'lazy'} />
+            </div>
+          ))}
+          <span class="hx5-grid-lines" aria-hidden="true"></span>
+          <span class="hx5-ring" aria-hidden="true"><em>Live site</em></span>
+          <span class="hx5-label" aria-hidden="true">Design</span>
+        </div>
+        <p class="hx5-caption"><span class="hx5-name">{projects[0].name}</span> · Click or tap to open the whole site</p>
+      </div>
+    </div>
+  </section>
+  <!-- 6: Departure board -->
+  <section class="hx hx6" id="idea-6" aria-label="Idea 6: Departure board">
+    <span class="idea-tag hx-tag"><b>6</b>Departure board<em>the platform flips like an airport board; your projects are the departures</em></span>
+    <div class="wrap hx6-inner">
+      <p class="tiny-heading hx6-kicker">Shopify, Webflow & WordPress developer</p>
+      <p class="hx6-title" aria-label="I build Shopify, Webflow and WordPress websites.">
+        <span aria-hidden="true">I build</span>
+        <span class="hx6-flaps" aria-hidden="true" data-words={JSON.stringify(flapWords)}>{Array.from({ length: FLAPS }, (_, i) => <span class="hx6-flap">{flapWords[0][i] ?? ''}</span>)}</span>
+        <span aria-hidden="true">websites.</span>
+      </p>
+      <div class="hx6-board" role="table" aria-label="Recent projects">
+        <div class="hx6-row hx6-head" role="row"><span role="columnheader">Project</span><span role="columnheader">Platform</span><span role="columnheader" class="hx6-cat">Category</span><span role="columnheader">Status</span></div>
+        {projects.map((p, i) => (
+          <a class="hx6-row" role="row" href={withBase(`/work/${p.slug}/`)} style={`--i:${i}`}>
+            <span role="cell">{p.name}</span><span role="cell">{p.platform}</span><span role="cell" class="hx6-cat">{p.category}</span><span role="cell" class="hx6-live"><i></i>Live</span>
+          </a>
+        ))}
+      </div>
+      <div class="hx6-foot">
+        <div class="hc-actions hx6-actions">
+          <a class="cta-primary" href={withBase('/estimate/')}>Get a free estimate <Arrow diagonal /></a>
+          <a class="cta-ghost" href={withBase('/#work')}>See my work</a>
+        </div>
+        <a class="intro-quote hx6-quote" href={withBase('/#reviews')}><span class="review-avatar" aria-hidden="true">C</span><span><q>He’s just an absolute weapon when it comes to Shopify.</q><small>Carlos · CEO & Owner, MDO Digital</small></span></a>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7: Tilted wall -->
+  <section class="hx hx7" id="idea-7" aria-label="Idea 7: Tilted wall">
+    <span class="idea-tag hx-tag"><b>7</b>Wall of work<em>tilted rows of your sites drift past; scrolling pushes them along</em></span>
+    <div class="hx7-wall" aria-hidden="true">{wallRows.map((row, r) => (
+      <div class="hx7-row" style={`--dur:${70 + r * 12}s;--dir:${r % 2 ? 1 : -1}`}>{[...row, ...row].map((p) => <img src={img(p.slug, '-480')} alt="" width="480" height="270" loading="lazy" />)}</div>
+    ))}</div>
+    <div class="wrap hx7-center"><div class="hx7-card"><HeroCopy headline="Thoughtful websites.<br />Built to work beautifully." align="center" /></div></div>
+  </section>
+
+  <!-- 8: Name list -->
+  <section class="hx hx8" id="idea-8" aria-label="Idea 8: Project names">
+    <span class="idea-tag hx-tag"><b>8</b>Project names<em>huge names; hover one to see the site and its colour</em></span>
+    <div class="wrap">
+      <div class="hx8-top">
+        <div><p class="tiny-heading">Shopify, Webflow & WordPress developer</p><p class="hx8-title">Thoughtful websites.<br />Built to work beautifully.</p></div>
+        <div class="hx8-side">
+          <p>I’m Grant, a web developer turning designs into custom websites and ecommerce experiences for brands and agencies.</p>
+          <div class="hc-actions"><a class="cta-primary" href={withBase('/estimate/')}>Get a free estimate <Arrow diagonal /></a><a class="cta-ghost" href={withBase('/#work')}>See my work</a></div>
+        </div>
+      </div>
+      <ol class="hx8-list">{projects.map((p, i) => (
+        <li data-tint={tints[p.canvas]}><a href={withBase(`/work/${p.slug}/`)}>
+          <span class="hx8-num">{String(i + 1).padStart(2, '0')}</span>
+          <span class="hx8-name">{p.name}</span>
+          <span class="hx8-meta">{p.platform}<br />{p.category}</span>
+          <Arrow diagonal />
+        </a></li>
+      ))}</ol>
+    </div>
+    <div class="hx8-float" aria-hidden="true">{projects.map((p) => <img src={img(p.slug, '-640')} alt="" width="640" height="360" loading="lazy" />)}</div>
+  </section>
+
+  <!-- 9: Command palette -->
+  <section class="hx hx9" id="idea-9" aria-label="Idea 9: Command palette">
+    <span class="idea-tag hx-tag"><b>9</b>Command palette<em>type what you need, or pick one; each option opens the estimator</em></span>
+    <div class="wrap hx9-inner">
+      <p class="tiny-heading">Shopify, Webflow & WordPress developer</p>
+      <p class="hx9-title">What are we<br />building?</p>
+      <div class="hx9-palette">
+        <label class="hx9-search">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="1.6" /><path d="m20 20-3.5-3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" /></svg>
+          <span class="sr-only">Describe your project</span>
+          <input type="text" autocomplete="off" placeholder="Describe your project…" aria-controls="hx9-options" />
+          <kbd>⌘K</kbd>
+        </label>
+        <ul class="hx9-options" id="hx9-options" role="listbox" aria-label="What you need">
+          {palette.map((o, i) => (
+            <li role="option" aria-selected={i === 0 ? 'true' : 'false'} data-keywords={`${o.label} ${o.hint} ${o.keywords}`.toLowerCase()}>
+              <a href={o.href}><span class="hx9-icon" aria-hidden="true">{o.icon}</span><span><strong>{o.label}</strong><small>{o.hint}</small></span><em>Get an estimate ↵</em></a>
+            </li>
+          ))}
+          <li class="hx9-empty" hidden><a href={withBase('/contact/')}><span class="hx9-icon" aria-hidden="true">✉</span><span><strong>Something else?</strong><small>Tell Grant about it directly</small></span><em>Get in touch ↵</em></a></li>
+        </ul>
+        <p class="hx9-foot"><span><kbd>↑</kbd><kbd>↓</kbd> to move</span><span><kbd>↵</kbd> to open</span><a href={withBase('/contact/')}>Or get in touch</a></p>
+      </div>
+      <a class="intro-quote hx9-quote" href={withBase('/#reviews')}><span class="review-avatar" aria-hidden="true">C</span><span><q>He’s just an absolute weapon when it comes to Shopify.</q><small>Carlos · CEO & Owner, MDO Digital</small></span></a>
+    </div>
+  </section>
+
+  <!-- 10: Dot-matrix name -->
+  <section class="hx hx10" id="idea-10" aria-label="Idea 10: Dot-matrix name">
+    <span class="idea-tag hx-tag"><b>10</b>Dot-matrix name<em>your name in dots that scatter under the cursor and spring back</em></span>
+    <div class="wrap hx10-inner">
+      <p class="tiny-heading">Shopify, Webflow & WordPress developer</p>
+      <canvas class="hx10-canvas" role="img" aria-label="Grant Dev14."></canvas>
+      <div class="hx2-row hx10-row">
+        <p class="hx2-lead">Thoughtful websites, built to work beautifully. I’m Grant: I turn designs into custom websites and ecommerce for brands and agencies.</p>
+        <div class="hx2-actions"><a class="cta-primary" href={withBase('/estimate/')}>Get a free estimate <Arrow diagonal /></a><a class="cta-ghost" href={withBase('/#work')}>See my work</a></div>
+        <a class="intro-quote" href={withBase('/#reviews')}><span class="review-avatar" aria-hidden="true">C</span><span><q>He’s just an absolute weapon when it comes to Shopify.</q><small>Carlos · CEO & Owner, MDO Digital</small></span></a>
+      </div>
+    </div>
+  </section>
+</BaseLayout>
+
+<script>
+  const root = document.documentElement;
+  const motion = root.classList.contains('motion');
+  const fine = matchMedia('(hover: hover) and (pointer: fine)').matches;
+  const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+  // Run an idea's animation only while it is on screen.
+  const whenVisible = (el: Element) => {
+    const state = { on: false };
+    new IntersectionObserver(([e]) => { state.on = e.isIntersecting; }, { threshold: 0.15 }).observe(el);
+    return state;
+  };
+
+  // 1: The Live Build — type the code, wipe the finished site in, move to the next project.
+  {
+    const laptop = document.querySelector<HTMLElement>('.hx1-laptop')!;
+    const items = JSON.parse(laptop.dataset.build!) as { name: string; platform: string; host: string; code: string; lang: string }[];
+    const screen = laptop.querySelector<HTMLElement>('.hx1-screen')!;
+    const codeEl = laptop.querySelector('code')!;
+    const shots = [...laptop.querySelectorAll<HTMLElement>('.hx1-shot')];
+    const hostEl = laptop.querySelector('.hx1-host')!;
+    const chip = document.querySelector('.hx1-chip-text')!;
+    const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const paint = (s: string) => esc(s)
+      .replace(/('[^'\n]*'?)/g, '<span class="s">$1</span>')
+      .replace(/(\{%|%\}|\{\{|\}\}|&lt;\?php|\?&gt;)/g, '<span class="k">$1</span>');
+    const show = (i: number) => {
+      shots.forEach((s, j) => s.classList.toggle('is-active', i === j));
+      hostEl.textContent = items[i].host;
+      chip.textContent = `${items[i].name} · ${items[i].platform} · ${items[i].lang}`;
+    };
+    if (!motion) {
+      screen.classList.add('is-live');
+    } else {
+      const seen = whenVisible(laptop);
+      (async () => {
+        for (let i = 0; ; i = (i + 1) % items.length) {
+          while (!seen.on) await sleep(300);
+          screen.classList.remove('is-live');
+          await sleep(500);
+          show(i);
+          const text = items[i].code;
+          for (let n = 0; n <= text.length; n += 2) { codeEl.innerHTML = paint(text.slice(0, n)); await sleep(14); }
+          await sleep(350);
+          screen.classList.add('is-live');
+          await sleep(3600);
+        }
+      })();
+    }
+  }
+
+  // 2: Type window — the letters grow and fade while the full screenshot opens behind them.
+  {
+    const stage = document.querySelector<HTMLElement>('.hx2')!;
+    if (motion) {
+      stage.classList.add('is-scrolly');
+      let ticking = false;
+      const update = () => {
+        ticking = false;
+        const r = stage.getBoundingClientRect();
+        const p = Math.max(0, Math.min(1, -r.top / (r.height - innerHeight)));
+        stage.style.setProperty('--p', p.toFixed(3));
+      };
+      addEventListener('scroll', () => { if (!ticking) { ticking = true; requestAnimationFrame(update); } }, { passive: true });
+      update();
+    }
+  }
+
+  // 3: Project orbit — steps to the next project every few seconds; drag or swipe with a little
+  // momentum (it settles on the nearest project), arrows move one project.
+  {
+    const section = document.querySelector<HTMLElement>('.hx3')!;
+    const ring = section.querySelector<HTMLElement>('.hx3-ring')!;
+    const spin = section.querySelector<HTMLElement>('.hx3-spin')!;
+    const cards = [...section.querySelectorAll<HTMLElement>('.hx3-card')];
+    const captions = [...section.querySelectorAll<HTMLElement>('.hx3-caption')];
+    const step = 360 / cards.length;
+    const seen = whenVisible(section);
+    let rot = 0, vel = 0, target: number | null = null, dragging = false, lastX = 0, moved = 0, front = -1, pausedUntil = 0, hover = false, nextStep = performance.now() + 3200;
+    const frame = () => {
+      if (!dragging) {
+        if (target !== null) { rot += (target - rot) * (motion ? 0.12 : 1); if (Math.abs(target - rot) < 0.05) { rot = target; target = null; } }
+        else if (Math.abs(vel) > 0.05) { rot += vel; vel *= 0.93; }
+        else if (Math.abs(rot - Math.round(rot / step) * step) > 0.05) { vel = 0; target = Math.round(rot / step) * step; }
+        else if (motion && seen.on && !hover && performance.now() > Math.max(pausedUntil, nextStep)) { target = (Math.round(rot / step) - 1) * step; nextStep = performance.now() + 3200; }
+      }
+      spin.style.transform = `translateZ(calc(var(--r) * -1)) rotateY(${rot}deg)`;
+      cards.forEach((card, i) => {
+        const d = ((((i * step + rot) % 360) + 540) % 360) - 180;
+        const f = 1 - Math.abs(d) / 180;
+        card.style.opacity = String(0.18 + 0.82 * f ** 1.6);
+        card.style.pointerEvents = Math.abs(d) < step / 2 ? 'auto' : 'none';
+      });
+      const now = ((Math.round(-rot / step) % cards.length) + cards.length) % cards.length;
+      if (now !== front) {
+        front = now;
+        captions.forEach((c, i) => c.classList.toggle('is-active', i === now));
+        section.style.setProperty('--tint', cards[now].dataset.tint!);
+      }
+      requestAnimationFrame(frame);
+    };
+    requestAnimationFrame(frame);
+    ring.addEventListener('pointerdown', (e) => { dragging = true; lastX = e.clientX; moved = 0; vel = 0; target = null; ring.setPointerCapture(e.pointerId); });
+    ring.addEventListener('pointermove', (e) => { if (!dragging) return; const dx = e.clientX - lastX; lastX = e.clientX; moved += Math.abs(dx); rot += dx * 0.22; vel = dx * 0.22; });
+    const release = () => { dragging = false; pausedUntil = performance.now() + 2500; };
+    ring.addEventListener('pointerup', release);
+    ring.addEventListener('pointercancel', release);
+    ring.addEventListener('click', (e) => { if (moved > 6) e.preventDefault(); }, true);
+    ring.addEventListener('pointerenter', () => { hover = true; });
+    ring.addEventListener('pointerleave', () => { hover = false; });
+    section.querySelectorAll<HTMLButtonElement>('.hx3-arrow').forEach((b) => b.addEventListener('click', () => {
+      vel = 0;
+      target = (Math.round(rot / step) - Number(b.dataset.dir)) * step;
+      pausedUntil = performance.now() + 4000;
+    }));
+  }
+
+  // 4: The desk — drag windows by their bar (mouse and trackpad), drift on scroll, play the video.
+  {
+    const desk = document.querySelector<HTMLElement>('.hx4-desk')!;
+    const wins = [...desk.querySelectorAll<HTMLElement>('.hx4-win')];
+    const wide = matchMedia('(min-width: 901px)');
+    let z = 10;
+    wins.forEach((win) => {
+      let ox = 0, oy = 0, sx = 0, sy = 0, active = false;
+      win.addEventListener('pointerdown', () => { win.style.zIndex = String(++z); });
+      const handle = win.querySelector<HTMLElement>('.hx4-bar') ?? win;
+      handle.addEventListener('pointerdown', (e) => {
+        if (!wide.matches || (e.target as HTMLElement).closest('button')) return;
+        active = true; sx = e.clientX - ox; sy = e.clientY - oy;
+        handle.setPointerCapture(e.pointerId);
+        win.classList.add('is-dragging');
+      });
+      handle.addEventListener('pointermove', (e) => { if (!active) return; ox = e.clientX - sx; oy = e.clientY - sy; win.style.translate = `${ox}px ${oy}px`; });
+      const stop = () => { active = false; win.classList.remove('is-dragging'); };
+      handle.addEventListener('pointerup', stop);
+      handle.addEventListener('pointercancel', stop);
+    });
+    if (motion) {
+      const section = desk.closest('section')!;
+      let ticking = false;
+      const update = () => {
+        ticking = false;
+        const top = section.getBoundingClientRect().top;
+        wins.forEach((w) => w.style.setProperty('--drift', `${(top * Number(w.style.getPropertyValue('--depth'))).toFixed(1)}px`));
+      };
+      addEventListener('scroll', () => { if (!ticking) { ticking = true; requestAnimationFrame(update); } }, { passive: true });
+      update();
+    }
+    const video = desk.querySelector('video')!;
+    const play = desk.querySelector<HTMLButtonElement>('.hx4-play')!;
+    play.addEventListener('click', () => {
+      if (!video.src) video.src = video.dataset.src!;
+      video.controls = true;
+      video.play();
+      play.hidden = true;
+    });
+  }
+
+  // 5: Design to live — the spotlight follows the cursor (or drifts on its own on touch screens);
+  // a click opens the whole live site, then the next project comes in as a blueprint.
+  {
+    const stage = document.querySelector<HTMLElement>('.hx5-stage')!;
+    const pairs = [...stage.querySelectorAll<HTMLElement>('.hx5-pair')];
+    const hostEl = document.querySelector('.hx5-host')!;
+    const nameEl = document.querySelector('.hx5-name')!;
+    let index = 0, busy = false;
+    const place = (x: number, y: number) => { stage.style.setProperty('--x', `${x}px`); stage.style.setProperty('--y', `${y}px`); };
+    const centre = () => { const r = stage.getBoundingClientRect(); place(r.width * 0.6, r.height * 0.45); };
+    centre();
+    addEventListener('resize', centre);
+    if (fine) {
+      stage.addEventListener('pointermove', (e) => { const r = stage.getBoundingClientRect(); place(e.clientX - r.left, e.clientY - r.top); });
+    } else if (motion) {
+      const seen = whenVisible(stage);
+      const drift = (t: number) => {
+        if (seen.on && !busy) { const r = stage.getBoundingClientRect(); place(r.width * (0.5 + 0.32 * Math.sin(t / 1700)), r.height * (0.5 + 0.28 * Math.sin(t / 1100))); }
+        requestAnimationFrame(drift);
+      };
+      requestAnimationFrame(drift);
+    }
+    stage.addEventListener('click', async () => {
+      if (busy) return;
+      busy = true;
+      stage.classList.add('is-open');
+      await sleep(motion ? 1900 : 1200);
+      index = (index + 1) % pairs.length;
+      pairs.forEach((p, i) => p.classList.toggle('is-active', i === index));
+      hostEl.textContent = pairs[index].dataset.host!;
+      nameEl.textContent = pairs[index].dataset.name!;
+      stage.classList.remove('is-open');
+      await sleep(600);
+      busy = false;
+    });
+  }
+</script>
+
+<style>
+  .hx-current { padding-bottom: 80px; }
+  .hx-tag-muted { background: var(--surface); }
+  .hx { position: relative; min-height: 100svh; display: flex; flex-direction: column; justify-content: center; overflow: hidden; }
+  .hx-tag { position: absolute; z-index: 30; left: var(--gutter); top: 22px; }
+
+  /* 1: The Live Build */
+  .hx1 { border-top: 1px solid var(--line); padding-block: 90px; }
+  .hx1-grid { display: grid; grid-template-columns: 0.85fr 1.15fr; gap: clamp(32px, 5vw, 90px); align-items: center; }
+  .hx1-device { display: grid; gap: 22px; justify-items: center; }
+  .hx1-laptop { width: 100%; container-type: inline-size; }
+  .hx1-stage { position: relative; flex: 1; min-height: 0; background: #0e0f12; }
+  .hx1-code { position: absolute; inset: 0; margin: 0; padding: 4.5cqi 5cqi; overflow: hidden; color: #c9ccd4; font: 1.75cqi/1.7 ui-monospace, "SF Mono", Menlo, monospace; white-space: pre-wrap; }
+  .hx1-code :global(.k) { color: oklch(0.8 0.12 75); }
+  .hx1-code :global(.s) { color: oklch(0.8 0.1 150); }
+  .hx1-caret { display: inline-block; width: 0.6em; height: 1.1em; margin-left: 1px; vertical-align: -0.2em; background: #c9ccd4; animation: hx1-blink 1s steps(1) infinite; }
+  @keyframes hx1-blink { 50% { opacity: 0; } }
+  .hx1-screen .hx1-shot { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: top; clip-path: inset(0 0 100% 0); transition: clip-path 0.95s var(--ease); }
+  .hx1-screen.is-live .hx1-shot.is-active { clip-path: inset(0); }
+  .hx1-chip { display: inline-flex; align-items: center; gap: 10px; padding: 9px 16px; border-radius: 99px; background: var(--surface); font-size: 13px; }
+  .hx1-chip i { width: 8px; height: 8px; border-radius: 50%; background: oklch(0.65 0.17 145); box-shadow: 0 0 0 4px oklch(0.65 0.17 145 / 0.18); }
+
+  /* 2: Type window */
+  .hx2 { position: relative; border-top: 1px solid var(--line); }
+  .hx2.is-scrolly { height: 210vh; }
+  .hx2-sticky { position: relative; min-height: 100svh; display: flex; align-items: center; overflow: hidden; }
+  .hx2.is-scrolly .hx2-sticky { position: sticky; top: 0; height: 100svh; }
+  .hx2-inner { position: relative; z-index: 2; width: 100%; padding-block: 90px 50px; }
+  .hx2-kicker { margin-bottom: 18px; opacity: calc(1 - var(--p, 0) * 3); }
+  .hx2-word { display: block; width: 100%; height: auto; overflow: visible; transform-origin: 50% 60%; transform: scale(calc(1 + var(--p, 0) * 2.2)); opacity: calc(1 - var(--p, 0) * 1.5); }
+  .hx2-word text { font: 800 268px "Big Shoulders Display", Impact, sans-serif; letter-spacing: -0.01em; }
+  .hx2-word-narrow text { font-size: 250px; }
+  .hx2-outline { fill: none; stroke: var(--ink); stroke-width: 1.4; }
+  .hx2-word-narrow { display: none; }
+  :global(.motion) .hx2-strip { animation: hx2-pan 48s linear infinite; }
+  @keyframes hx2-pan { to { transform: translateX(var(--strip)); } }
+  .hx2-row { display: grid; grid-template-columns: 1.1fr auto auto; gap: 24px 32px; align-items: center; margin-top: 34px; opacity: calc(1 - var(--p, 0) * 3); }
+  .hx2-lead { max-width: 460px; font-size: 17px; line-height: 1.5; }
+  .hx2-actions { display: flex; gap: 10px; }
+  .hx2-row .intro-quote { margin: 0; }
+  .hx2-full { position: absolute; inset: 0; z-index: 1; clip-path: circle(calc(var(--p, 0) * 80%) at 50% 55%); }
+  .hx2-full img { width: 100%; height: 100%; object-fit: cover; object-position: top; }
+  .hx2:not(.is-scrolly) .hx2-full { display: none; }
+
+  /* 3: Project orbit */
+  .hx3 { --card: clamp(240px, 30vw, 460px); --r: calc(var(--card) * 1.05); padding-block: 90px 50px; background: var(--tint); transition: background 0.8s var(--ease); }
+  .hx3-top { padding-top: 10px; }
+  .hx3 :global(.cta-ghost) { background: oklch(1 0 0 / 0.4); }
+  .hx3-ring { position: relative; height: calc(var(--card) * 0.75); margin-top: 36px; perspective: 1800px; cursor: grab; touch-action: pan-y; user-select: none; }
+  .hx3-ring:active { cursor: grabbing; }
+  .hx3-spin { position: absolute; left: 50%; top: 0; width: var(--card); margin-left: calc(var(--card) / -2); transform-style: preserve-3d; }
+  .hx3-card { position: absolute; inset: 0 0 auto; display: block; border-radius: 12px; overflow: hidden; background: var(--bg); box-shadow: 0 30px 60px oklch(0 0 0 / 0.22); transform: rotateY(calc(var(--i) * var(--step))) translateZ(var(--r)); -webkit-user-drag: none; }
+  .hx3-bar, .hx4-bar, .hx5-bar { display: flex; align-items: center; gap: 5px; height: 26px; padding-inline: 10px; background: #f4f4f5; border-bottom: 1px solid #e4e4e7; }
+  .hx3-bar i, .hx4-bar i, .hx5-bar i { width: 7px; height: 7px; border-radius: 50%; background: #d4d4d8; }
+  .hx3-bar b, .hx4-bar span, .hx5-bar span { margin-left: auto; margin-right: auto; padding: 2px 10px; border-radius: 5px; background: #e4e4e7; font-size: 10px; font-weight: 400; color: #52525b; }
+  .hx3-card img { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: cover; object-position: top; pointer-events: none; }
+  .hx3-foot { position: relative; z-index: 2; display: grid; grid-template-columns: 48px 1fr 48px; align-items: center; gap: 20px; max-width: 640px; margin-top: 40px; }
+  .hx3-arrow { width: 48px; height: 48px; border-radius: 50%; border: 1px solid var(--ink); background: none; font-size: 18px; cursor: pointer; transition: background 0.25s, color 0.25s; }
+  .hx3-arrow:hover { background: var(--ink); color: var(--bg); }
+  .hx3-captions { display: grid; text-align: center; }
+  .hx3-caption { grid-area: 1 / 1; display: grid; gap: 4px; opacity: 0; transform: translateY(6px); transition: opacity 0.4s, transform 0.5s var(--ease); pointer-events: none; }
+  .hx3-caption.is-active { opacity: 1; transform: none; pointer-events: auto; }
+  .hx3-caption strong { font-size: 20px; font-weight: 500; }
+  .hx3-caption span { font-size: 12px; color: oklch(0.3 0 0); }
+  .hx3-caption a { display: inline-flex; align-items: center; justify-content: center; gap: 8px; margin-top: 6px; font-size: 13px; text-decoration: underline; text-underline-offset: 4px; }
+  .hx3-caption a :global(.arrow-icon) { width: 16px; height: 16px; }
+
+  /* 4: The desk */
+  .hx4 { padding-block: 90px; background: radial-gradient(circle at 1px 1px, oklch(0.8 0 0) 1px, transparent 0) 0 0 / 22px 22px, var(--surface); }
+  .hx4-desk { position: absolute; inset: 0; }
+  .hx4-center { position: relative; z-index: 1; pointer-events: none; }
+  .hx4-center :global(a) { pointer-events: auto; }
+  .hx4-win { position: absolute; left: var(--x); top: var(--y); width: var(--w); margin: 0; border-radius: 10px; overflow: hidden; background: var(--bg); box-shadow: 0 1px 0 oklch(0 0 0 / 0.04), 0 24px 50px oklch(0 0 0 / 0.14); transform: translateY(var(--drift, 0px)) rotate(var(--rot)); transition: box-shadow 0.3s, rotate 0.3s; }
+  .hx4-bar { cursor: grab; touch-action: none; }
+  .hx4-win.is-dragging { box-shadow: 0 40px 80px oklch(0 0 0 / 0.25); }
+  .hx4-win.is-dragging .hx4-bar { cursor: grabbing; }
+  .hx4-win img { display: block; width: 100%; aspect-ratio: 16 / 10; object-fit: cover; object-position: top; }
+  .hx4-video-body { position: relative; }
+  .hx4-video video { display: block; width: 100%; height: auto; aspect-ratio: 4 / 5; object-fit: cover; background: #111; }
+  .hx4-play { position: absolute; left: 50%; bottom: 12px; translate: -50% 0; display: inline-flex; gap: 8px; align-items: center; padding: 8px 14px; border: 0; border-radius: 99px; background: var(--bg); font: 500 12px Archivo, sans-serif; white-space: nowrap; cursor: pointer; box-shadow: 0 6px 16px oklch(0 0 0 / 0.2); }
+  .hx4-note { padding: 18px 18px 16px; background: oklch(0.93 0.09 95); cursor: grab; touch-action: none; }
+  .hx4-note blockquote { margin: 0; font-size: 15px; font-weight: 500; line-height: 1.35; }
+  .hx4-note figcaption { margin-top: 10px; font-size: 11px; color: oklch(0.35 0.03 90); }
+
+  /* 5: Design to live */
+  .hx5 { padding-block: 90px; background: oklch(0.2 0.04 255); color: var(--bg); }
+  @property --r5 { syntax: '<length>'; inherits: true; initial-value: 110px; }
+  .hx5-grid { display: grid; grid-template-columns: 0.8fr 1.2fr; gap: clamp(32px, 5vw, 90px); align-items: center; }
+  .hx5-frame { border-radius: 12px; overflow: hidden; background: oklch(0.25 0.05 255); box-shadow: 0 40px 90px oklch(0 0 0 / 0.45); }
+  .hx5-bar { background: oklch(0.28 0.05 255); border-color: oklch(1 0 0 / 0.08); }
+  .hx5-bar i { background: oklch(1 0 0 / 0.2); }
+  .hx5-bar span { background: oklch(1 0 0 / 0.1); color: oklch(1 0 0 / 0.7); }
+  .hx5-stage { --x: 60%; --y: 45%; --r5: 110px; position: relative; aspect-ratio: 16 / 9; overflow: hidden; cursor: none; transition: --r5 0.9s var(--ease); }
+  .hx5-stage.is-open { --r5: 1400px; transition-duration: 1.1s; }
+  .hx5-pair { position: absolute; inset: 0; opacity: 0; transition: opacity 0.5s; }
+  .hx5-pair.is-active { opacity: 1; }
+  .hx5-pair img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: top; }
+  .hx5-blue { filter: grayscale(1) contrast(1.5) invert(1) sepia(1) saturate(3.5) hue-rotate(175deg) brightness(0.72); }
+  .hx5-live { -webkit-mask-image: radial-gradient(circle var(--r5) at var(--x) var(--y), #000 calc(100% - 1px), transparent 100%); mask-image: radial-gradient(circle var(--r5) at var(--x) var(--y), #000 calc(100% - 1px), transparent 100%); }
+  .hx5-grid-lines { position: absolute; inset: 0; pointer-events: none; background: linear-gradient(oklch(1 0 0 / 0.08) 1px, transparent 1px) 0 0 / 24px 24px, linear-gradient(90deg, oklch(1 0 0 / 0.08) 1px, transparent 1px) 0 0 / 24px 24px; -webkit-mask-image: radial-gradient(circle var(--r5) at var(--x) var(--y), transparent calc(100% - 1px), #000 100%); mask-image: radial-gradient(circle var(--r5) at var(--x) var(--y), transparent calc(100% - 1px), #000 100%); }
+  .hx5-ring { position: absolute; left: var(--x); top: var(--y); width: calc(var(--r5) * 2); height: calc(var(--r5) * 2); translate: -50% -50%; border: 1.5px solid oklch(1 0 0 / 0.9); border-radius: 50%; pointer-events: none; }
+  .hx5-ring em { position: absolute; left: 50%; top: -12px; translate: -50% 0; padding: 3px 10px; border-radius: 99px; background: var(--bg); color: var(--ink); font: 500 11px Archivo, sans-serif; font-style: normal; white-space: nowrap; }
+  .hx5-stage.is-open .hx5-ring { opacity: 0; transition: opacity 0.3s; }
+  .hx5-label { position: absolute; left: 14px; top: 14px; padding: 3px 10px; border: 1px solid oklch(1 0 0 / 0.5); border-radius: 99px; font-size: 11px; color: oklch(1 0 0 / 0.85); }
+  .hx5-caption { padding: 12px 16px; font-size: 12px; color: oklch(1 0 0 / 0.65); }
+
+  @media (max-width: 900px) {
+    .hx { min-height: auto; padding-block: 80px 60px !important; }
+    .hx1-grid, .hx5-grid { grid-template-columns: 1fr; }
+    .hx1 :global(.hc-quote), .hx5 :global(.hc-quote) { display: none; }
+    .hx2-word-wide { display: none; }
+    .hx2-word-narrow { display: block; }
+    .hx2-row { grid-template-columns: 1fr; }
+    .hx2.is-scrolly { height: 170vh; }
+    .hx3-ring { margin-top: 28px; }
+    .hx4 { display: block; }
+    .hx4-desk { position: static; display: flex; gap: 14px; overflow-x: auto; padding: 32px var(--gutter) 10px; scroll-snap-type: x mandatory; order: 2; }
+    .hx4-win { position: relative; left: auto; top: auto; flex: 0 0 68%; transform: none; scroll-snap-align: center; }
+    .hx4-video, .hx4-note { flex-basis: 52%; }
+    .hx4 { display: flex; flex-direction: column; }
+    .hx4-center { order: 1; }
+    .hx5-stage { cursor: pointer; }
+  }
+</style>
+
+<script>
+  const root6 = document.documentElement;
+  const motion6 = root6.classList.contains('motion');
+  const fine6 = matchMedia('(hover: hover) and (pointer: fine)').matches;
+  const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
+  const onScreen = (el: Element, threshold = 0.15) => {
+    const state = { on: false };
+    new IntersectionObserver(([e]) => { state.on = e.isIntersecting; el.classList.toggle('is-on', e.isIntersecting || el.classList.contains('is-on')); }, { threshold }).observe(el);
+    return state;
+  };
+
+  // 6: Departure board — each tile shuffles through letters before landing on the next platform.
+  {
+    const board = document.querySelector<HTMLElement>('.hx6-flaps')!;
+    const section = board.closest('section')!;
+    const tiles = [...board.querySelectorAll<HTMLElement>('.hx6-flap')];
+    const words = JSON.parse(board.dataset.words!) as string[];
+    const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    const seen = onScreen(section);
+    const flip = (tile: HTMLElement, ch: string) => {
+      if (tile.textContent === ch) return;
+      tile.textContent = ch;
+      tile.animate([{ transform: 'rotateX(0)' }, { transform: 'rotateX(-75deg)', offset: 0.5 }, { transform: 'rotateX(0)' }], { duration: 110 });
+    };
+    if (motion6) (async () => {
+      for (let w = 1; ; w = (w + 1) % words.length) {
+        await wait(2600);
+        while (!seen.on) await wait(300);
+        const word = words[w];
+        await Promise.all(tiles.map(async (tile, i) => {
+          for (let k = 0; k < 4 + i; k++) { flip(tile, letters[(Math.random() * 26) | 0]); await wait(55); }
+          flip(tile, word[i] ?? '');
+        }));
+      }
+    })();
+  }
+
+  // 7: Wall of work — scrolling nudges the rows along on top of their slow drift.
+  {
+    const section = document.querySelector<HTMLElement>('.hx7')!;
+    if (motion6) {
+      let ticking = false;
+      const update = () => { ticking = false; section.style.setProperty('--shift', `${(section.getBoundingClientRect().top * -0.35).toFixed(1)}px`); };
+      addEventListener('scroll', () => { if (!ticking) { ticking = true; requestAnimationFrame(update); } }, { passive: true });
+      update();
+    }
+  }
+
+  // 8: Project names — hovering a name shows its screenshot by the cursor and tints the background.
+  {
+    const section = document.querySelector<HTMLElement>('.hx8')!;
+    const items = [...section.querySelectorAll<HTMLElement>('.hx8-list li')];
+    const float = section.querySelector<HTMLElement>('.hx8-float')!;
+    const shots = [...float.querySelectorAll('img')];
+    if (fine6) {
+      section.querySelector('.hx8-list')!.addEventListener('pointermove', (e) => { float.style.translate = `${(e as PointerEvent).clientX}px ${(e as PointerEvent).clientY}px`; });
+      items.forEach((item, i) => {
+        item.addEventListener('pointerenter', () => {
+          shots.forEach((s, j) => s.classList.toggle('is-active', i === j));
+          float.classList.add('is-on');
+          section.style.setProperty('--tint', item.dataset.tint!);
+        });
+      });
+      section.querySelector('.hx8-list')!.addEventListener('pointerleave', () => { float.classList.remove('is-on'); section.style.removeProperty('--tint'); });
+      addEventListener('scroll', () => float.classList.remove('is-on'), { passive: true });
+    }
+  }
+
+  // 9: Command palette — filter as you type, arrow keys and Enter, ⌘K / Ctrl+K to jump in,
+  // and an example request typed into the empty box.
+  {
+    const section = document.querySelector<HTMLElement>('.hx9')!;
+    const input = section.querySelector('input')!;
+    const options = [...section.querySelectorAll<HTMLElement>('.hx9-options li:not(.hx9-empty)')];
+    const empty = section.querySelector<HTMLElement>('.hx9-empty')!;
+    let active = 0;
+    const visible = () => [...options, empty].filter((o) => !o.hidden);
+    const paint = () => visible().forEach((o, i) => o.setAttribute('aria-selected', String(i === active)));
+    const filter = () => {
+      const words = input.value.toLowerCase().split(/\s+/).filter((w) => w.length > 1);
+      options.forEach((o) => { o.hidden = words.length > 0 && !words.some((w) => o.dataset.keywords!.includes(w)); });
+      empty.hidden = options.some((o) => !o.hidden);
+      active = 0;
+      paint();
+    };
+    input.addEventListener('input', filter);
+    input.addEventListener('keydown', (e) => {
+      const list = visible();
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); active = (active + (e.key === 'ArrowDown' ? 1 : -1) + list.length) % list.length; paint(); }
+      if (e.key === 'Enter') { e.preventDefault(); list[active]?.querySelector('a')?.click(); }
+    });
+    [...options, empty].forEach((o) => o.addEventListener('pointerenter', () => { active = visible().indexOf(o); paint(); }));
+    addEventListener('keydown', (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); section.scrollIntoView({ block: 'center' }); input.focus(); }
+    });
+    const examples = ['A new Shopify store for my brand…', 'Move my site from WordPress to Shopify…', 'Make my store load faster…', 'Help with my site every month…'];
+    const seen = onScreen(section);
+    if (motion6) (async () => {
+      for (let i = 0; ; i = (i + 1) % examples.length) {
+        while (!seen.on || document.activeElement === input || input.value) await wait(400);
+        for (let n = 1; n <= examples[i].length; n++) { if (document.activeElement === input) break; input.placeholder = examples[i].slice(0, n); await wait(38); }
+        await wait(1800);
+      }
+    })();
+    input.addEventListener('focus', () => { input.placeholder = 'Describe your project…'; });
+  }
+
+  // 10: Dot-matrix name — the letters are sampled into dots that the cursor pushes away and that
+  // spring back home. On touch screens a ripple plays on its own every few seconds.
+  {
+    const canvas = document.querySelector<HTMLCanvasElement>('.hx10-canvas')!;
+    const ctx = canvas.getContext('2d')!;
+    type Dot = { hx: number; hy: number; x: number; y: number; vx: number; vy: number };
+    let dots: Dot[] = [], W = 0, H = 0, gap = 7, px = -9999, py = -9999;
+    const seen = onScreen(canvas, 0);
+    const ink = getComputedStyle(root6).getPropertyValue('--ink').trim() || '#161616';
+    const build = async () => {
+      await document.fonts.load('800 200px "Big Shoulders Display"');
+      const r = canvas.getBoundingClientRect();
+      W = Math.floor(r.width); H = Math.floor(r.height);
+      const dpr = Math.min(2, devicePixelRatio || 1);
+      canvas.width = W * dpr; canvas.height = H * dpr;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      const off = document.createElement('canvas');
+      off.width = W; off.height = H;
+      const o = off.getContext('2d')!;
+      const lines = W < 640 ? ['GRANT', 'DEV14.'] : ['GRANT DEV14.'];
+      let size = (H / lines.length) * 1.12;
+      o.font = `800 ${size}px "Big Shoulders Display"`;
+      const widest = Math.max(...lines.map((l) => o.measureText(l).width));
+      size = Math.min(size, (size * W * 0.99) / widest);
+      o.font = `800 ${size}px "Big Shoulders Display"`;
+      o.textAlign = 'center'; o.textBaseline = 'middle';
+      lines.forEach((l, i) => o.fillText(l, W / 2, (H * (i + 0.5)) / lines.length + size * 0.04));
+      const data = o.getImageData(0, 0, W, H).data;
+      gap = W < 640 ? 5 : 7;
+      dots = [];
+      for (let y = gap / 2; y < H; y += gap) for (let x = gap / 2; x < W; x += gap) {
+        if (data[((y | 0) * W + (x | 0)) * 4 + 3] > 128) dots.push({ hx: x, hy: y, x, y, vx: 0, vy: 0 });
+      }
+      draw();
+    };
+    const draw = () => {
+      ctx.clearRect(0, 0, W, H);
+      const still = new Path2D(), moved = new Path2D();
+      const rad = gap * 0.36;
+      for (const d of dots) {
+        const p = Math.abs(d.x - d.hx) + Math.abs(d.y - d.hy) > 2 ? moved : still;
+        p.moveTo(d.x + rad, d.y); p.arc(d.x, d.y, rad, 0, Math.PI * 2);
+      }
+      ctx.fillStyle = ink; ctx.fill(still);
+      ctx.fillStyle = 'oklch(0.6 0.15 255)'; ctx.fill(moved);
+    };
+    const R = 110;
+    const step = () => {
+      if (seen.on) {
+        for (const d of dots) {
+          const dx = d.x - px, dy = d.y - py, dist = Math.hypot(dx, dy);
+          if (dist < R && dist > 0.1) { const f = (1 - dist / R) * 5; d.vx += (dx / dist) * f; d.vy += (dy / dist) * f; }
+          d.vx += (d.hx - d.x) * 0.07; d.vy += (d.hy - d.y) * 0.07;
+          d.vx *= 0.8; d.vy *= 0.8;
+          d.x += d.vx; d.y += d.vy;
+        }
+        draw();
+      }
+      requestAnimationFrame(step);
+    };
+    build().then(() => { if (motion6) requestAnimationFrame(step); });
+    let resizeTimer = 0;
+    addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = window.setTimeout(build, 200); });
+    if (motion6 && fine6) {
+      canvas.addEventListener('pointermove', (e) => { const r = canvas.getBoundingClientRect(); px = e.clientX - r.left; py = e.clientY - r.top; });
+      canvas.addEventListener('pointerleave', () => { px = py = -9999; });
+    } else if (motion6) {
+      (async () => {
+        for (;;) {
+          await wait(2600);
+          if (!seen.on || !dots.length) continue;
+          const d = dots[(Math.random() * dots.length) | 0];
+          for (let t = 0; t < 24; t++) { px = d.hx + (t - 12) * 6; py = d.hy; await wait(16); }
+          px = py = -9999;
+        }
+      })();
+    }
+  }
+</script>
+
+<style>
+  .hx :global(.hc-actions), .hx8-side .hc-actions, .hx6-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+
+  /* 6: Departure board */
+  .hx6 { padding-block: 100px 70px; background: #0f0f0f; color: oklch(0.95 0.01 90); }
+  .hx6 .tiny-heading { color: oklch(1 0 0 / 0.7); }
+  .hx6-title { display: flex; flex-wrap: wrap; align-items: center; gap: 0.18em 0.3em; margin-top: 22px; font: 800 clamp(40px, 7vw, 124px)/1 "Big Shoulders Display", Impact, sans-serif; text-transform: uppercase; letter-spacing: 0.01em; }
+  .hx6-flaps { display: inline-flex; gap: 0.06em; perspective: 600px; }
+  .hx6-flap { position: relative; display: grid; place-items: center; width: 0.68em; height: 1.08em; border-radius: 0.07em; background: linear-gradient(#232323 50%, #1b1b1b 50%); color: oklch(0.93 0.09 95); box-shadow: inset 0 -0.02em 0 oklch(0 0 0 / 0.6); transform-origin: 50% 50%; }
+  .hx6-flap::after { content: ''; position: absolute; left: 0; right: 0; top: 50%; height: 0.02em; background: #050505; }
+  .hx6-board { margin-top: 46px; border-top: 1px solid oklch(1 0 0 / 0.16); font: 500 13px/1 ui-monospace, "SF Mono", Menlo, monospace; text-transform: uppercase; letter-spacing: 0.04em; }
+  .hx6-row { display: grid; grid-template-columns: 1.4fr 1fr 1.4fr 0.6fr; gap: 20px; padding: 13px 4px; border-bottom: 1px solid oklch(1 0 0 / 0.08); transition: background 0.25s, padding 0.35s var(--ease); }
+  a.hx6-row:hover { background: oklch(1 0 0 / 0.05); padding-left: 12px; }
+  .hx6-head { color: oklch(1 0 0 / 0.45); font-size: 11px; }
+  :global(.motion) .hx6:not(:global(.is-on)) a.hx6-row { opacity: 0; transform: translateY(-6px); }
+  a.hx6-row { transition: opacity 0.4s calc(var(--i) * 0.08s), transform 0.5s var(--ease) calc(var(--i) * 0.08s), background 0.25s, padding 0.35s var(--ease); }
+  .hx6-live { display: inline-flex; align-items: center; gap: 8px; color: oklch(0.82 0.15 145); }
+  .hx6-live i { width: 7px; height: 7px; border-radius: 50%; background: currentColor; box-shadow: 0 0 10px currentColor; }
+  .hx6-foot { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 22px; margin-top: 40px; }
+  .hx6 .cta-primary { background: oklch(0.93 0.09 95); border-color: oklch(0.93 0.09 95); color: var(--ink); }
+  .hx6 .cta-ghost { border-color: oklch(1 0 0 / 0.45); color: inherit; }
+  .hx6-quote { margin: 0; background: oklch(1 0 0 / 0.07); }
+  .hx6-quote small { color: oklch(1 0 0 / 0.55); }
+  .hx6-quote .review-avatar { background: oklch(0.93 0.09 95); color: var(--ink); }
+
+  /* 7: Wall of work */
+  .hx7 { background: var(--ink); }
+  .hx7-wall { position: absolute; inset: -30% -20%; display: grid; align-content: center; gap: 18px; transform: rotate(-9deg); }
+  .hx7-row { display: flex; gap: 18px; width: max-content; translate: calc(var(--shift, 0px) * var(--dir)) 0; }
+  :global(.motion) .hx7-row { animation: hx7-move var(--dur) linear infinite; animation-direction: var(--anim-dir, normal); }
+  .hx7-row:nth-child(even) { --anim-dir: reverse; }
+  @keyframes hx7-move { to { transform: translateX(-50%); } }
+  .hx7-row img { width: clamp(220px, 22vw, 360px); height: auto; aspect-ratio: 16 / 9; object-fit: cover; object-position: top; border-radius: 12px; opacity: 0.85; }
+  .hx7::after { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse at center, oklch(0.16 0 0 / 0.55) 0%, oklch(0.16 0 0 / 0.15) 60%, transparent 100%); pointer-events: none; }
+  .hx7-center { position: relative; z-index: 2; display: flex; justify-content: center; }
+  .hx7-card { width: min(820px, 100%); padding: clamp(28px, 4vw, 56px); border-radius: 28px; background: var(--bg); box-shadow: 0 40px 100px oklch(0 0 0 / 0.45); }
+
+  /* 8: Project names */
+  .hx8 { padding-block: 100px 70px; background: var(--tint, var(--bg)); transition: background 0.6s var(--ease); }
+  .hx8-top { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; align-items: end; margin-bottom: 44px; }
+  .hx8-title { margin-top: 16px; font-size: clamp(30px, 3.2vw, 52px); font-weight: 500; line-height: 1.05; letter-spacing: -0.035em; }
+  .hx8-side { display: grid; gap: 22px; justify-items: start; }
+  .hx8-side p { max-width: 440px; font-size: 15px; line-height: 1.55; color: var(--muted); }
+  .hx8-list { list-style: none; padding: 0; margin: 0; border-top: 1px solid var(--ink); }
+  .hx8-list a { display: grid; grid-template-columns: 44px 1fr auto 30px; gap: 20px; align-items: center; padding-block: 6px; border-bottom: 1px solid oklch(0 0 0 / 0.12); transition: opacity 0.35s var(--ease); }
+  .hx8-list:hover a { opacity: 0.25; }
+  .hx8-list li:hover a { opacity: 1; }
+  .hx8-num { font-size: 11px; }
+  .hx8-name { font: 800 clamp(46px, 8vw, 132px)/0.9 "Big Shoulders Display", Impact, sans-serif; text-transform: uppercase; transition: transform 0.5s var(--ease); }
+  .hx8-list li:hover .hx8-name { transform: translateX(16px); }
+  .hx8-meta { text-align: right; font-size: 11px; line-height: 1.5; }
+  .hx8-list :global(.arrow-icon) { width: 26px; height: 26px; }
+  .hx8-float { position: fixed; left: 0; top: 0; z-index: 25; width: 300px; pointer-events: none; }
+  .hx8-float img { position: absolute; left: 20px; top: -90px; width: 300px; height: auto; aspect-ratio: 16 / 9; object-fit: cover; object-position: top; border-radius: 12px; box-shadow: 0 30px 60px oklch(0 0 0 / 0.25); opacity: 0; transform: scale(0.9) rotate(-4deg); transition: opacity 0.25s, transform 0.45s var(--ease); }
+  .hx8-float.is-on img.is-active { opacity: 1; transform: rotate(-3deg); }
+
+  /* 9: Command palette */
+  .hx9 { padding-block: 100px 70px; background: radial-gradient(ellipse at 50% 30%, oklch(0.97 0.01 95), var(--bg) 70%); }
+  .hx9-inner { display: grid; justify-items: center; text-align: center; }
+  .hx9-title { margin-top: 16px; font-size: clamp(44px, 6vw, 100px); font-weight: 500; line-height: 0.98; letter-spacing: -0.045em; }
+  .hx9-palette { width: min(680px, 100%); margin-top: 40px; border: 1px solid var(--line); border-radius: 20px; background: var(--bg); text-align: left; box-shadow: 0 30px 80px oklch(0 0 0 / 0.12), 0 2px 0 oklch(0 0 0 / 0.03); overflow: hidden; }
+  .hx9-search { display: flex; align-items: center; gap: 12px; padding: 0 18px; border-bottom: 1px solid var(--line); color: var(--muted); }
+  .hx9-search input { flex: 1; min-width: 0; height: 64px; border: 0; outline: 0; background: none; font: 400 18px Archivo, sans-serif; color: var(--ink); }
+  .hx9-search input::placeholder { color: var(--muted); }
+  kbd { display: inline-grid; place-items: center; min-width: 22px; height: 22px; padding: 0 6px; border: 1px solid var(--line); border-radius: 6px; font: 500 11px Archivo, sans-serif; color: var(--muted); background: var(--surface); }
+  .hx9-options { list-style: none; padding: 8px; margin: 0; }
+  .hx9-options a { display: grid; grid-template-columns: 40px 1fr auto; gap: 14px; align-items: center; padding: 10px 12px; border-radius: 12px; transition: background 0.2s; }
+  .hx9-options li[aria-selected='true'] a { background: var(--surface); }
+  .hx9-icon { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 10px; background: var(--surface); font-size: 17px; }
+  .hx9-options li[aria-selected='true'] .hx9-icon { background: var(--ink); color: var(--bg); }
+  .hx9-options strong { display: block; font-size: 15px; font-weight: 500; }
+  .hx9-options small { display: block; margin-top: 2px; font-size: 12px; color: var(--muted); }
+  .hx9-options em { font-style: normal; font-size: 12px; color: var(--muted); opacity: 0; transition: opacity 0.2s; }
+  .hx9-options li[aria-selected='true'] em { opacity: 1; }
+  .hx9-foot { display: flex; gap: 18px; align-items: center; padding: 12px 18px; border-top: 1px solid var(--line); font-size: 12px; color: var(--muted); }
+  .hx9-foot span { display: inline-flex; gap: 4px; align-items: center; }
+  .hx9-foot a { margin-left: auto; color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
+  .hx9-quote { margin-top: 28px; text-align: left; }
+
+  /* 10: Dot-matrix name */
+  .hx10 { padding-block: 100px 60px; }
+  .hx10-canvas { display: block; width: 100%; height: clamp(220px, 30vw, 520px); margin-top: 26px; touch-action: pan-y; }
+
+  @media (max-width: 900px) {
+    .hx6-row { grid-template-columns: 1.3fr 1fr 0.6fr; }
+    .hx6-cat { display: none; }
+    .hx7 { min-height: 100svh !important; }
+    .hx8-top { grid-template-columns: 1fr; gap: 24px; }
+    .hx8-list a { grid-template-columns: 1fr auto; }
+    .hx8-num, .hx8-list :global(.arrow-icon) { display: none; }
+    .hx8-float { display: none; }
+    .hx9-options em, .hx9-foot span { display: none; }
+    .hx9-search kbd { display: none; }
+    .hx10-canvas { height: clamp(220px, 62vw, 360px); }
+  }
+</style>
