@@ -2,6 +2,32 @@
 
 ## Current state
 
+### Approved hero scope — mobile orbital models (November 5, 2026)
+
+The homepage MUST keep `HomeHero.astro` and its existing six-project orbital layout. The user explicitly rejected replacing it with the two-phone concept. Only the mobile phones (up to 640px) are replaced by the supplied iPhone GLB. Keep desktop browser cards, typography, introduction, orbit, captions, arrows and project links intact.
+
+- `ProjectOrbit.astro` adds a mobile-only canvas over the existing six link hit areas. `HomeHero.astro` passes the existing orbit's turn/spread/tilt to `src/scripts/orbit-phone-scene.ts`; there is no second auto-rotation controller. Six instances show Tero, Road Armor, Omenz, Coptrz, Skinistry and Light My Bricks. Silver, Cosmic Orange and Deep Blue finishes repeat around the orbit, with independent screen materials and shared geometry.
+- `public/models/iphone-17-pro-max-orbit.glb` is a 315,504-byte derivative retaining ALL 29,544 original triangles per instance before the runtime glass-overlay omission. Higher precision compression preserves the original curves. Backmost phones are culled; screenshots are 512px wide with heights matched to the actual display aspect, and the lighting environment is 128px. DPR starts at Retina resolution (up to 3, or 1.75 on constrained devices) and steps down only after sustained slow frames. There is no independent idle WebGL render loop. Scrolling, hidden tabs and offscreen states suspend drawing. Desktop does not initialize WebGL.
+- Screen textures preserve source image proportions, allow 76/512 of the display width for the top safe area and leave a home-indicator inset. Website headers should sit below the camera island. Anisotropic filtering keeps angled project previews clearer. Do not describe this as a 4K asset; source screenshots are 440px wide and the 3D viewport adapts to display density and frame cadence.
+- `src/components/VideoReviews.astro` uses an SVG play triangle, preventing iOS from rendering an emoji. Playback failures restore the retry button and an accessible status message. Native video controls remain available.
+- Rebuild GitHub Pages output with `npm run build:github`; the generated `/docs` export preserves its existing quote-page encryption. Local implementation and export do not imply a GitHub push or public deployment.
+- Keep the original GLB unchanged and retain the linked MajdyModels / CC BY 4.0 attribution. Physical iPhone/Android performance still needs device testing; configured render limits are not measured device FPS.
+
+### iPhone model preview (November 5, 2026)
+
+The older two-phone development concept remains at `/ideas/phones/` and is excluded from static builds. It is a comparison preview only; do not use it as the homepage hero. The approved homepage scope is documented above.
+
+- `public/models/iphone-17-pro-max.glb` is the unchanged, self-contained supplied GLB (1,713,400 bytes). USDZ and FBX alternatives were not needed.
+- `src/scripts/iphone-model.ts` loads the optimized web derivative with Three.js GLTFLoader and MeshoptDecoder, expands quantized attributes before baking authored transforms, faces the display toward the camera, and normalizes its height. The camera housing, orange finish, and logos remain recognizable; mobile uses simpler materials.
+- Only the `screen.001` material/UVs are adapted to display project screenshots. Two instances show front and reverse views, with shared model geometry and independent display materials.
+- `src/scripts/phone-scene.ts` controls rotation, pointer drag, pause/reset, project switching, reduced-motion behavior, and visibility-based rendering. `PhoneHero.astro` supplies the local base-aware model URL and linked attribution.
+- Mobile performance pass: `iphone-17-pro-max-web.glb` is 235,024 bytes / 17,157 triangles, versus the preserved original's 1,713,400 bytes / 29,544 triangles. Rebuild it with `node scripts/optimize-phone.mjs`; optimization packages are dev dependencies. Do not load the original wallpaper texture. Web derivative changes are disclosed in the attribution.
+- Mobile uses 256×555 project textures (only the visible pair cached), no multisample antialiasing, DPR capped at 1.25 (1 on constrained devices), a 64px lighting environment and single-pass standard materials. Ambient animation caps at 30 fps and settles after six seconds; explicit resume keeps it running. Rotation/drag can render at the display's 60 fps cadence. Rendering stops while scrolling, offscreen, hidden or paused/settled. These are configured limits, not measured physical-device FPS.
+- `HomeHero.astro` also avoids the full-screen name scatter and recurring touch ripples on mobile; its mobile name canvas DPR is capped at 1.25. Preserve the established orbit layout.
+- Verification and limitations for this pass are recorded in `docs/VERIFICATION.md`. Do not claim a mobile Lighthouse score or physical iPhone/Android smoothness from the desktop responsive checks.
+- Creator: MajdyModels. License: CC BY 4.0. Original license and source details are beside the GLB. Keep the attribution if adopting this scene on the homepage.
+- Verified the imported model renders on desktop and at 390px, without horizontal overflow; project switching and rotation controls work; browser warning/error log was empty. `npm run check` passed with two pre-existing hints in other preview files; `npm run build` passed with its chunk-size advisory. No new Lighthouse score is claimed.
+
 The user approved implementation on October 17, 2026. Codex has built the portfolio in this checkout. Continue from the existing code; do not scaffold a replacement or restart the planning interview.
 
 The user subsequently requested a plain `index.html` version for GitHub Pages. `npm run build:github` exports the static website to `docs/`, starting at `docs/index.html`. The target is `https://angelomig.github.io/KNB-GRANT-WEBSITE/`; publish branch `main` from `/docs`. Internal links and assets use `src/utils/paths.ts`; font files are bundled from `src/assets/fonts` to support both root hosting and repository subdirectories. Do not hand-edit the generated HTML; regenerate after source changes. The root-hosted Sites build still uses `npm run build`.

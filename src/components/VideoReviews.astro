@@ -39,7 +39,8 @@ const total = reviews.length + quotes.length;
               <video src={src} data-poster={poster} preload="none" playsinline>
                 {review.captions && <track kind="captions" src={withBase(review.captions)} srclang="en" label="English" default />}
               </video>
-              <button class="video-play" type="button" aria-label={`Play video review from ${review.name}`}><span aria-hidden="true">▶</span></button>
+              <button class="video-play" type="button" aria-label={`Play video review from ${review.name}`}><svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor" aria-hidden="true" focusable="false"><path d="M7 4.7a1 1 0 0 1 1.52-.85l11 7.3a1 1 0 0 1 0 1.7l-11 7.3A1 1 0 0 1 7 19.3Z" /></svg></button>
+              <span class="video-status sr-only" role="status"></span>
               <span class="video-length">{review.duration}</span>
             </div>
             <figcaption><span class="review-avatar" aria-hidden="true">{initials(review.name)}</span><span><strong>{review.name}</strong><span>{review.role}</span></span>{review.placeholder && <span class="video-badge">Placeholder</span>}</figcaption>
@@ -91,14 +92,31 @@ const total = reviews.length + quotes.length;
     video.controls = false;
     frame.classList.remove('is-playing');
   };
-  const start = (index: number) => {
+  let playRequest = 0;
+  const start = async (index: number) => {
+    const request = ++playRequest;
     frames.forEach((frame, other) => { if (other !== index) stop(frame); });
     const frame = frames[index];
     const video = frame?.querySelector('video');
     if (!frame || !video) return;
+    const button = frame.querySelector<HTMLButtonElement>('.video-play')!;
+    const status = frame.querySelector<HTMLElement>('.video-status')!;
+    status.textContent = '';
+    button.disabled = true;
+    button.setAttribute('aria-busy', 'true');
     video.controls = true;
-    frame.classList.add('is-playing');
-    video.play().catch(() => {});
+    try {
+      // Start in the click's activation stack, including on mobile Safari.
+      await video.play();
+      if (request !== playRequest) { video.pause(); return; }
+      frame.classList.add('is-playing');
+    } catch {
+      frame.classList.remove('is-playing');
+      status.textContent = 'Video could not start. Try the play button again or use the video controls.';
+    } finally {
+      button.disabled = false;
+      button.removeAttribute('aria-busy');
+    }
   };
   /** Phones: slide a card into view. */
   const goTo = (index: number) => {
@@ -110,14 +128,16 @@ const total = reviews.length + quotes.length;
     const video = frame.querySelector('video');
     const button = frame.querySelector<HTMLButtonElement>('.video-play');
     if (!video || !button) return;
-    button.addEventListener('click', () => { start(index); video.focus(); });
+    button.addEventListener('click', () => { void start(index); video.focus(); });
+    video.addEventListener('pause', () => frame.classList.remove('is-playing'));
+    video.addEventListener('playing', () => frame.classList.add('is-playing'));
     video.addEventListener('ended', () => {
       stop(frame);
       // Reloading puts the poster back in place of the last frame.
       video.load();
       if (index + 1 < frames.length) {
         if (isCarousel()) goTo(cards.indexOf(frames[index + 1].closest('.video-review') as HTMLElement));
-        start(index + 1);
+        void start(index + 1);
       }
     });
   });

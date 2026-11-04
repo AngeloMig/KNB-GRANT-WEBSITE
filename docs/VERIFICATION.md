@@ -62,3 +62,43 @@ Prepared a second static build for `https://angelomig.github.io/KNB-GRANT-WEBSIT
 - Browser review confirmed font loading, the homepage presentation, and project navigation under the repository path.
 - The upload ZIP contains the complete `docs/` website and upload instructions. It excludes this verification document.
 - GitHub publication is not verified; the current Git credentials do not have push permission to the target repository.
+
+## Mobile phone performance pass — November 5, 2026
+
+Scope: the development-only `/ideas/phones/` concept and the existing homepage's mobile dot-name animation. The phone concept is still excluded from static routes; this pass does not publish it or replace the homepage composition.
+
+Measured asset changes, using `scripts/optimize-phone.mjs`:
+
+| Resource | Supplied original | Web derivative |
+| --- | ---: | ---: |
+| GLB bytes | 1,713,400 | 235,024 |
+| Triangles per phone | 29,544 | 17,157 |
+| Mobile display canvas | 512 × 1110 | 256 × 555 |
+
+The original GLB remains unchanged. The derivative removes the unused wallpaper before decoding, simplifies geometry with a 0.001 error bound, and uses Meshopt compression. This reduces transferred model bytes by 86.3% and geometry triangles by 41.9%. Mobile display textures use one quarter of the previous pixel count. Licensing and derivative modifications are disclosed in the model README and visible attribution.
+
+Browser checks in the local development server:
+
+- Visually reviewed the supplied orange model's front/reverse presentation on desktop (1280px) and mobile (390px). Phone concept and homepage had no horizontal overflow at the checked 320px / 390px widths.
+- Mobile diagnostics confirmed 256px screen textures, two cached project screens, 24 draw calls and 34,314 rendered triangles for the pair. The desktop derivative scene reported 28 draw calls and 39,400 triangles, including transparent material passes.
+- The mobile scene automatically settled after its short introduction. Its recorded render count stayed at 175 across separate reads while idle; Next projects rendered one additional frame and updated the project links. Rotation woke rendering and settled again. The cache stayed at two screens.
+- Vertical scrolling suspends WebGL rendering. Offscreen and hidden states cancel scheduled frames; stage-based lazy initialization also leaves the scene unmounted when the phone stage is never approached.
+- The current homepage's mobile name no longer scatters across a full-screen canvas or runs recurring simulated touch ripples. Its name canvas uses a mobile DPR cap of 1.25. The existing orbit and project controls remain.
+- Astro check: zero errors / warnings, with two existing hints in other preview files. Static build: 12 pages; an existing large-chunk warning remains for the lazily imported Three.js preview bundle. The phone preview is not a public static route.
+
+These are asset measurements, browser lifecycle checks and responsive desktop-browser checks. No new Lighthouse score, real-device FPS, thermal/battery result, iOS Safari result, Android Chrome result, or throttled-network result is claimed. Physical iPhone/Android verification remains necessary before promising smoothness across devices.
+
+## Final scope: six mobile orbital models and play button — November 5, 2026
+
+The homepage continues to render `HomeHero.astro`; its original desktop browser-card orbit is retained. The two-phone concept is not used on the homepage. Only the mobile project-phone visuals are replaced.
+
+- Confirmed six GLB instances at 390px, each with its own project screenshot. Clicked Next project through Road Armor, Omenz, Coptrz, Skinistry, Light My Bricks and back to Tero; active captions and project links followed the existing orbit.
+- At 1280px the WebGL canvas was `display:none`, model instances were not initialized, and all six original browser cards remained. Visually reviewed the desktop orbit.
+- The final mobile derivative is 315,504 bytes and preserves all 29,544 original triangles per model. It removes the unused wallpaper, compresses geometry and increases position/normal/UV precision; no geometry simplification is applied to this derivative. Geometry is shared between the six instances; backmost phones are culled.
+- Display textures are now 512px wide, with their height calculated from the actual model display aspect. Source images retain their proportions; a larger top safe area puts website navigation below the Dynamic Island. Anisotropic filtering improves angled screens.
+- Render density starts at up to 3× for high-density displays (up to 1.75× on constrained devices), then decreases in 0.25 increments only after sustained slow animation frames. The responsive test browser used 1.5× on its 1× display. These settings are not a claim of 4K imagery or measured device FPS; source project images are 440px wide.
+- Verified the renderer stays suspended offscreen: its frame count remained 699 before and after the video playback check. Idle rendering depends on orbit changes; it has no independent ambient render loop. Vertical scroll intent is released before a horizontal drag is captured.
+- Replaced the testimonial play emoji with an SVG triangle. In the 390px browser check, Carlos's video started, advanced beyond seven seconds, exposed native controls and paused with the keyboard. The play button returns on pause and failed starts allow retry with an accessible status message.
+- Source checks passed with zero errors/warnings and two existing preview hints. The GitHub Pages export is regenerated from source with existing quote-page encryption retained. Public deployment / GitHub push and physical iOS/Android performance are not verified by these local checks.
+
+Final QA images: `output/mobile-six-project-orbit.jpg`, `output/mobile-video-play-fixed.jpg` and `output/original-desktop-orbit-restored.jpg` (ignored, not included in the public export).

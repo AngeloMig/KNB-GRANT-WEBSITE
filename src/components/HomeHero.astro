@@ -34,7 +34,6 @@ import ProjectOrbit from './ProjectOrbit.astro';
   const root = document.documentElement;
   const motion = root.classList.contains('motion');
   const fine = matchMedia('(hover: hover) and (pointer: fine)').matches;
-  const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
   const ink = getComputedStyle(root).getPropertyValue('--ink').trim() || '#161616';
   const watch = (el: Element) => {
     const state = { on: false };
@@ -46,6 +45,8 @@ import ProjectOrbit from './ProjectOrbit.astro';
   // card, then it steps to the next project every few seconds. Drag or swipe with momentum; it settles on the nearest project. Arrows move one.
   class Orbit {
     rot = 0; front = -1;
+    phoneState = { turn: 0, spread: 1, tilt: 0 };
+    phoneRender?: (state: { turn: number; spread: number; tilt: number }) => void;
     // A little extra turn and tilt while the page scrolls away from the hero (set by the hero).
     nudge = { rot: 0, tilt: 0 };
     // start: a card to open at the front, with no entrance (coming back from that project's page).
@@ -120,6 +121,10 @@ import ProjectOrbit from './ProjectOrbit.astro';
         const key = `${turn.toFixed(3)}|${spread.toFixed(4)}|${this.nudge.tilt.toFixed(2)}`;
         if (key !== lastKey) {
           lastKey = key;
+          if (phone3d) {
+            this.phoneState = { turn, spread, tilt: tilt + this.nudge.tilt };
+            this.phoneRender?.(this.phoneState);
+          }
           spin.style.transform = `translateZ(calc(var(--r) * -1)) rotateX(${(tilt + this.nudge.tilt).toFixed(3)}deg) rotateY(${turn.toFixed(3)}deg)`;
           cards.forEach((card, i) => {
             const d = ((((angles[i] * spread + turn) % 360) + 540) % 360) - 180;
@@ -154,17 +159,19 @@ import ProjectOrbit from './ProjectOrbit.astro';
       requestAnimationFrame(frame);
       // A press becomes a drag only once it has moved a few pixels. Until then the pointer isn't captured,
       // so a plain click still reaches the card's link (a captured pointer sends the click to the ring).
-      let pressed = false, pointer = 0;
+      let pressed = false, pointer = 0, pressX = 0, pressY = 0;
       ring.addEventListener('pointerdown', (e) => {
         if (e.button !== 0) return;
         // Stop the mouse press from starting a text selection, focusing the card or dragging its image.
         if (e.pointerType === 'mouse') e.preventDefault();
         if (intro) endIntro();
         pressed = true; pointer = e.pointerId; lastX = e.clientX; moved = 0; vel = 0; tween = null; dragTo = this.rot; samples.length = 0;
+        pressX = e.clientX; pressY = e.clientY;
         getSelection()?.removeAllRanges();
       });
       ring.addEventListener('pointermove', (e) => {
         if (!pressed) return;
+        if (!dragging && e.pointerType !== 'mouse' && Math.abs(e.clientY - pressY) > Math.abs(e.clientX - pressX) && Math.abs(e.clientY - pressY) > 6) { release(); return; }
         // Let go outside the window, where the release wasn't seen: end the press.
         if (e.pointerType === 'mouse' && !e.buttons) { release(); return; }
         const dx = e.clientX - lastX; lastX = e.clientX; moved += Math.abs(dx);
@@ -215,7 +222,7 @@ import ProjectOrbit from './ProjectOrbit.astro';
   }
 
   // ── The dot name: the letters are sampled into dots. Each dot springs back home; the cursor pushes
-  // dots away (on touch screens a ripple runs through every few seconds). The colour eases between shades.
+  // dots away. Touch screens keep the name still between project colour changes.
   type Dot = { x: number; y: number; vx: number; vy: number; hx: number; hy: number; ox: number; oy: number; delay: number; dur: number; t: number; kicked: boolean };
   class DotName {
     ctx: CanvasRenderingContext2D;
@@ -237,8 +244,6 @@ import ProjectOrbit from './ProjectOrbit.astro';
       if (fine) {
         canvas.addEventListener('pointermove', (e) => { const r = canvas.getBoundingClientRect(); this.px = e.clientX - r.left; this.py = e.clientY - r.top; this.awake = true; });
         canvas.addEventListener('pointerleave', () => { this.px = this.py = -1e4; });
-      } else if (motion) {
-        (async () => { for (;;) { await sleep(2800); if (!this.seen.on || !this.dots.length) continue; const d = this.dots[(Math.random() * this.dots.length) | 0]; for (let k = 0; k < 24; k++) { this.px = d.hx + (k - 12) * 7; this.py = d.hy; this.awake = true; await sleep(16); } this.px = this.py = -1e4; } })();
       }
       const loop = () => {
         // Scrolled away mid-flight: land the dots at once.
@@ -256,7 +261,7 @@ import ProjectOrbit from './ProjectOrbit.astro';
       const r = this.canvas.getBoundingClientRect();
       this.W = Math.floor(r.width); this.H = Math.floor(r.height);
       if (!this.W || !this.H) return;
-      const dpr = Math.min(2, devicePixelRatio || 1);
+      const dpr = Math.min(matchMedia('(max-width: 640px)').matches ? 1.25 : 2, devicePixelRatio || 1);
       this.canvas.width = this.W * dpr; this.canvas.height = this.H * dpr;
       this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       const { W, H } = this;
@@ -276,7 +281,7 @@ import ProjectOrbit from './ProjectOrbit.astro';
       const data = o.getImageData(0, 0, W, H).data;
       const gap = this.gap;
       // The first time (with motion on), each dot starts at a random point on the screen.
-      const scatter = motion && !this.dots.length;
+      const scatter = motion && !matchMedia('(max-width: 640px), (pointer: coarse)').matches && !this.dots.length;
       this.gliding = scatter;
       if (scatter) this.makeFly();
       this.dots = [];
@@ -480,6 +485,26 @@ import ProjectOrbit from './ProjectOrbit.astro';
       root.style.setProperty('--hero-ink', `oklch(0.33 0.07 ${hue})`);
       root.style.setProperty('--hero-hue', hue);
     }, stageEl, start);
+
+    // Only the mobile project phones use WebGL. The desktop orbit remains CSS.
+    const mobileModels = matchMedia('(max-width: 640px)');
+    let modelLoading = false;
+    const loadMobileModels = async () => {
+      if (!mobileModels.matches || modelLoading) return;
+      modelLoading = true;
+      try {
+        const { mountOrbitPhones } = await import('../scripts/orbit-phone-scene');
+        orbit.phoneRender = await mountOrbitPhones(ob, orbit.phoneState);
+        orbit.phoneRender(orbit.phoneState);
+      } catch (error) {
+        console.warn('The mobile orbit is using its lightweight fallback:', error);
+      }
+    };
+    const modelObserver = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) void loadMobileModels();
+    }, { rootMargin: '100px' });
+    modelObserver.observe(ob);
+    mobileModels.addEventListener('change', () => { if (mobileModels.matches) void loadMobileModels(); });
 
     // ── The front card tilts a little towards the cursor, with a soft light following it.
     if (fine && motion) {

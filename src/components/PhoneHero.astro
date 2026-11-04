@@ -4,13 +4,12 @@ import { withBase } from '../utils/paths';
 import Arrow from './Arrow.astro';
 const previews = projects.map(p => ({ name: p.name, image: withBase(`/images/projects/${p.slug}-mobile-440.webp`), href: withBase(`/work/${p.slug}/`), bg: p.mobileBar.bg, fg: p.mobileBar.fg }));
 ---
-<section class="phone-concept wrap" data-phone-hero data-projects={JSON.stringify(previews)}>
-  <div class="phone-concept-bar"><a href={withBase('/')}>← Compare with the current hero</a><span>3D phone concept</span></div>
+<section class="phone-concept wrap" aria-label="Introduction" data-phone-hero data-projects={JSON.stringify(previews)} data-model-url={withBase('/models/iphone-17-pro-max-web.glb')}>
+  <div class="phone-concept-bar"><a href={withBase('/')}>← Homepage</a><span>iPhone 17 Pro Max · 3D</span></div>
   <div class="phone-concept-grid">
     <div class="phone-concept-copy">
-      <p class="phone-concept-byline">Grant Dev14. / Web developer</p>
-      <h1 class="display">BUILT FOR<br />EVERY SCREEN.</h1>
-      <p class="phone-concept-intro">Thoughtful websites, built to work beautifully. Shopify, Webflow & WordPress development for brands and agencies.</p>
+      <p class="phone-concept-byline">Grant Dev14. / Web developer</p><h1 class="display">BUILT FOR<br />EVERY SCREEN.</h1>
+      <p class="phone-concept-intro">Thoughtful websites, built to work beautifully. I’m Grant: I turn designs into custom websites and ecommerce for brands and agencies.</p>
       <a class="cta-primary" href={withBase('/estimate/')}>Get a free estimate <Arrow diagonal /></a>
       <p class="phone-concept-detail">Real projects. Two different perspectives.</p>
     </div>
@@ -20,14 +19,20 @@ const previews = projects.map(p => ({ name: p.name, image: withBase(`/images/pro
         <canvas class="phone-webgl" aria-hidden="true"></canvas>
         <span class="phone-drag-note" data-scene-note>Drag to turn the phones</span>
       </div>
-      <div class="phone-scene-controls" aria-label="3D phone controls">
-        <div class="phone-rotation-controls"><button type="button" data-rotate="-1" aria-label="Rotate phones left">↶</button><button type="button" data-reset>Reset view</button><button type="button" data-rotate="1" aria-label="Rotate phones right">↷</button></div>
-        <button type="button" data-motion aria-pressed="false">Pause motion</button>
+      <div class="phone-finish-picker" role="group" aria-label="Phone finish">
+        <span data-finish-label>Deep Blue</span>
+        <button type="button" class="finish-swatch" data-finish="silver" aria-label="Silver phone finish" aria-pressed="false" style="--finish:#d5d8db" disabled></button>
+        <button type="button" class="finish-swatch" data-finish="cosmic-orange" aria-label="Cosmic Orange phone finish" aria-pressed="false" style="--finish:#d88048" disabled></button>
+        <button type="button" class="finish-swatch" data-finish="deep-blue" aria-label="Deep Blue phone finish" aria-pressed="true" style="--finish:#28394f" disabled></button>
       </div>
-      <div class="phone-projects" aria-live="polite"><a href={previews[0].href} data-project-link="0"><span>iPhone-style / Titanium</span><strong>{previews[0].name} ↗</strong></a><a href={previews[1].href} data-project-link="1"><span>Galaxy-style / Graphite</span><strong>{previews[1].name} ↗</strong></a><button type="button" data-next>Next projects <Arrow /></button></div>
+      <div class="phone-scene-controls" aria-label="3D phone controls">
+        <div class="phone-rotation-controls"><button type="button" data-rotate="-1" aria-label="Rotate phones left" disabled>↶</button><button type="button" data-reset disabled>Reset view</button><button type="button" data-rotate="1" aria-label="Rotate phones right" disabled>↷</button></div>
+        <button type="button" data-motion aria-pressed="false" disabled>Pause motion</button>
+      </div>
+      <div class="phone-projects" aria-live="polite"><a href={previews[0].href} data-project-link="0"><span>iPhone 17 Pro Max / Screen</span><strong>{previews[0].name} ↗</strong></a><a href={previews[1].href} data-project-link="1"><span>iPhone 17 Pro Max / Reverse</span><strong>{previews[1].name} ↗</strong></a><button type="button" data-next aria-label="Next projects" disabled>Next projects <Arrow /></button></div>
     </div>
   </div>
-  <p class="phone-preview-note">Design preview · Custom 3D device designs inspired by the two phone styles, rather than exact manufacturer models.</p>
+  <p class="phone-preview-note">3D model: <a href="https://sketchfab.com/3d-models/iphone-17-pro-max-87fc1df741384124a8ce0226d2b2058d" target="_blank" rel="noopener noreferrer">“iPhone 17 Pro Max”</a> by <a href="https://sketchfab.com/MG990" target="_blank" rel="noopener noreferrer">MajdyModels</a>, <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer">CC BY 4.0</a>. Geometry simplified and compressed for the web; screen textures replaced with project previews; materials adapted, model oriented and scaled for this scene.</p>
 </section>
 <script>
   const root = document.querySelector<HTMLElement>('[data-phone-hero]');
@@ -35,16 +40,20 @@ const previews = projects.map(p => ({ name: p.name, image: withBase(`/images/pro
     const observer = new IntersectionObserver(async ([entry]) => {
       if (!entry.isIntersecting) return;
       observer.disconnect();
-      try {
+      const initialize = async () => { try {
         const { mountPhoneScene } = await import('../scripts/phone-scene');
         await mountPhoneScene(root);
-      } catch {
+      } catch (error) {
+        console.warn('Unable to initialize the 3D phone preview:', error);
         const note = root.querySelector('[data-scene-note]');
         if (note) note.textContent = 'Project previews';
-        root.querySelectorAll<HTMLButtonElement>('.phone-scene-controls button').forEach(button => button.disabled = true);
-      }
-    }, { rootMargin: '200px' });
-    observer.observe(root);
+        root.querySelectorAll<HTMLButtonElement>('.phone-scene-controls button, [data-next], [data-finish]').forEach(button => button.disabled = true);
+      } };
+      // Let the page and scrolling settle before compiling the 3D scene.
+      if ('requestIdleCallback' in window) window.requestIdleCallback(initialize, { timeout: 1200 });
+      else setTimeout(initialize, 150);
+    }, { rootMargin: '100px' });
+    observer.observe(root.querySelector('[data-phone-scene]')!);
   }
 </script>
 <style>
@@ -53,4 +62,10 @@ const previews = projects.map(p => ({ name: p.name, image: withBase(`/images/pro
   @media(max-width:850px){.phone-concept-grid{grid-template-columns:1fr;gap:0}.phone-concept-copy{padding-block:44px 0}.phone-concept-copy h1{font-size:clamp(64px,13vw,106px)}.phone-concept-intro{max-width:420px}.phone-concept-detail{display:none}.phone-concept-demo{max-width:650px;width:100%;margin-inline:auto}.phone-scene{height:530px}.phone-projects{margin-bottom:35px}}
   @media(max-width:450px){.phone-concept-bar{font-size:9px;gap:14px}.phone-concept-copy h1{font-size:clamp(54px,14vw,66px)}.phone-concept-copy{padding-top:30px}.phone-concept-byline{font-size:10px;margin-bottom:20px}.phone-concept-intro{font-size:13px;margin-block:20px 24px}.phone-scene{height:400px;margin-top:12px}.phone-scene-fallback{inset:50px 8px;gap:18px}.fallback-handset{border-width:5px;border-radius:22px}.phone-projects{grid-template-columns:1fr 1fr;gap:20px 10px}.phone-projects button{grid-column:1/-1;justify-self:end}.phone-projects span{font-size:8px}.phone-scene-controls{gap:2px}.phone-scene-controls button{padding-inline:8px;font-size:9px}}
   @media(prefers-reduced-motion:reduce){.phone-webgl,.phone-scene-fallback{transition:none}}
+  .phone-finish-picker{display:flex;align-items:center;justify-content:center;gap:5px;margin-top:8px}
+  .phone-finish-picker>span{font-size:11px;color:var(--muted);margin-right:12px;min-width:85px}
+  .finish-swatch{width:44px;height:44px;display:grid;place-items:center;background:none;border-radius:50%}
+  .finish-swatch::before{content:'';width:19px;height:19px;border-radius:50%;background:var(--finish);border:1px solid #0002}
+  .finish-swatch[aria-pressed=true]::before{outline:1px solid var(--ink);outline-offset:4px}
+  .phone-scene-controls button,.phone-projects button{min-height:44px}
 </style>

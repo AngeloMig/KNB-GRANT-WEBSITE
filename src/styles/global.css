@@ -4066,6 +4066,16 @@ html.menu-closing,
 .video-frame:hover .video-play {
   transform: scale(1.1);
 }
+.video-play svg {
+  display: block;
+  width: 24px;
+  height: 24px;
+  transform: translateX(1px);
+  pointer-events: none;
+}
+.video-play:disabled {
+  cursor: progress;
+}
 .video-length {
   position: absolute;
   left: 14px;
