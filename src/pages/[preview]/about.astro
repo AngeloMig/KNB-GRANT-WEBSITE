@@ -1,0 +1,538 @@
+---
+// Design preview: 30 ideas for the About page. Local preview only: in a build this route has no pages.
+// Open http://localhost:4321/ideas/about/. Real content is used wherever the site has it; anything that
+// needs your words (FAQ answers, principles, a photo…) is marked “example” and must be replaced.
+import { withBase } from '../../utils/paths';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import Arrow from '../../components/Arrow.astro';
+import IdeaLegend from '../../components/IdeaLegend.astro';
+import CompanyLogo from '../../components/CompanyLogo.astro';
+import VideoReviews from '../../components/VideoReviews.astro';
+import { projects, canvasHues } from '../../data/projects';
+import { experience, profile } from '../../data/profile';
+
+export function getStaticPaths() {
+  return import.meta.env.DEV ? [{ params: { preview: 'ideas' } }] : [];
+}
+
+const IDEAS = [
+  [1, 'Name in dots'], [2, 'Photo in dots'], [3, 'One-line intro'], [4, 'Availability pill'], [5, 'Local time and overlap'], [6, 'Résumé preview card'],
+  [7, 'Numbered sections'], [8, 'Pull quote'], [9, 'How I work'], [10, 'Working with me'], [11, 'Words that fill in'], [12, 'A day in my work'],
+  [13, 'Numbers that count up'], [14, 'Skills that link to proof'], [15, 'Logo strip'], [16, 'The video review'], [17, 'Live sites list'], [18, 'Recently shipped'],
+  [19, 'Tools by strength'], [20, 'Tool notes on hover'], [21, 'Tools in an orbit'], [22, 'Tools by platform'],
+  [23, 'Career timeline bar'], [24, 'Company colour on hover'], [25, 'Education card'],
+  [26, '“Sound like a fit?”'], [27, 'FAQ for agencies'], [28, 'Currently learning'], [29, 'Next-page panel'], [30, 'Colour per section'],
+] as const;
+const GROUPS: Record<number, string> = { 1: 'First screen', 7: 'Story', 13: 'Proof', 19: 'Tools of the trade', 23: 'Experience & education', 26: 'Closing' };
+const NOTES: Record<number, [string, string]> = {
+  1: ['move over it', 'The page title drawn in the hero’s dots, so About feels part of the same site.'],
+  2: ['hover the frame', 'Your photo as a dot halftone that sharpens on hover. Placeholder figure until you send a photo.'],
+  3: ['', 'One clear sentence right under the title, so visitors get who you are before reading on.'],
+  4: ['example month', 'A small pill saying when you can take on new work. Only if you want to show it.'],
+  5: ['live: your time and the visitor’s', 'Manila time now, the visitor’s time, and how many working hours overlap. Clients abroad ask this first.'],
+  6: ['hover it', 'The résumé download as a little document card that lifts on hover, instead of a plain link.'],
+  7: ['scroll inside the box', 'A numbered list down the side that lights up the section you’re reading.'],
+  8: ['', 'One line from your own intro set huge, between paragraphs.'],
+  9: ['example wording', 'Your process in four short steps, with a line drawing across as it comes into view.'],
+  10: ['example wording', 'Three short promises about how you work with clients and agencies.'],
+  11: ['scroll past it', 'Key phrases in your intro fill in with colour as you scroll past them.'],
+  12: ['example times', 'A short timeline of a working day in Manila time, with when you reply and when you’re building.'],
+  13: ['scroll into view', 'Numbers taken from the site’s own data: years since 2019, companies, featured projects and tools.'],
+  14: ['pick a skill', 'Each platform or agency shows the projects that prove it.'],
+  15: ['', 'The companies you’ve worked with, in the site’s mono logo style, moving slowly.'],
+  16: ['the homepage section, reused', 'Carlos’s real video review on the About page too. No new quotes.'],
+  17: ['', 'Every featured project as a row that opens the live site.'],
+  18: ['', 'The newest project (Tero) as a small “latest” card.'],
+  19: ['example strengths', 'Tools sized by how much you use them: daily, often, comfortable.'],
+  20: ['hover a tool · example notes', 'Each tool shows one line on how you use it.'],
+  21: ['drag isn’t needed: it turns', 'The tools on a turning ring, echoing the hero orbit.'],
+  22: ['pick a platform · example grouping', 'Filter the tools to the ones you use on each platform.'],
+  23: ['real dates', 'Your roles as bars on a timeline from 2019 to now, so the overlap (Cardell Media and Dingus & Zazzy) is clear.'],
+  24: ['hover a role', 'Each experience row takes a faint colour on hover, with the logo coming forward.'],
+  25: ['', 'Education as a small card instead of a plain row.'],
+  26: ['move over the dots', 'An About-specific ending with the homepage’s dotted “LET’S TALK.”'],
+  27: ['example answers', 'Answers to what agencies ask first: white-label, NDAs, time zones and handover.'],
+  28: ['example', 'One line you update now and then, so the page feels current.'],
+  29: ['hover it', 'A full-width panel at the bottom leading to your work, like the new “Next project”.'],
+  30: ['scroll through it', 'The background takes a faint colour for each section as you scroll, like the hero.'],
+};
+const tag = (n: number) => ({ name: IDEAS[n - 1][1], note: NOTES[n][0], why: NOTES[n][1] });
+const toolGroups = [
+  { label: 'Development', tools: ['HTML', 'CSS', 'JavaScript', 'jQuery', 'PHP', 'Liquid', 'SASS', 'MySQL'] },
+  { label: 'Platforms', tools: ['Shopify', 'Shopify Plus', 'Webflow', 'WordPress', 'WooCommerce', 'BigCommerce'] },
+  { label: 'Design & integrations', tools: ['Figma', 'GSAP', 'Adobe Photoshop', 'HubSpot', 'ActiveCampaign', 'Klaviyo'] },
+];
+const allTools = toolGroups.flatMap((g) => g.tools);
+// Examples only, for ideas 19, 20 and 22: replace with your own.
+const strength: Record<string, number> = { Shopify: 3, Liquid: 3, 'Shopify Plus': 3, JavaScript: 3, CSS: 3, HTML: 3, Webflow: 2, WordPress: 2, GSAP: 2, Figma: 2, PHP: 2, SASS: 2, Klaviyo: 2, WooCommerce: 1, BigCommerce: 1, jQuery: 1, MySQL: 1, 'Adobe Photoshop': 1, HubSpot: 1, ActiveCampaign: 1 };
+const toolNote: Record<string, string> = { Shopify: 'Custom themes, sections and store builds', Liquid: 'Theme logic and reusable sections', Webflow: 'CMS builds and interactions', WordPress: 'Custom themes and WooCommerce', GSAP: 'Scroll and page animation', Figma: 'Handing designs over to code', Klaviyo: 'Email sign-ups wired into stores', JavaScript: 'Interactive features and integrations' };
+const byPlatform: Record<string, string[]> = { Shopify: ['Shopify', 'Shopify Plus', 'Liquid', 'JavaScript', 'CSS', 'Klaviyo', 'Figma'], Webflow: ['Webflow', 'GSAP', 'JavaScript', 'CSS', 'Figma', 'HubSpot'], WordPress: ['WordPress', 'WooCommerce', 'PHP', 'MySQL', 'jQuery', 'CSS'] };
+const img = (slug: string, size = '-640') => withBase(`/images/projects/${slug}${size}.webp`);
+const host = (url: string) => new URL(url).hostname.replace('www.', '');
+const hueOf = (p: (typeof projects)[number]) => canvasHues[p.canvas] ?? 60;
+// Idea 13: everything here is counted from the site's data.
+const years = new Date().getFullYear() - 2019;
+const stats = [
+  { n: years, suffix: '+', label: 'years building websites' },
+  { n: experience.length, suffix: '', label: 'companies and agencies' },
+  { n: projects.length, suffix: '', label: 'featured projects' },
+  { n: allTools.length, suffix: '', label: 'tools of the trade' },
+];
+// Idea 23: each role's dates as months since Jan 2019.
+const monthsOf = (s: string) => { const [m, y] = s.trim().split(' '); return (Number(y) - 2019) * 12 + ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].indexOf(m); };
+const span = monthsOf('Dec 2026');
+const bars = experience.map((e) => { const [a, b] = e.dates.split('—'); return { company: e.company, role: e.role, from: monthsOf(a), to: monthsOf(b) }; });
+const roleHues = [245, 20, 295, 105];
+const skills = [
+  ...[...new Set(projects.map((p) => p.platform))].map((s) => ({ label: s, slugs: projects.filter((p) => p.platform === s).map((p) => p.slug) })),
+  ...[...new Set(projects.map((p) => p.agency).filter(Boolean))].map((a) => ({ label: `With ${a}`, slugs: projects.filter((p) => p.agency === a).map((p) => p.slug) })),
+];
+const latest = projects[0];
+const logos = [...experience.filter((e) => e.logo), { company: 'MDO Digital' }, { company: 'Tecniqode' }];
+---
+<BaseLayout title="About ideas | Grant Dev14" description="Local design preview." noindex>
+  <IdeaLegend ideas={IDEAS} links={[{ label: 'Compare with the current About page', href: '/about/' }]} />
+  <div class="wrap ab-page">
+    <header class="ab-head">
+      <span class="tiny-heading">Preview · About page</span>
+      <h1 class="display">Thirty ideas<br />for About</h1>
+      <p>Each demo works. Real content is used wherever the site has it; anything marked “example” needs your own words before it goes live. Pick the numbers you like.</p>
+    </header>
+
+    {IDEAS.map(([n]) => {
+      const t = tag(n);
+      return (
+        <section class="ab" id={`idea-${n}`}>
+          {GROUPS[n] && <p class="ab-group">{GROUPS[n]}</p>}
+          <div class="ab-top"><span class="idea-tag"><b>{n}</b>{t.name}{t.note && <em>{t.note}</em>}</span><p class="ab-why">{t.why}</p></div>
+
+          {n === 1 && <canvas class="ab-dots ab-title-dots" data-text="ABOUT GRANT"></canvas>}
+
+          {n === 2 && (
+            <div class="ab-photo"><span class="ab-photo-frame"><canvas></canvas><svg viewBox="0 0 200 240" aria-hidden="true"><defs><radialGradient id="ab-face" cx="50%" cy="35%" r="60%"><stop offset="0" stop-color="#d9d4cc" /><stop offset="1" stop-color="#6d665c" /></radialGradient></defs><rect width="200" height="240" fill="#efece6" /><circle cx="100" cy="92" r="46" fill="url(#ab-face)" /><path d="M20 240c6-58 40-86 80-86s74 28 80 86z" fill="url(#ab-face)" /></svg></span><p>Placeholder figure: your photo would go here.</p></div>
+          )}
+
+          {n === 3 && (
+            <div class="ab-mock"><p class="ab-mock-title display">ABOUT GRANT</p><p class="ab-oneliner">Shopify, Webflow & WordPress developer in the Philippines, building websites for brands and agencies worldwide.</p></div>
+          )}
+
+          {n === 4 && <p class="ab-pill"><i></i>Taking new projects from <b>December</b> <span>· example</span></p>}
+
+          {n === 5 && (
+            <div class="ab-time">
+              <div class="ab-clocks"><p><span>Grant · Manila</span><b data-clock="Asia/Manila">--:--</b></p><p><span>You · <em data-you-zone></em></span><b data-clock="">--:--</b></p><p><span>Working hours that overlap</span><b data-overlap>–</b></p></div>
+              <div class="ab-day" aria-hidden="true"><span class="ab-day-grant"></span><span class="ab-day-you"></span><span class="ab-day-now"></span></div>
+              <p class="ab-day-key"><i class="g"></i>Grant, 9 am – 6 pm Manila <i class="y"></i>You, 9 am – 6 pm your time</p>
+            </div>
+          )}
+
+          {n === 6 && (
+            <a class="ab-resume" href={withBase('/resume/grant-payad-resume.pdf')} download><span class="ab-doc"><b>{profile.name}</b><i></i><i></i><i class="s"></i><i></i><i class="s"></i><i></i></span><span><strong>Download résumé</strong><small>PDF</small></span><Arrow diagonal /></a>
+          )}
+
+          {n === 7 && (
+            <div class="ab-scrollbox ab-index-demo">
+              <ol class="ab-index">{['Who I am', 'How I work', 'Experience', 'Tools', 'Education'].map((s, i) => <li><a href={`#ab-s${i}`}><b>{String(i + 1).padStart(2, '0')}</b>{s}</a></li>)}</ol>
+              <div class="ab-index-body">{['Who I am', 'How I work', 'Experience', 'Tools', 'Education'].map((s, i) => <section id={`ab-s${i}`} data-i={i}><h3>{s}</h3><p>Section content goes here. Scroll on and the list on the left follows where you are.</p></section>)}</div>
+            </div>
+          )}
+
+          {n === 8 && <blockquote class="ab-quote display">“I care about the details you see, and the foundations you don’t.”</blockquote>}
+
+          {n === 9 && (
+            <ol class="ab-steps">{[['Brief', 'We agree what we’re building, by when, and for how much.'], ['Build', 'I build in a staging site you can check at any time.'], ['Review', 'You test it; I fix and polish until it’s right.'], ['Launch', 'We go live together, then I hand over clean, documented code.']].map(([h, p], i) => <li style={`--i:${i}`}><b>{String(i + 1).padStart(2, '0')}</b><h3>{h}</h3><p>{p}</p></li>)}</ol>
+          )}
+
+          {n === 10 && (
+            <div class="ab-promises">{[['Clear updates', 'You’ll always know what’s done and what’s next.'], ['No surprises', 'Scope and cost agreed before the work starts.'], ['Clean handover', 'Code your team can keep working on.']].map(([h, p]) => <div><h3>{h}</h3><p>{p}</p></div>)}</div>
+          )}
+
+          {n === 11 && (
+            <p class="ab-fill">My experience spans <mark>ecommerce development</mark>, <mark>custom themes</mark>, <mark>platform migrations</mark>, third-party integrations, and <mark>technical SEO</mark>. Alongside hands-on development, I’ve <mark>led development teams</mark> and coordinated projects from planning through delivery.</p>
+          )}
+
+          {n === 12 && (
+            <ol class="ab-dayline">{[['9:00', 'Replies and planning'], ['10:00', 'Building'], ['13:00', 'Calls with clients in Europe'], ['15:00', 'Building and testing'], ['18:00', 'Daily update sent']].map(([t, l]) => <li><b>{t}</b><span>{l}</span></li>)}</ol>
+          )}
+
+          {n === 13 && (
+            <div class="ab-stats">{stats.map((s) => <p><b data-count={s.n} data-suffix={s.suffix}>0</b><span>{s.label}</span></p>)}</div>
+          )}
+
+          {n === 14 && (
+            <div class="ab-skills">
+              <div class="ab-chips" role="group" aria-label="Skill">{skills.map((s, i) => <button type="button" data-slugs={s.slugs.join(' ')} aria-pressed={i === 0 ? 'true' : 'false'}>{s.label} <span>{s.slugs.length}</span></button>)}</div>
+              <ul class="ab-skill-list">{projects.map((p) => <li data-slug={p.slug} hidden={!skills[0].slugs.includes(p.slug)}><a href={withBase(`/work/${p.slug}/`)}><img src={img(p.slug, '-320')} alt="" width="320" height="180" loading="lazy" /><strong>{p.name}</strong><span>{p.platform} · {p.category}</span></a></li>)}</ul>
+            </div>
+          )}
+
+          {n === 15 && (
+            <div class="ab-logos" aria-label="Companies Grant has worked with"><div class="ab-logos-track">{[0, 1].map(() => logos.map((l) => <span class="ab-logo"><CompanyLogo name={l.company} logo={'logo' in l ? l.logo : undefined} size={26} /></span>))}</div></div>
+          )}
+
+          {n === 16 && <div class="ab-video"><VideoReviews /></div>}
+
+          {n === 17 && (
+            <ol class="ab-sites">{projects.map((p, i) => <li><a href={p.url} target="_blank" rel="noopener noreferrer"><b>{String(i + 1).padStart(2, '0')}</b><strong>{p.name}</strong><span>{p.platform} · {p.category}</span><span class="ab-host">{host(p.url)}</span><span aria-hidden="true">↗</span></a></li>)}</ol>
+          )}
+
+          {n === 18 && (
+            <a class="ab-latest" href={withBase(`/work/${latest.slug}/`)} style={`--h:${hueOf(latest)}`}><img src={img(latest.slug, '-480')} alt="" width="480" height="270" /><span><small><i></i>Recently shipped</small><strong>{latest.name}</strong><em>{latest.description}</em></span><Arrow diagonal /></a>
+          )}
+
+          {n === 19 && <ul class="ab-strength">{[...allTools].sort((a, b) => (strength[b] ?? 1) - (strength[a] ?? 1)).map((tool) => <li data-s={strength[tool] ?? 1}>{tool}</li>)}</ul>}
+
+          {n === 20 && <ul class="ab-notes">{allTools.map((tool) => <li tabindex="0">{tool}<span role="tooltip">{toolNote[tool] ?? 'Used on client projects'}</span></li>)}</ul>}
+
+          {n === 21 && <div class="ab-ring" aria-label="Tools"><div class="ab-ring-spin">{allTools.map((tool, i) => <span style={`--i:${i};--n:${allTools.length}`}>{tool}</span>)}</div></div>}
+
+          {n === 22 && (
+            <div class="ab-plat">
+              <div class="ab-chips" role="group" aria-label="Platform">{Object.keys(byPlatform).map((k, i) => <button type="button" data-tools={byPlatform[k].join('|')} aria-pressed={i === 0 ? 'true' : 'false'}>{k}</button>)}</div>
+              <ul class="ab-plat-tools">{allTools.map((tool) => <li data-tool={tool} class:list={{ 'is-on': byPlatform.Shopify.includes(tool) }}>{tool}</li>)}</ul>
+            </div>
+          )}
+
+          {n === 23 && (
+            <div class="ab-timeline">
+              <div class="ab-years">{Array.from({ length: 8 }, (_, i) => <span style={`left:${((i * 12) / span) * 100}%`}>{2019 + i}</span>)}</div>
+              {bars.map((b, i) => <div class="ab-bar-row"><span class="ab-bar" style={`left:${(b.from / span) * 100}%;width:${((b.to - b.from) / span) * 100}%;--h:${roleHues[i]}`}><b>{b.company}</b></span></div>)}
+            </div>
+          )}
+
+          {n === 24 && (
+            <div class="ab-roles">{experience.map((e, i) => <article style={`--h:${roleHues[i]}`}><span class="ab-role-logo"><CompanyLogo name={e.company} logo={e.logo} size={22} /></span><div><h3>{e.role}</h3><p>{e.dates}</p></div></article>)}</div>
+          )}
+
+          {n === 25 && (
+            <div class="ab-edu"><span class="ab-edu-year display">2019</span><div><span class="tiny-heading">Education</span><h3>BS Information Technology</h3><p>Major in Web Development · Bulacan State University</p></div></div>
+          )}
+
+          {n === 26 && (
+            <div class="ab-fit">
+              <div><h3 class="display">Sound like<br />a fit?</h3><p>Tell me about your project, or get a realistic timeline in two minutes.</p><div class="ab-fit-actions"><a class="cta-primary" href={withBase('/contact/')}>Tell me about it <Arrow diagonal /></a><a class="cta-ghost" href={withBase('/estimate/')}>Get an estimate</a></div></div>
+              <canvas class="ab-dots ab-fit-dots" data-lines="LET’S|TALK."></canvas>
+            </div>
+          )}
+
+          {n === 27 && (
+            <div class="ab-faq">{[['Do you work white-label for agencies?', 'Yes. I can work under your agency’s name and talk to your clients as part of your team.'], ['Will you sign an NDA?', 'Happy to, before we share anything confidential.'], ['How do time zones work?', 'I overlap with UK mornings and Australian afternoons, and send an update at the end of each day.'], ['What happens after launch?', 'You get clean code, a short handover, and help with fixes or new features whenever you need it.']].map(([q, a]) => <details><summary>{q}<i aria-hidden="true"></i></summary><p>{a}</p></details>)}</div>
+          )}
+
+          {n === 28 && <p class="ab-learning"><span>Currently learning</span><strong>Shopify Hydrogen and headless storefronts</strong><em>example · updated Nov 2026</em></p>}
+
+          {n === 29 && (
+            <a class="next-project" href={withBase('/#work')} style={`--next-hue:${hueOf(latest)}`}><span class="next-project-label">Next</span><strong class="display">Selected work</strong><span class="next-project-meta">{projects.length} projects · Shopify, Webflow & WordPress</span><span class="next-project-arrow"><Arrow diagonal /></span><img src={img(latest.slug, '-960')} alt="" width="960" height="540" loading="lazy" /></a>
+          )}
+
+          {n === 30 && (
+            <div class="ab-wash">{[['Who I am', 245], ['How I work', 20], ['Experience', 105]].map(([h, hue]) => <div class="ab-wash-panel" data-h={hue}><h3 class="display">{h}</h3><p>The page background eases into a faint shade for each section as it reaches the middle of the screen.</p></div>)}</div>
+          )}
+        </section>
+      );
+    })}
+  </div>
+</BaseLayout>
+
+<script>
+  import { Dots } from './_dots';
+  const clamp = (v: number, a = 0, b = 1) => Math.min(b, Math.max(a, v));
+
+  // 1, 26: dot text.
+  document.querySelectorAll<HTMLCanvasElement>('canvas.ab-dots').forEach((c) => new Dots(c, c.dataset.text ?? '', { lines: c.dataset.lines?.split('|'), color: c.classList.contains('ab-fit-dots') ? '#f2f0ea' : undefined, accent: 'oklch(0.8 0.12 245)' }));
+
+  // 2: the placeholder figure as a dot halftone, sharpening on hover.
+  const frame = document.querySelector<HTMLElement>('.ab-photo-frame');
+  if (frame) {
+    const svg = frame.querySelector('svg')!, cv = frame.querySelector('canvas')!;
+    const im = new Image();
+    im.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(new XMLSerializer().serializeToString(svg));
+    im.decode().then(() => {
+      const r = cv.getBoundingClientRect(), W = Math.floor(r.width), H = Math.floor(r.height), dpr = Math.min(2, devicePixelRatio || 1), g = 7;
+      cv.width = W * dpr; cv.height = H * dpr;
+      const c = cv.getContext('2d')!; c.setTransform(dpr, 0, 0, dpr, 0, 0);
+      const cols = Math.ceil(W / g), rows = Math.ceil(H / g), s = document.createElement('canvas'); s.width = cols; s.height = rows;
+      const sc = s.getContext('2d', { willReadFrequently: true })!; sc.drawImage(im, 0, 0, cols, rows);
+      const px = sc.getImageData(0, 0, cols, rows).data, p = new Path2D();
+      for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++) { const k = (y * cols + x) * 4, lum = (px[k] + px[k + 1] + px[k + 2]) / 765, rad = (1 - lum) * g * 0.6; if (rad > 0.4) { p.moveTo(x * g + g / 2 + rad, y * g + g / 2); p.arc(x * g + g / 2, y * g + g / 2, rad, 0, 6.2832); } }
+      c.fillStyle = '#161616'; c.fill(p);
+    });
+  }
+
+  // 5: Manila time, the visitor's time, and the overlap of 9–6 working days.
+  const timeBox = document.querySelector<HTMLElement>('.ab-time');
+  if (timeBox) {
+    const you = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    timeBox.querySelector('[data-you-zone]')!.textContent = you.split('/').pop()!.replace(/_/g, ' ');
+    // Minutes the visitor's zone is ahead of Manila.
+    const offset = (zone: string) => { const d = new Date(); const t = new Date(d.toLocaleString('en-US', { timeZone: zone })); return t.getTime(); };
+    const diff = Math.round((offset(you) - offset('Asia/Manila')) / 60000);
+    // Grant 9–18 Manila; the visitor's 9–18, in Manila minutes.
+    const a = [540, 1080], b = [540 - diff, 1080 - diff];
+    let overlap = 0;
+    for (const shift of [-1440, 0, 1440]) overlap += Math.max(0, Math.min(a[1], b[1] + shift) - Math.max(a[0], b[0] + shift));
+    const hrs = overlap / 60;
+    timeBox.querySelector('[data-overlap]')!.textContent = hrs >= 9 ? 'All day' : hrs ? `${+hrs.toFixed(1)} hours` : 'None: replies the next morning';
+    const pct = (m: number) => `${(((m % 1440) + 1440) % 1440) / 14.4}%`;
+    const g = timeBox.querySelector<HTMLElement>('.ab-day-grant')!, y = timeBox.querySelector<HTMLElement>('.ab-day-you')!, now = timeBox.querySelector<HTMLElement>('.ab-day-now')!;
+    g.style.left = pct(a[0]); g.style.width = `${(540 / 1440) * 100}%`;
+    y.style.left = pct(b[0]); y.style.width = `${(540 / 1440) * 100}%`;
+    const tick = () => {
+      timeBox.querySelectorAll<HTMLElement>('[data-clock]').forEach((el) => { el.textContent = new Date().toLocaleTimeString('en-GB', { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: el.dataset.clock || undefined }); });
+      const m = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Manila' }));
+      now.style.left = pct(m.getHours() * 60 + m.getMinutes());
+    };
+    tick(); setInterval(tick, 15000);
+  }
+
+  // 7: the side list follows the section in view inside the box.
+  const idx = document.querySelector<HTMLElement>('.ab-index-demo');
+  if (idx) {
+    const links = [...idx.querySelectorAll<HTMLElement>('.ab-index a')];
+    const io = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) links.forEach((l, i) => l.classList.toggle('is-on', i === Number((e.target as HTMLElement).dataset.i))); }), { root: idx, rootMargin: '-40% 0px -55% 0px' });
+    idx.querySelectorAll('.ab-index-body section').forEach((s) => io.observe(s));
+    links[0].classList.add('is-on');
+    links.forEach((l) => l.addEventListener('click', (e) => { e.preventDefault(); idx.querySelector(l.getAttribute('href')!)!.scrollIntoView({ behavior: 'smooth', block: 'start' }); }));
+  }
+
+  // 9, 13: things that start when they come into view.
+  const once = (el: Element, fn: () => void) => { const io = new IntersectionObserver(([e]) => { if (e.isIntersecting) { fn(); io.disconnect(); } }, { threshold: 0.4 }); io.observe(el); };
+  const steps = document.querySelector('.ab-steps');
+  if (steps) once(steps, () => steps.classList.add('is-in'));
+  const statBox = document.querySelector('.ab-stats');
+  if (statBox) once(statBox, () => statBox.querySelectorAll<HTMLElement>('[data-count]').forEach((el) => {
+    const to = Number(el.dataset.count), start = performance.now();
+    const tick = (now: number) => { const t = clamp((now - start) / 1400), e = 1 - (1 - t) ** 3; el.textContent = Math.round(to * e) + (t >= 1 ? el.dataset.suffix! : ''); if (t < 1) requestAnimationFrame(tick); };
+    requestAnimationFrame(tick);
+  }));
+
+  // 11: each highlight fills as the paragraph moves up the screen.
+  const fill = document.querySelector<HTMLElement>('.ab-fill');
+  if (fill) {
+    const marks = [...fill.querySelectorAll<HTMLElement>('mark')];
+    const tick = () => { const r = fill.getBoundingClientRect(), p = clamp((innerHeight * 0.85 - r.top) / (innerHeight * 0.6)); marks.forEach((m, i) => m.style.setProperty('--fill', `${clamp(p * marks.length - i) * 100}%`)); };
+    addEventListener('scroll', () => requestAnimationFrame(tick), { passive: true }); tick();
+  }
+
+  // 14, 22: chips that filter.
+  document.querySelectorAll<HTMLElement>('.ab-chips').forEach((chips) => chips.querySelectorAll<HTMLButtonElement>('button').forEach((b) => b.addEventListener('click', () => {
+    chips.querySelectorAll('button').forEach((o) => o.setAttribute('aria-pressed', String(o === b)));
+    const box = chips.parentElement!;
+    if (b.dataset.slugs) { const s = b.dataset.slugs.split(' '); box.querySelectorAll<HTMLElement>('[data-slug]').forEach((li) => { li.hidden = !s.includes(li.dataset.slug!); }); }
+    if (b.dataset.tools) { const t = b.dataset.tools.split('|'); box.querySelectorAll<HTMLElement>('[data-tool]').forEach((li) => li.classList.toggle('is-on', t.includes(li.dataset.tool!))); }
+  })));
+
+  // 30: the box takes the shade of the panel in the middle of the screen.
+  const wash = document.querySelector<HTMLElement>('.ab-wash');
+  if (wash) {
+    const io = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) wash.style.setProperty('--h', (e.target as HTMLElement).dataset.h!); }), { rootMargin: '-45% 0px -45% 0px' });
+    wash.querySelectorAll('.ab-wash-panel').forEach((p) => io.observe(p));
+  }
+</script>
+
+<style is:global>
+  .ab-page { padding-bottom: 160px; }
+  .ab-head { display: grid; gap: 18px; max-width: 820px; padding-block: 24px 40px; }
+  .ab-head h1 { margin: 0; font-size: clamp(56px, 8vw, 130px); }
+  .ab-head p { margin: 0; color: var(--muted); font-size: 17px; line-height: 1.5; }
+  .ab { padding-block: 52px; border-top: 1px solid var(--line); }
+  .ab-group { margin: 0 0 20px; font: 800 clamp(28px, 3vw, 44px) / 1 "Big Shoulders Display", sans-serif; text-transform: uppercase; }
+  .ab-top { display: grid; gap: 4px; margin-bottom: 26px; }
+  .ab-why { max-width: 680px; margin: 0; color: var(--muted); font-size: 15px; line-height: 1.5; }
+  .ab-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 22px; }
+  .ab-chips button { padding: 8px 16px; border: 1px solid var(--line); border-radius: 99px; background: none; color: var(--ink); font: 500 13px Archivo, sans-serif; cursor: pointer; transition: background 0.25s, color 0.25s; }
+  .ab-chips button[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+  .ab-chips button span { opacity: 0.55; margin-left: 4px; }
+  .ab-scrollbox { height: 380px; overflow: auto; border-radius: 22px; background: var(--surface); overscroll-behavior: contain; }
+
+  /* 1 */ .ab-title-dots { display: block; width: 100%; height: clamp(110px, 15vw, 240px); }
+  /* 2 */
+  .ab-photo { display: flex; align-items: end; gap: 24px; }
+  .ab-photo-frame { position: relative; display: block; width: 240px; aspect-ratio: 5 / 6; border-radius: 20px; overflow: hidden; background: #efece6; }
+  .ab-photo-frame svg, .ab-photo-frame canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .ab-photo-frame svg { opacity: 0; transition: opacity 0.6s; }
+  .ab-photo-frame canvas { transition: opacity 0.6s; }
+  .ab-photo-frame:hover svg { opacity: 1; }
+  .ab-photo-frame:hover canvas { opacity: 0; }
+  .ab-photo p { margin: 0; font-size: 13px; color: var(--muted); }
+  /* 3 */
+  .ab-mock { padding: 32px; border-radius: 22px; background: var(--surface); }
+  .ab-mock-title { margin: 0; font-size: clamp(56px, 8vw, 120px); }
+  .ab-oneliner { max-width: 640px; margin: 14px 0 0; font-size: clamp(18px, 1.8vw, 24px); line-height: 1.35; }
+  /* 4 */
+  .ab-pill { display: inline-flex; align-items: center; gap: 10px; margin: 0; padding: 10px 18px; border-radius: 99px; background: oklch(0.96 0.04 150); color: oklch(0.32 0.08 150); font-size: 14px; }
+  .ab-pill i { width: 9px; height: 9px; border-radius: 50%; background: oklch(0.62 0.17 150); box-shadow: 0 0 0 0 oklch(0.62 0.17 150 / 0.5); animation: ab-ping 2s infinite; }
+  .ab-pill span { opacity: 0.6; }
+  @keyframes ab-ping { 70% { box-shadow: 0 0 0 8px oklch(0.62 0.17 150 / 0); } 100% { box-shadow: 0 0 0 0 oklch(0.62 0.17 150 / 0); } }
+  /* 5 */
+  .ab-time { display: grid; gap: 18px; max-width: 780px; }
+  .ab-clocks { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .ab-clocks p { display: grid; gap: 6px; margin: 0; padding: 18px; border-radius: 16px; background: var(--surface); }
+  .ab-clocks span { font-size: 12.5px; color: var(--muted); }
+  .ab-clocks em { font-style: normal; }
+  .ab-clocks b { font-size: 26px; font-weight: 500; letter-spacing: -0.02em; }
+  .ab-day { position: relative; height: 34px; border-radius: 10px; background: repeating-linear-gradient(90deg, var(--surface) 0 calc(100% / 24 - 1px), var(--line) 0 calc(100% / 24)); overflow: hidden; }
+  .ab-day span { position: absolute; top: 0; height: 50%; }
+  .ab-day-grant { background: oklch(0.6 0.14 245 / 0.75); }
+  .ab-day-you { top: 50% !important; background: oklch(0.7 0.14 60 / 0.8); }
+  .ab-day-now { top: 0 !important; width: 2px; height: 100% !important; background: var(--ink); }
+  .ab-day-key { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin: 0; font-size: 12.5px; color: var(--muted); }
+  .ab-day-key i { display: inline-block; width: 10px; height: 10px; margin-right: -10px; border-radius: 3px; }
+  .ab-day-key .g { background: oklch(0.6 0.14 245); }
+  .ab-day-key .y { background: oklch(0.7 0.14 60); }
+  /* 6 */
+  .ab-resume { display: inline-flex; align-items: center; gap: 18px; padding: 14px 22px 14px 14px; border: 1px solid var(--line); border-radius: 18px; transition: translate 0.4s var(--ease), box-shadow 0.4s; }
+  .ab-resume:hover { translate: 0 -4px; box-shadow: 0 18px 40px -18px oklch(0 0 0 / 0.35); }
+  .ab-doc { display: grid; gap: 5px; align-content: start; width: 62px; height: 80px; padding: 9px 8px; border-radius: 6px; background: #fff; box-shadow: 0 2px 10px oklch(0 0 0 / 0.15); rotate: -4deg; transition: rotate 0.4s var(--ease); }
+  .ab-resume:hover .ab-doc { rotate: 0deg; }
+  .ab-doc b { font-size: 6.5px; }
+  .ab-doc i { height: 3px; border-radius: 2px; background: var(--line); }
+  .ab-doc i.s { width: 60%; }
+  .ab-resume > span:nth-child(2) { display: grid; }
+  .ab-resume small { color: var(--muted); }
+  /* 7 */
+  .ab-index-demo { display: grid; grid-template-columns: 200px 1fr; gap: 24px; padding: 0 24px; }
+  .ab-index { position: sticky; top: 0; align-self: start; margin: 0; padding: 24px 0; list-style: none; display: grid; gap: 6px; }
+  .ab-index a { display: flex; gap: 10px; font-size: 14px; color: var(--muted); transition: color 0.3s, translate 0.4s var(--ease); }
+  .ab-index a b { font-weight: 400; font-size: 11px; }
+  .ab-index a.is-on { color: var(--ink); translate: 6px 0; }
+  .ab-index-body section { min-height: 300px; padding-top: 24px; }
+  .ab-index-body h3 { margin: 0 0 8px; font-size: 26px; font-weight: 500; }
+  .ab-index-body p { margin: 0; color: var(--muted); }
+  /* 8 */ .ab-quote { max-width: 1100px; margin: 0; font-size: clamp(40px, 5.6vw, 92px); line-height: 1; text-transform: uppercase; }
+  /* 9 */
+  .ab-steps { position: relative; display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; margin: 0; padding: 28px 0 0; list-style: none; }
+  .ab-steps::before { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 2px; background: var(--ink); transform-origin: 0 50%; scale: 0 1; transition: scale 1.4s var(--ease); }
+  .ab-steps.is-in::before { scale: 1 1; }
+  .ab-steps li { opacity: 0; translate: 0 14px; transition: opacity 0.6s, translate 0.8s var(--ease); transition-delay: calc(0.25s + var(--i) * 0.22s); }
+  .ab-steps.is-in li { opacity: 1; translate: none; }
+  .ab-steps b { font-size: 12px; font-weight: 500; color: var(--muted); }
+  .ab-steps h3 { margin: 6px 0; font-size: 24px; font-weight: 500; }
+  .ab-steps p { margin: 0; font-size: 14px; color: var(--muted); line-height: 1.5; }
+  /* 10 */
+  .ab-promises { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .ab-promises div { padding: 24px; border-radius: 18px; background: var(--surface); }
+  .ab-promises h3 { margin: 0 0 8px; font-size: 20px; font-weight: 500; }
+  .ab-promises p { margin: 0; font-size: 14px; color: var(--muted); line-height: 1.5; }
+  /* 11 */
+  .ab-fill { max-width: 860px; margin: 0; font-size: clamp(22px, 2.4vw, 34px); line-height: 1.35; letter-spacing: -0.02em; }
+  .ab-fill mark { --fill: 0%; padding: 0 3px; border-radius: 4px; background: linear-gradient(90deg, oklch(0.9 0.08 245) var(--fill), transparent var(--fill)); color: inherit; }
+  /* 12 */
+  .ab-dayline { display: grid; grid-template-columns: repeat(5, 1fr); margin: 0; padding: 0; list-style: none; border-top: 2px solid var(--ink); }
+  .ab-dayline li { position: relative; display: grid; gap: 4px; padding: 18px 12px 0 0; }
+  .ab-dayline li::before { content: ''; position: absolute; top: -7px; left: 0; width: 12px; height: 12px; border-radius: 50%; background: var(--bg); border: 2px solid var(--ink); }
+  .ab-dayline b { font-size: 20px; font-weight: 500; }
+  .ab-dayline span { font-size: 13.5px; color: var(--muted); }
+  /* 13 */
+  .ab-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+  .ab-stats p { display: grid; gap: 4px; margin: 0; padding-top: 16px; border-top: 1px solid var(--line); }
+  .ab-stats b { font: 800 clamp(56px, 7vw, 110px) / 1 "Big Shoulders Display", sans-serif; font-variant-numeric: tabular-nums; }
+  .ab-stats span { font-size: 14px; color: var(--muted); }
+  /* 14 */
+  .ab-skill-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 20px; margin: 0; padding: 0; list-style: none; }
+  .ab-skill-list li { animation: reveal-rise 0.6s var(--ease); }
+  .ab-skill-list li[hidden] { display: none; }
+  .ab-skill-list a { display: grid; gap: 4px; }
+  .ab-skill-list img { width: 100%; height: auto; border-radius: 10px; margin-bottom: 6px; }
+  .ab-skill-list strong { font-weight: 500; }
+  .ab-skill-list span { font-size: 13px; color: var(--muted); }
+  /* 15 */
+  .ab-logos { overflow: hidden; padding-block: 26px; border-block: 1px solid var(--line); -webkit-mask-image: linear-gradient(90deg, transparent, #000 10%, #000 90%, transparent); mask-image: linear-gradient(90deg, transparent, #000 10%, #000 90%, transparent); }
+  .ab-logos-track { display: flex; align-items: center; gap: 72px; width: max-content; animation: marquee 30s linear infinite; }
+  .ab-logo { display: flex; align-items: center; opacity: 0.8; }
+  /* 16 */ .ab-video > * { margin: 0 !important; }
+  /* 17 */
+  .ab-sites { margin: 0; padding: 0; list-style: none; border-top: 1px solid var(--line); }
+  .ab-sites a { display: grid; grid-template-columns: 44px 1.2fr 1fr 1fr 20px; align-items: center; gap: 16px; padding: 16px 0; border-bottom: 1px solid var(--line); transition: padding 0.4s var(--ease); }
+  .ab-sites a:hover { padding-inline: 12px; }
+  .ab-sites b { font-weight: 400; font-size: 12px; color: var(--muted); }
+  .ab-sites strong { font: 800 clamp(22px, 2.2vw, 32px) / 1 "Big Shoulders Display", sans-serif; text-transform: uppercase; }
+  .ab-sites span { font-size: 13.5px; color: var(--muted); }
+  /* 18 */
+  .ab-latest { display: inline-grid; grid-template-columns: 200px 1fr 30px; align-items: center; gap: 22px; max-width: 760px; padding: 14px 22px 14px 14px; border-radius: 22px; background: oklch(0.975 0.015 var(--h)); }
+  .ab-latest img { width: 100%; height: auto; border-radius: 12px; }
+  .ab-latest > span { display: grid; gap: 4px; }
+  .ab-latest small { display: flex; align-items: center; gap: 8px; font-size: 12px; color: oklch(0.35 0.07 var(--h)); }
+  .ab-latest small i { width: 7px; height: 7px; border-radius: 50%; background: oklch(0.55 0.15 var(--h)); }
+  .ab-latest strong { font: 800 34px / 1 "Big Shoulders Display", sans-serif; text-transform: uppercase; }
+  .ab-latest em { font-style: normal; font-size: 13.5px; color: var(--muted); }
+  /* 19 */
+  .ab-strength { display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px 22px; margin: 0; padding: 0; list-style: none; }
+  .ab-strength li[data-s="3"] { font: 800 clamp(40px, 4.4vw, 68px) / 1 "Big Shoulders Display", sans-serif; text-transform: uppercase; }
+  .ab-strength li[data-s="2"] { font: 800 clamp(26px, 2.6vw, 40px) / 1 "Big Shoulders Display", sans-serif; text-transform: uppercase; color: oklch(0.35 0 0); }
+  .ab-strength li[data-s="1"] { font-size: 16px; color: var(--muted); }
+  /* 20 */
+  .ab-notes { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; list-style: none; }
+  .ab-notes li { position: relative; padding: 10px 16px; border-radius: 12px; background: var(--surface); font-size: 14px; cursor: default; outline: none; }
+  .ab-notes li span { position: absolute; z-index: 3; left: 50%; bottom: calc(100% + 8px); width: max-content; max-width: 240px; padding: 8px 12px; border-radius: 10px; background: var(--ink); color: var(--bg); font-size: 12.5px; translate: -50% 4px; opacity: 0; pointer-events: none; transition: opacity 0.25s, translate 0.35s var(--ease); }
+  .ab-notes li:hover span, .ab-notes li:focus-visible span { opacity: 1; translate: -50% 0; }
+  /* 21 */
+  .ab-ring { height: 300px; display: grid; place-items: center; perspective: 1200px; overflow: hidden; border-radius: 22px; background: var(--surface); }
+  .ab-ring-spin { position: relative; width: 0; height: 0; transform-style: preserve-3d; animation: ab-turn 40s linear infinite; }
+  .ab-ring-spin span { position: absolute; left: 0; top: 0; translate: -50% -50%; white-space: nowrap; font: 800 28px / 1 "Big Shoulders Display", sans-serif; text-transform: uppercase; transform: rotateY(calc(var(--i) / var(--n) * 360deg)) translateZ(min(38vw, 460px)); backface-visibility: hidden; }
+  @keyframes ab-turn { from { transform: rotateX(-12deg) rotateY(0); } to { transform: rotateX(-12deg) rotateY(-360deg); } }
+  /* 22 */
+  .ab-plat-tools { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; list-style: none; }
+  .ab-plat-tools li { padding: 10px 16px; border-radius: 12px; background: var(--surface); font-size: 14px; opacity: 0.3; transition: opacity 0.4s, background 0.4s, color 0.4s; }
+  .ab-plat-tools li.is-on { opacity: 1; background: var(--ink); color: var(--bg); }
+  /* 23 */
+  .ab-timeline { position: relative; display: grid; gap: 10px; padding-top: 30px; }
+  .ab-years { position: absolute; inset: 0 0 auto; height: 100%; }
+  .ab-years span { position: absolute; top: 0; height: 100%; padding-left: 6px; border-left: 1px solid var(--line); font-size: 11.5px; color: var(--muted); }
+  .ab-bar-row { position: relative; height: 40px; }
+  .ab-bar { position: absolute; top: 0; height: 100%; display: flex; align-items: center; padding-inline: 12px; border-radius: 10px; background: oklch(0.9 0.05 var(--h)); color: oklch(0.3 0.07 var(--h)); font-size: 13px; white-space: nowrap; overflow: hidden; }
+  .ab-bar b { font-weight: 500; }
+  /* 24 */
+  .ab-roles { border-top: 1px solid var(--line); }
+  .ab-roles article { display: grid; grid-template-columns: 220px 1fr; align-items: center; gap: 24px; padding: 20px 16px; border-bottom: 1px solid var(--line); transition: background-color 0.5s var(--ease); }
+  .ab-roles article:hover { background: oklch(0.97 0.025 var(--h)); }
+  .ab-role-logo { opacity: 0.55; scale: 0.94; transform-origin: 0 50%; transition: opacity 0.4s, scale 0.5s var(--ease); }
+  .ab-roles article:hover .ab-role-logo { opacity: 1; scale: 1; }
+  .ab-roles h3 { margin: 0; font-size: 18px; font-weight: 500; }
+  .ab-roles p { margin: 2px 0 0; font-size: 13px; color: var(--muted); }
+  /* 25 */
+  .ab-edu { display: inline-grid; grid-template-columns: auto 1fr; align-items: center; gap: 28px; padding: 26px 34px 26px 26px; border-radius: 22px; background: var(--surface); }
+  .ab-edu-year { font-size: 72px; color: oklch(0.6 0 0); }
+  .ab-edu h3 { margin: 6px 0 4px; font-size: 22px; font-weight: 500; }
+  .ab-edu p { margin: 0; font-size: 14px; color: var(--muted); }
+  /* 26 */
+  .ab-fit { display: grid; grid-template-columns: 1fr 1fr; align-items: center; gap: 40px; padding: clamp(28px, 4vw, 60px); border-radius: 28px; background: var(--ink); color: var(--bg); }
+  .ab-fit h3 { margin: 0; font-size: clamp(48px, 6vw, 96px); }
+  .ab-fit p { color: oklch(0.8 0 0); }
+  .ab-fit-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+  .ab-fit .cta-primary { background: var(--bg); color: var(--ink); }
+  .ab-fit .cta-ghost { border-color: oklch(1 0 0 / 0.4); color: var(--bg); }
+  .ab-fit-dots { display: block; width: 100%; height: clamp(200px, 22vw, 340px); }
+  /* 27 */
+  .ab-faq { max-width: 820px; border-top: 1px solid var(--line); }
+  .ab-faq details { border-bottom: 1px solid var(--line); }
+  .ab-faq summary { display: flex; justify-content: space-between; align-items: center; gap: 20px; padding: 20px 0; font-size: 19px; cursor: pointer; list-style: none; }
+  .ab-faq summary::-webkit-details-marker { display: none; }
+  .ab-faq summary i { position: relative; width: 14px; height: 14px; flex: none; }
+  .ab-faq summary i::before, .ab-faq summary i::after { content: ''; position: absolute; left: 0; top: 50%; width: 100%; height: 1.5px; background: currentColor; transition: rotate 0.4s var(--ease); }
+  .ab-faq summary i::after { rotate: 90deg; }
+  .ab-faq details[open] summary i::after { rotate: 0deg; }
+  .ab-faq p { margin: 0 0 20px; max-width: 640px; color: var(--muted); line-height: 1.6; }
+  /* 28 */
+  .ab-learning { display: inline-flex; flex-wrap: wrap; align-items: baseline; gap: 8px 14px; margin: 0; padding: 16px 22px; border-radius: 16px; border: 1px dashed var(--line); }
+  .ab-learning span { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+  .ab-learning strong { font-weight: 500; font-size: 17px; }
+  .ab-learning em { font-style: normal; font-size: 12px; color: var(--muted); }
+  /* 30 */
+  .ab-wash { --h: 245; border-radius: 24px; background: oklch(0.965 0.025 var(--h)); transition: background-color 1.2s var(--ease); }
+  .ab-wash-panel { display: grid; align-content: center; gap: 10px; min-height: 55vh; padding: 48px; }
+  .ab-wash-panel h3 { margin: 0; font-size: clamp(48px, 6vw, 96px); text-transform: uppercase; color: oklch(0.3 0.07 var(--h)); transition: color 1.2s var(--ease); }
+  .ab-wash-panel p { max-width: 420px; margin: 0; color: var(--muted); }
+
+  @media (max-width: 900px) {
+    .ab-clocks, .ab-promises { grid-template-columns: 1fr; }
+    .ab-steps, .ab-stats { grid-template-columns: 1fr 1fr; }
+    .ab-dayline { grid-template-columns: 1fr 1fr; row-gap: 18px; }
+    .ab-sites a { grid-template-columns: 36px 1fr 20px; }
+    .ab-sites a span:not([aria-hidden]) { display: none; }
+    .ab-latest { grid-template-columns: 1fr; }
+    .ab-roles article { grid-template-columns: 1fr; gap: 10px; }
+    .ab-fit { grid-template-columns: 1fr; }
+    .ab-index-demo { grid-template-columns: 120px 1fr; }
+  }
+</style>

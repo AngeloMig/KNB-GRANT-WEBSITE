@@ -17,6 +17,21 @@ export interface Project {
 
 const allProjects: Project[] = [
   {
+    slug: "tero",
+    name: "Tero",
+    platform: "Shopify",
+    category: "Wellness & audio",
+    engagement: "Company project",
+    agency: "MDO Digital",
+    url: "https://tero.au/",
+    canvas: "blue",
+    mobileBar: { bg: "#6b8f92", fg: "#fff" },
+    description:
+      "A listening app for the bath. A Shopify site for a studio recording audio made for warm water.",
+    overview:
+      "Tero is a studio for the bath, releasing spoken essays, stories, breathwork, narrated histories, and sound recorded to be heard in warm water. The site introduces the app, its library and releases, and lets listeners join to get access by email.",
+  },
+  {
     slug: "road-armor",
     name: "Road Armor",
     platform: "Shopify",
@@ -107,21 +122,9 @@ const allProjects: Project[] = [
     overview:
       "Light My Bricks designs lighting kits engineered for specific LEGO® sets. The store helps fans find kits for their builds, browse new releases, and explore its learning centre and instructions.",
   },
-  {
-    slug: "tero",
-    name: "Tero",
-    platform: "Shopify",
-    category: "Wellness & audio",
-    engagement: "Company project",
-    agency: "MDO Digital",
-    url: "https://tero.au/",
-    canvas: "blue",
-    mobileBar: { bg: "#6b8f92", fg: "#fff" },
-    description:
-      "A listening app for the bath. A Shopify site for a studio recording audio made for warm water.",
-    overview:
-      "Tero is a studio for the bath, releasing spoken essays, stories, breathwork, narrated histories, and sound recorded to be heard in warm water. The site introduces the app, its library and releases, and lets listeners join to get access by email.",
-  },
 ];
 
 export const projects = allProjects.filter((project) => !project.hidden);
+
+/** The hue of each card tint, for the deeper shades of a project's colour (the hero, "Next project"). */
+export const canvasHues: Record<string, number> = { olive: 105, lilac: 295, violet: 285, rose: 20, blue: 245, clay: 60 };

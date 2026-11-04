@@ -1,0 +1,175 @@
+---
+// Design preview: ten takes on a dotted stage floor under the hero orbit. Local preview only: in a
+// build this route has no pages. Open http://localhost:4321/ideas/stage-floor/.
+// Each floor is a field of dots on a flat plane, projected in perspective and drawn live on a canvas,
+// so it can react to the orbit (its turn, the front project's colour) and to the cursor.
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import IdeaLegend from '../../components/IdeaLegend.astro';
+import ProjectOrbit from '../../components/ProjectOrbit.astro';
+
+export function getStaticPaths() {
+  return import.meta.env.DEV ? [{ params: { preview: 'ideas' } }] : [];
+}
+
+const IDEAS = [
+  [1, 'Lit grid'], [2, 'Turntable rings'], [3, 'Spotlight halftone'], [4, 'Ripple floor'], [5, 'Floor that follows the cursor'],
+  [6, 'Spokes that turn with the orbit'], [7, 'Infinite horizon'], [8, 'Dotted shadows'], [9, 'Runway of light'], [10, 'Twinkling floor'],
+] as const;
+const NOTES: Record<number, [string, string]> = {
+  1: ['', 'A clean dot grid in perspective that fades into the distance; the dots under the front card light up in its colour.'],
+  2: ['drag the orbit', 'Dotted rings around the orbit’s centre, like a turntable, turning with the cards.'],
+  3: ['', 'A pool of light under the front card: the dots grow and take the project colour towards its centre, like a halftone print.'],
+  4: ['change project', 'Gentle ripples run out from under the front card, and a bigger wave rolls out each time a new project arrives.'],
+  5: ['move over the floor', 'The dots near the cursor rise and light up, then settle back, like the hero name.'],
+  6: ['drag the orbit', 'Dotted spokes from the orbit’s centre, turning with the cards like the floor of a carousel.'],
+  7: ['', 'Dots shrinking towards a glowing horizon in the project colour: a calm, endless stage.'],
+  8: ['drag the orbit', 'Each card casts a dotted shadow on the floor, and the shadows move round with the cards.'],
+  9: ['', 'A strip of light runs from the front card towards you, with pulses travelling along it.'],
+  10: ['', 'The floor twinkles: dots softly brighten and fade at random, more near the front card.'],
+};
+---
+<BaseLayout title="Stage floor ideas | Grant Dev14" description="Local design preview." noindex>
+  <IdeaLegend ideas={IDEAS} links={[{ label: 'All 20 orbit floor ideas', href: '/ideas/orbit-floor/' }, { label: 'Compare with the current homepage', href: '/' }]} />
+  <div class="wrap sf-page">
+    <header class="sf-head">
+      <span class="tiny-heading">Preview · dotted stage floor</span>
+      <h1 class="display">Ten stage<br />floors</h1>
+      <p>Ten takes on a dotted floor for the orbit to stand on. Each is a real field of dots in perspective, drawn live, so it can follow the orbit, the front project’s colour, or your cursor.</p>
+    </header>
+    {IDEAS.map(([n, name]) => (
+      <section class="sf" id={`idea-${n}`}>
+        <div class="sf-top"><span class="idea-tag"><b>{n}</b>{name}{NOTES[n][0] && <em>{NOTES[n][0]}</em>}</span><p class="sf-why">{NOTES[n][1]}</p></div>
+        <div class="sf-demo" data-v={n}>
+          <canvas class="sf-floor" aria-hidden="true"></canvas>
+          <ProjectOrbit card="var(--sf-card)" />
+        </div>
+      </section>
+    ))}
+  </div>
+</BaseLayout>
+
+<script>
+  import { Orbit } from './_orbit-demo';
+  const fine = matchMedia('(hover: hover) and (pointer: fine)').matches;
+  const ink = getComputedStyle(document.documentElement).getPropertyValue('--ink').trim() || '#161616';
+  type P = { x: number; z: number; r: number; a: number; phase: number };
+  // What a variant says about one dot: its size, how visible, how much it takes the project colour, and a lift.
+  type Look = { size: number; alpha: number; lit: number; lift?: number };
+
+  document.querySelectorAll<HTMLElement>('.sf-demo').forEach((box) => {
+    const v = Number(box.dataset.v);
+    const cv = box.querySelector<HTMLCanvasElement>('.sf-floor')!, c = cv.getContext('2d')!;
+    const ob = box.querySelector<HTMLElement>('.ob')!;
+    let hue = 245, burst = -1e9, mx = -1e4, my = -1e4;
+    const orbit = new Orbit(ob, {
+      onFront: (card) => { hue = Number(card.dataset.hue); box.style.setProperty('--h', String(hue)); burst = performance.now(); },
+    });
+
+    // The floor plane: world units are pixels at the front card's foot (z = 0); z grows away from you.
+    let W = 0, H = 0, cx = 0, horizon = 0, hc = 0, cw = 0, R = 0, on = false;
+    const D = 900;
+    let points: P[] = [];
+    // Only the dots that land on screen: each row is as wide as the view at its depth.
+    const grid = (step: number) => { const o: P[] = []; for (let z = -600; z <= 3200; z += step) { const span = (W / 2 + 30) * ((z + D) / D); for (let x = -Math.floor(span / step) * step; x <= span; x += step) o.push({ x, z, r: Math.hypot(x, z), a: Math.atan2(x, z), phase: Math.random() * 6.28 }); } return o; };
+    const size = () => {
+      const b = box.getBoundingClientRect(), card = ob.querySelector<HTMLElement>('.ob-card')!, ring = ob.querySelector<HTMLElement>('.ob-ring')!.getBoundingClientRect();
+      W = Math.floor(b.width); H = Math.floor(b.height); cw = card.offsetWidth; R = cw * 1.05;
+      const dpr = Math.min(2, devicePixelRatio || 1);
+      cv.width = W * dpr; cv.height = H * dpr; c.setTransform(dpr, 0, 0, dpr, 0, 0);
+      cx = W / 2;
+      const top = ring.top - b.top, foot = top + 24 + cw * 0.5625 + 14;
+      horizon = top + cw * 0.18; hc = foot - horizon;
+      // The dots for each kind of floor (rings and spokes are centred on the orbit's middle, z = R).
+      if (v === 2) { points = []; for (let k = 1; k <= 16; k++) { const rr = k * 70, n = Math.round((Math.PI * 2 * rr) / 46); for (let i = 0; i < n; i++) { const a = (i / n) * Math.PI * 2; points.push({ x: rr, z: 0, r: rr, a, phase: k }); } } }
+      else if (v === 6) { points = []; const spokes = 36; for (let s = 0; s < spokes; s++) for (let rr = 60; rr <= 1500; rr += 38) points.push({ x: rr, z: 0, r: rr, a: (s / spokes) * Math.PI * 2, phase: s }); }
+      else points = grid(v === 3 || v === 8 ? 34 : 42);
+    };
+    requestAnimationFrame(size);
+    addEventListener('resize', size);
+    new IntersectionObserver(([e]) => { on = e.isIntersecting; }).observe(box);
+    if (fine) { box.addEventListener('pointermove', (e) => { const b = box.getBoundingClientRect(); mx = e.clientX - b.left; my = e.clientY - b.top; }); box.addEventListener('pointerleave', () => { mx = my = -1e4; }); }
+    // Lifted dots for the cursor floor (5) spring back.
+    const lifts = new Map<P, number>();
+
+    const look = (p: P, wx: number, wz: number, t: number, sx: number, sy: number): Look => {
+      const depth = Math.max(0, Math.min(1, 1 - (wz + 600) / 3800));
+      const fade = 0.15 + 0.7 * depth;
+      // The spot just in front of the front card's foot (where the floor isn't hidden behind the card).
+      const front = Math.hypot(wx, wz + 150);
+      switch (v) {
+        case 1: { const lit = Math.max(0, 1 - front / (cw * 0.55)); return { size: 1.6 + lit * 1.4, alpha: fade, lit }; }
+        case 2: { const lit = Math.max(0, 1 - front / (cw * 0.5)); return { size: 1.5 + lit, alpha: fade * (p.phase % 2 ? 0.9 : 0.55), lit }; }
+        case 3: { const g = Math.exp(-(front * front) / (2 * (cw * 0.42) ** 2)); return { size: 0.8 + g * 3.4, alpha: 0.25 + 0.75 * Math.max(g, depth * 0.5), lit: g }; }
+        case 4: { const since = (t - burst) / 1000, ring = Math.exp(-((front - since * 700) ** 2) / 9000) * Math.max(0, 1 - since / 2.2); const calm = 0.5 + 0.5 * Math.sin(front / 55 - t / 420); const lit = Math.max(ring, calm * Math.max(0, 1 - front / 900) * 0.45); return { size: 1.4 + lit * 2.2, alpha: fade * (0.55 + lit * 0.6), lit, lift: ring * 10 }; }
+        case 5: { const d = Math.hypot(sx - mx, sy - my); let k = lifts.get(p) ?? 0; const target = d < 120 ? 1 - d / 120 : 0; k += (target - k) * 0.12; if (k > 0.002) lifts.set(p, k); else lifts.delete(p); return { size: 1.5 + k * 2.6, alpha: fade + k * 0.4, lit: k, lift: k * 16 }; }
+        case 6: { const lit = Math.max(0, 1 - front / (cw * 0.5)); return { size: 1.4 + lit * 1.2, alpha: fade * 0.85, lit }; }
+        case 7: { const s = 0.4 + 2.6 * depth ** 1.6; return { size: s, alpha: 0.18 + 0.6 * depth, lit: Math.max(0, 1 - depth * 1.6) * 0.8 }; }
+        case 8: return { size: 1.5, alpha: fade * 0.5, lit: 0 };
+        case 9: { const lane = Math.abs(wx) < cw * 0.5 && wz < 200 ? 1 : 0; const pulse = lane ? Math.max(0, Math.sin(-wz / 90 + t / 180)) ** 6 : 0; return { size: 1.4 + lane * 0.8 + pulse * 2, alpha: fade * (0.5 + lane * 0.4) + pulse * 0.4, lit: lane * (0.5 + pulse * 0.5) }; }
+        default: { const tw = Math.max(0, Math.sin(t / 900 + p.phase * 3)) ** 10; const near = Math.max(0, 1 - front / 1100); return { size: 1.3 + tw * 1.8, alpha: fade * 0.45 + tw * (0.35 + near * 0.5), lit: tw * near }; }
+      }
+    };
+
+    const draw = (t: number) => {
+      requestAnimationFrame(draw);
+      if (!on || !W) return;
+      c.clearRect(0, 0, W, H);
+      const rot = (orbit.rot * Math.PI) / 180;
+      // Paths grouped by colour and transparency, so thousands of dots are only a few fills.
+      const groups = new Map<string, Path2D>();
+      const add = (key: string, x: number, y: number, s: number) => { let p = groups.get(key); if (!p) groups.set(key, (p = new Path2D())); p.rect(x - s / 2, y - s / 2, s, s); };
+      // 8: where each card stands on the ring, for its shadow.
+      const cards = v === 8 ? orbit.cards.map((card, i) => { const a = ((orbit.angles[i] + orbit.rot) * Math.PI) / 180; return { x: R * Math.sin(a), z: R - R * Math.cos(a), a, o: Number(card.style.opacity || 1) }; }) : [];
+      for (const p of points) {
+        let wx = p.x, wz = p.z;
+        // Rings and spokes turn with the orbit about its middle.
+        if (v === 2 || v === 6) { const a = p.a + rot; wx = Math.sin(a) * p.r; wz = R - Math.cos(a) * p.r; }
+        const d = wz + D;
+        if (d < 80) continue;
+        const k = D / d, sx = cx + wx * k;
+        let sy = horizon + hc * k;
+        if (sx < -10 || sx > W + 10 || sy > H + 10) continue;
+        const l = look(p, wx, wz, t, sx, sy);
+        if (l.lift) sy -= l.lift * k;
+        let alpha = l.alpha, lit = l.lit, s = l.size * Math.min(2.4, k ** 0.9);
+        if (v === 8) for (const cd of cards) {
+          // The shadow: a band behind each card's foot, as wide as the card, turned with it.
+          const dx = wx - cd.x, dz = wz - cd.z, along = dx * Math.cos(cd.a) + dz * Math.sin(cd.a), back = -dx * Math.sin(cd.a) + dz * Math.cos(cd.a);
+          // Light from behind the cards: each shadow falls forward, towards you.
+          if (Math.abs(along) < cw * 0.5 * (1 - back / (cw * 3)) && back < 10 && back > -cw * 1.1) { const fall = (1 + back / (cw * 1.1)) ** 0.7; alpha = Math.max(alpha, fall * cd.o); s *= 1 + 1.3 * fall * cd.o; lit = Math.max(lit, Math.abs(cd.a % (Math.PI * 2)) < 0.3 ? 0.4 * fall : 0); }
+        }
+        const a = Math.max(0, Math.min(1, alpha));
+        if (a < 0.03) continue;
+        const key = `${lit > 0.35 ? 'h' : 'i'}${(Math.round(a * 10) / 10).toFixed(1)}`;
+        add(key, sx, sy, s);
+      }
+      for (const [key, path] of groups) {
+        c.globalAlpha = Number(key.slice(1));
+        c.fillStyle = key[0] === 'h' ? `oklch(0.6 0.15 ${hue})` : ink;
+        c.fill(path);
+      }
+      c.globalAlpha = 1;
+      // 7: a soft glow along the horizon in the project colour.
+      if (v === 7) { const g = c.createLinearGradient(0, horizon - 60, 0, horizon + 80); g.addColorStop(0, `oklch(0.8 0.1 ${hue} / 0)`); g.addColorStop(0.5, `oklch(0.8 0.1 ${hue} / 0.45)`); g.addColorStop(1, `oklch(0.8 0.1 ${hue} / 0)`); c.fillStyle = g; c.fillRect(0, horizon - 60, W, 140); }
+    };
+    requestAnimationFrame(draw);
+  });
+</script>
+
+<style is:global>
+  .sf-page { padding-bottom: 160px; }
+  .sf-head { display: grid; gap: 18px; max-width: 820px; padding-block: 24px 40px; }
+  .sf-head h1 { margin: 0; font-size: clamp(56px, 8vw, 130px); }
+  .sf-head p { margin: 0; color: var(--muted); font-size: 17px; line-height: 1.5; }
+  .sf { padding-block: 48px; border-top: 1px solid var(--line); }
+  .sf-top { display: grid; gap: 4px; margin-bottom: 22px; }
+  .sf-why { max-width: 700px; margin: 0; color: var(--muted); font-size: 15px; line-height: 1.5; }
+  .sf-demo { --h: 245; --sf-card: clamp(230px, 30vw, 440px); position: relative; padding: 56px 0 40px; border-radius: 28px; overflow: hidden; background: oklch(0.982 0.009 var(--h)); transition: background-color 1.4s var(--ease); isolation: isolate; }
+  .sf-floor { position: absolute; z-index: 0; inset: 0; width: 100%; height: 100%; }
+  .sf-demo .ob { z-index: 1; }
+  /* The floor replaces the reflection. */
+  .sf-demo .ob-mirror { display: none; }
+  .sf-demo .ob-caption strong { color: oklch(0.33 0.07 var(--h)); transition: color 1.4s var(--ease); }
+  .sf-demo .ob-foot { margin-top: 70px; }
+  .sf-demo .ob-arrow { background: var(--bg); }
+</style>

@@ -1,0 +1,226 @@
+---
+// Design preview: eight ways to fill the left side of the menu when a link is hovered. Local preview
+// only: in a build this route has no pages. Open http://localhost:4321/ideas/menu-hover/.
+// Each style is a menu already open (as on the site); hover the links on the right.
+import { withBase } from '../../utils/paths';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import Arrow from '../../components/Arrow.astro';
+import IdeaLegend from '../../components/IdeaLegend.astro';
+import { projects, canvasHues } from '../../data/projects';
+import { profile, experience } from '../../data/profile';
+
+export function getStaticPaths() {
+  return import.meta.env.DEV ? [{ params: { preview: 'ideas' } }] : [];
+}
+
+const IDEAS = [
+  [1, 'The page itself'], [2, 'A card for each page'], [3, 'Big word and one line'], [4, 'Word in dots'],
+  [5, 'Follows the cursor'], [6, 'One big number'], [7, 'Colour and word'], [8, 'Mix: projects fan out, pages swap in'],
+] as const;
+const NOTES: Record<number, [string, string]> = {
+  1: ['hover the links', 'The shrunk page turns into the page you’re pointing at, so visitors see exactly where the link goes. Shown here with the real pages; on the site they’d be light screenshots.'],
+  2: ['hover the links', 'A small card made for each page: the projects, a résumé, the four services, the estimator’s first question, your email and time, and the audit.'],
+  3: ['hover the links', 'The page’s name set huge over the shrunk page, with one real line about it. Calm and fast.'],
+  4: ['hover the links', 'The page’s name flies together in the hero’s dots; move over it to scatter them.'],
+  5: ['hover the links, then move the cursor', 'The preview follows the cursor across the left side with a slight tilt, instead of sitting still.'],
+  6: ['hover the links', 'One number for each page, counting up: projects, years, services, minutes, your time, and a free audit.'],
+  7: ['hover the links', 'The whole menu takes a colour for each page, with the word in outline behind the list.'],
+  8: ['hover “Selected work”, then the others', 'Selected work fans out all six projects (Tero first); the other links swap the shrunk page for that page.'],
+};
+const img = (slug: string, size = '-480') => withBase(`/images/projects/${slug}${size}.webp`);
+const hueOf = (p: (typeof projects)[number]) => canvasHues[p.canvas] ?? 60;
+const years = new Date().getFullYear() - 2019;
+const links = [
+  { label: 'Selected work', word: 'WORK', href: withBase('/'), page: withBase('/#work'), line: `${projects.length} projects across Shopify, Webflow & WordPress.`, stat: String(projects.length), statLabel: 'featured projects', hue: hueOf(projects[0]) },
+  { label: 'About Grant', word: 'ABOUT', href: withBase('/about/'), page: withBase('/about/'), line: `Developer and team lead in the Philippines, building websites since 2019.`, stat: `${years}+`, statLabel: 'years building websites', hue: 20 },
+  { label: 'Services', word: 'SERVICES', href: withBase('/#services'), page: withBase('/#services'), line: 'Build, migrate, improve and support websites.', stat: '4', statLabel: 'services', hue: 105 },
+  { label: 'Estimate a project', word: 'ESTIMATE', href: withBase('/estimate/'), page: withBase('/estimate/'), line: 'Get a realistic timeline in two minutes.', stat: '2', statLabel: 'minutes for an estimate', hue: 295 },
+  { label: 'Get in touch', word: 'TALK', href: withBase('/contact/'), page: withBase('/contact/'), line: profile.email, stat: '', statLabel: 'in Manila right now', hue: 245 },
+  { label: 'Free website audit', word: 'AUDIT', href: withBase('/contact/#audit'), page: withBase('/contact/#audit'), line: 'Already have a website? Get a free audit of it.', stat: 'Free', statLabel: 'website audit', hue: 60 },
+];
+const services = ['Shopify development', 'Webflow development', 'WordPress development', 'Migrations & technical SEO'];
+---
+<BaseLayout title="Menu hover ideas | Grant Dev14" description="Local design preview." noindex>
+  <IdeaLegend ideas={IDEAS} links={[{ label: 'Compare with the real menu', href: '/' }, { label: 'All 20 menu ideas', href: '/ideas/menu/' }]} />
+  <div class="wrap mh-pagewrap">
+    <header class="mh-head">
+      <span class="tiny-heading">Preview · menu hover</span>
+      <h1 class="display">What shows<br />on hover</h1>
+      <p>Eight ways to fill the left side of the menu when a link is hovered. Each menu below is already open; point at the links on the right. Today’s menu shows three tilted screenshots or a short phrase.</p>
+    </header>
+
+    {IDEAS.map(([n, name]) => (
+      <section class="mh" id={`idea-${n}`}>
+        <div class="mh-top"><span class="idea-tag"><b>{n}</b>{name}<em>{NOTES[n][0]}</em></span><p class="mh-why">{NOTES[n][1]}</p></div>
+        <div class={`mh-stage mh-${n}`} data-idea={n}>
+          <div class="mh-card">
+            <div class="mh-mock"><div class="mh-mock-head"><span>Grant<br />Dev14.</span><span>Let’s talk ↗</span></div><p class="mh-mock-name display">GRANT DEV14.</p><div class="mh-mock-cards">{projects.slice(0, 3).map((p) => <img src={img(p.slug)} alt="" width="480" height="270" loading="lazy" />)}</div></div>
+            {(n === 1 || n === 8) && <div class="mh-frames" aria-hidden="true">{links.map((l, i) => <div class="mh-frame" data-for={i} data-src={l.page}></div>)}</div>}
+          </div>
+          {n === 4 && <canvas class="mh-dots" aria-hidden="true"></canvas>}
+          {n === 7 && <p class="mh-outline display" aria-hidden="true"></p>}
+          <div class="mh-left" aria-hidden="true">
+            {links.map((l, i) => (
+              <div class="mh-pv" data-for={i}>
+                {n === 2 && (
+                  i === 0 ? <div class="mh-fan3">{projects.slice(0, 3).map((p) => <img src={img(p.slug)} alt="" width="480" height="270" loading="lazy" />)}</div>
+                  : i === 1 ? <div class="mh-cardx"><span class="mh-doc"><b>{profile.name}</b><i></i><i></i><i class="s"></i><i></i><i class="s"></i><i></i><i></i></span><p><strong>About Grant</strong>{experience.length} roles since 2019 · résumé</p></div>
+                  : i === 2 ? <div class="mh-cardx"><ol>{services.map((s, k) => <li><b>0{k + 1}</b>{s}</li>)}</ol></div>
+                  : i === 3 ? <div class="mh-cardx"><p class="mh-q">What are you building?</p><div class="mh-opts"><span>A new store</span><span>A redesign</span><span>Move platforms</span></div><small>Two minutes · free</small></div>
+                  : i === 4 ? <div class="mh-cardx"><p class="mh-q">Say hello</p><p>{profile.email}</p><small><span class="mh-clock"></span> in Manila</small></div>
+                  : <div class="mh-cardx"><p class="mh-q">Free audit</p><div class="mh-checks">{['Speed', 'SEO', 'Accessibility', 'Conversion'].map((c) => <span>✓ {c}</span>)}</div><small>Of the site you already have</small></div>
+                )}
+                {n === 3 && <div class="mh-word"><p class="display">{l.word}</p><span>{l.line}</span></div>}
+                {n === 5 && <div class="mh-follow">{i === 0 ? <img src={img(projects[0].slug)} alt="" width="480" height="270" loading="lazy" /> : <div class="mh-follow-card"><strong class="display">{l.word}</strong><span>{l.line}</span></div>}</div>}
+                {n === 6 && <div class="mh-stat"><b class="display" data-to={l.stat}>{l.stat}</b><span>{l.statLabel}</span></div>}
+                {n === 8 && i === 0 && <div class="mh-fan">{projects.map((p, k) => <img src={img(p.slug)} alt="" width="480" height="270" loading="lazy" style={`--k:${k - (projects.length - 1) / 2};z-index:${projects.length - k}`} />)}</div>}
+              </div>
+            ))}
+          </div>
+          <div class="mh-menu">
+            <nav class="mh-links" aria-label={`Menu demo ${n}`}>{links.map((l, i) => <a href={l.href} data-i={i} data-hue={l.hue} data-word={l.word}><span>{l.label}</span><Arrow /></a>)}</nav>
+            <div class="mh-bottom"><span>{profile.email}</span><span>LinkedIn ↗</span></div>
+          </div>
+        </div>
+      </section>
+    ))}
+  </div>
+</BaseLayout>
+
+<script>
+  import { Dots } from './_dots';
+  const clock = () => new Date().toLocaleTimeString('en-GB', { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'Asia/Manila' });
+  const tickClock = () => {
+    document.querySelectorAll('.mh-clock').forEach((el) => { el.textContent = clock(); });
+    // 6: "Get in touch" shows the time in Manila as its number.
+    document.querySelectorAll<HTMLElement>('.mh-6 .mh-pv[data-for="4"] b').forEach((el) => { el.textContent = clock().replace(' ', ' ').toUpperCase(); });
+  };
+  tickClock(); setInterval(tickClock, 20000);
+
+  document.querySelectorAll<HTMLElement>('.mh-stage').forEach((stage) => {
+    const n = Number(stage.dataset.idea);
+    const links = [...stage.querySelectorAll<HTMLAnchorElement>('.mh-links a')];
+    const pvs = [...stage.querySelectorAll<HTMLElement>('.mh-pv')];
+    const frames = [...stage.querySelectorAll<HTMLElement>('.mh-frame')];
+    let dots: Dots | null = null;
+    const show = (i: number) => {
+      stage.classList.toggle('is-hovering', i >= 0);
+      pvs.forEach((p) => p.classList.toggle('is-on', Number(p.dataset.for) === i));
+      // 1 and 8: the shrunk page turns into the linked page (8 keeps the fan for Selected work).
+      if (n === 1 || (n === 8 && i !== 0)) frames.forEach((f) => {
+        const on = Number(f.dataset.for) === i;
+        if (on && !f.firstChild) { const fr = document.createElement('iframe'); fr.src = f.dataset.src!; fr.tabIndex = -1; fr.title = ''; f.append(fr); }
+        f.classList.toggle('is-on', on);
+      });
+      if (n === 8 && i === 0) frames.forEach((f) => f.classList.remove('is-on'));
+      if (i < 0) return;
+      const a = links[i];
+      if (n === 4) { const cv = stage.querySelector<HTMLCanvasElement>('.mh-dots')!; dots ??= new Dots(cv, a.dataset.word!, { color: '#f2f0ea', accent: `oklch(0.8 0.12 ${a.dataset.hue})`, hidden: true }); dots.opts.accent = `oklch(0.8 0.12 ${a.dataset.hue})`; dots.setText(a.dataset.word!); }
+      if (n === 6) {
+        const b = pvs[i].querySelector<HTMLElement>('b')!, to = Number(b.dataset.to);
+        if (to) { const start = performance.now(); const step = (now: number) => { const t = Math.min(1, (now - start) / 700); b.textContent = String(Math.round(to * (1 - (1 - t) ** 3))) + (b.dataset.to!.endsWith('+') && t >= 1 ? '+' : ''); if (t < 1) requestAnimationFrame(step); }; requestAnimationFrame(step); }
+      }
+      if (n === 7) { stage.style.setProperty('--h', a.dataset.hue!); stage.querySelector('.mh-outline')!.textContent = a.dataset.word!; }
+    };
+    links.forEach((a, i) => { a.addEventListener('pointerenter', () => show(i)); a.addEventListener('focus', () => show(i)); a.addEventListener('click', (e) => e.preventDefault()); });
+    stage.querySelector('.mh-links')!.addEventListener('pointerleave', () => { if (n !== 4) show(-1); });
+
+    // 5: the preview follows the cursor over the stage, tilting with its speed.
+    if (n === 5) {
+      const left = stage.querySelector<HTMLElement>('.mh-left')!;
+      const pos = { x: 0, y: 0 }, to = { x: 0, y: 0 };
+      let lastX = 0;
+      stage.addEventListener('pointermove', (e) => { const r = stage.getBoundingClientRect(); to.x = e.clientX - r.left - r.width * 0.36; to.y = e.clientY - r.top - r.height / 2; });
+      const tick = () => { pos.x += (to.x - pos.x) * 0.12; pos.y += (to.y - pos.y) * 0.12; const v = pos.x - lastX; lastX = pos.x; left.style.translate = `${pos.x.toFixed(1)}px ${pos.y.toFixed(1)}px`; left.style.rotate = `${Math.max(-8, Math.min(8, v * 0.6)).toFixed(2)}deg`; requestAnimationFrame(tick); };
+      requestAnimationFrame(tick);
+    }
+  });
+</script>
+
+<style is:global>
+  .mh-pagewrap { padding-bottom: 160px; }
+  .mh-head { display: grid; gap: 18px; max-width: 820px; padding-block: 24px 40px; }
+  .mh-head h1 { margin: 0; font-size: clamp(56px, 8vw, 130px); }
+  .mh-head p { margin: 0; color: var(--muted); font-size: 17px; line-height: 1.5; }
+  .mh { padding-block: 52px; border-top: 1px solid var(--line); }
+  .mh-top { display: grid; gap: 4px; margin-bottom: 22px; }
+  .mh-why { max-width: 720px; margin: 0; color: var(--muted); font-size: 15px; line-height: 1.5; }
+
+  /* A copy of the open menu: the page shrunk to the left, the links on the right. */
+  .mh-stage { --h: 0; position: relative; height: clamp(500px, 46vw, 640px); border-radius: 24px; overflow: hidden; background: var(--ink); color: #fff; isolation: isolate; }
+  .mh-card { position: absolute; z-index: 1; inset: 0; overflow: hidden; border-radius: 20px; background: var(--bg); color: var(--ink); transform: translateX(-46%) scale(0.84); }
+  .mh-mock { display: grid; gap: 18px; height: 100%; padding: 26px 30px; }
+  .mh-mock-head { display: flex; justify-content: space-between; font-size: 18px; font-weight: 500; line-height: 0.98; letter-spacing: -0.03em; }
+  .mh-mock-head span:last-child { font-size: 13px; font-weight: 400; padding-top: 12px; }
+  .mh-mock-name { margin: 0; font-size: clamp(70px, 11vw, 170px); text-align: center; }
+  .mh-mock-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .mh-mock-cards img { width: 100%; height: auto; border-radius: 10px; box-shadow: 0 20px 40px oklch(0 0 0 / 0.18); }
+  .mh-menu { position: absolute; z-index: 2; top: 0; bottom: 0; right: 5%; width: min(46%, 560px); display: flex; flex-direction: column; justify-content: center; padding-block: 40px 24px; }
+  .mh-links { display: flex; flex-direction: column; margin-block: auto; }
+  .mh-links a { display: flex; align-items: center; justify-content: space-between; padding: clamp(9px, 1.4vw, 15px) 0; border-bottom: 1px solid oklch(1 0 0 / 0.18); font-size: clamp(20px, 2.4vw, 34px); font-weight: 500; letter-spacing: -0.035em; transition: color 0.3s; }
+  .mh-links a:hover { color: oklch(1 0 0 / 0.6); }
+  .mh-links .arrow-icon { width: 26px; height: 26px; }
+  .mh-bottom { display: flex; justify-content: space-between; font-size: 13px; opacity: 0.75; }
+  /* The preview sits over the shrunk page, on the left. */
+  .mh-left { position: absolute; z-index: 3; left: 4%; top: 50%; width: min(38%, 460px); aspect-ratio: 4 / 3; translate: 0 -50%; pointer-events: none; }
+  .mh-pv { position: absolute; inset: 0; display: grid; place-items: center; opacity: 0; scale: 0.96; transition: opacity 0.35s, scale 0.6s var(--ease); }
+  .mh-pv.is-on { opacity: 1; scale: 1; }
+
+  /* 1, 8: the linked page replaces the shrunk page. */
+  .mh-frames { position: absolute; inset: 0; }
+  .mh-frame { position: absolute; inset: 0; opacity: 0; transition: opacity 0.45s; background: var(--bg); }
+  .mh-frame.is-on { opacity: 1; }
+  .mh-frame iframe { width: 100%; height: 100%; border: 0; pointer-events: none; }
+  /* 2 */
+  .mh-fan3 { position: relative; width: 100%; height: 100%; }
+  .mh-fan3 img { position: absolute; width: 62%; height: auto; border-radius: 6px; box-shadow: 0 18px 40px oklch(0 0 0 / 0.45); }
+  .mh-fan3 img:nth-child(1) { left: 0; top: 4%; rotate: -4deg; }
+  .mh-fan3 img:nth-child(2) { right: 0; top: 24%; rotate: 3deg; }
+  .mh-fan3 img:nth-child(3) { left: 18%; bottom: 2%; rotate: -1deg; }
+  .mh-cardx { display: grid; align-content: center; justify-items: start; gap: 14px; width: 100%; height: 100%; padding: 32px; border-radius: 18px; background: var(--ink); color: #fff; box-shadow: 0 18px 40px oklch(0 0 0 / 0.45); }
+  .mh-cardx p { display: grid; gap: 4px; margin: 0; }
+  .mh-cardx small { opacity: 0.6; }
+  .mh-cardx ol { display: grid; gap: 12px; margin: 0; padding: 0; list-style: none; font-size: 19px; }
+  .mh-cardx ol b { margin-right: 10px; font-size: 12px; font-weight: 400; opacity: 0.6; }
+  .mh-q { font: 800 40px / 1 "Big Shoulders Display", sans-serif !important; text-transform: uppercase; }
+  .mh-opts { display: flex; flex-wrap: wrap; gap: 6px; }
+  .mh-opts span { padding: 7px 12px; border: 1px solid oklch(1 0 0 / 0.3); border-radius: 99px; font-size: 13px; }
+  .mh-checks { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 20px; font-size: 15px; }
+  .mh-doc { display: grid; gap: 6px; width: 96px; height: 124px; padding: 12px 10px; border-radius: 8px; background: #fff; rotate: -4deg; }
+  .mh-doc b { color: var(--ink); font-size: 8px; }
+  .mh-doc i { height: 4px; border-radius: 2px; background: var(--line); }
+  .mh-doc i.s { width: 60%; }
+  /* 3 */
+  .mh-word { display: grid; gap: 12px; width: 100%; padding: 36px; border-radius: 18px; background: var(--ink); box-shadow: 0 18px 40px oklch(0 0 0 / 0.45); }
+  .mh-word p { margin: 0; font-size: clamp(64px, 8vw, 128px); line-height: 0.9; overflow: hidden; }
+  .mh-word span { max-width: 340px; font-size: 15px; line-height: 1.4; opacity: 0.75; }
+  .mh-3 .mh-pv { scale: 1; translate: 0 14px; transition: opacity 0.35s, translate 0.6s var(--ease); }
+  .mh-3 .mh-pv.is-on { translate: none; }
+  /* 4 */
+  .mh-dots { position: absolute; z-index: 3; left: 3%; top: 30%; width: 44%; height: 40%; pointer-events: auto; }
+  .mh-4::after { content: ''; position: absolute; z-index: 2; left: 0; top: 0; bottom: 0; width: 50%; background: linear-gradient(90deg, oklch(0.16 0 0 / 0.82), oklch(0.16 0 0 / 0.55)); opacity: 0; transition: opacity 0.4s; pointer-events: none; }
+  .mh-4.is-hovering::after { opacity: 1; }
+  /* 5 */
+  .mh-5 .mh-left { left: 0; top: 0; translate: 0 0; width: 300px; transform-origin: 50% 0; }
+  .mh-follow { display: grid; place-items: center; width: 100%; }
+  .mh-follow img { width: 100%; height: auto; border-radius: 10px; box-shadow: 0 24px 50px oklch(0 0 0 / 0.45); }
+  .mh-follow-card { display: grid; gap: 8px; width: 100%; padding: 24px; border-radius: 16px; background: #fff; color: var(--ink); box-shadow: 0 24px 50px oklch(0 0 0 / 0.45); }
+  .mh-follow-card strong { font-size: 54px; line-height: 0.9; }
+  .mh-follow-card span { font-size: 13.5px; color: var(--muted); }
+  /* 6 */
+  .mh-stat { display: grid; justify-items: start; gap: 6px; width: 100%; padding: 36px; border-radius: 18px; background: var(--ink); box-shadow: 0 18px 40px oklch(0 0 0 / 0.45); }
+  .mh-stat b { font-size: clamp(90px, 11vw, 170px); line-height: 0.85; font-variant-numeric: tabular-nums; }
+  .mh-stat span { font-size: 15px; opacity: 0.75; }
+  .mh-6 .mh-pv[data-for="4"] b { font-size: clamp(64px, 7vw, 110px); }
+  /* 7 */
+  .mh-7 { background: oklch(0.2 0.02 0); transition: background-color 0.8s var(--ease); }
+  .mh-7.is-hovering { background: oklch(0.28 0.08 var(--h)); }
+  .mh-outline { position: absolute; z-index: 0; right: -2%; bottom: -6%; margin: 0; font-size: clamp(120px, 17vw, 280px); line-height: 0.8; color: transparent; -webkit-text-stroke: 1.5px oklch(1 0 0 / 0.16); opacity: 0; transition: opacity 0.5s; pointer-events: none; }
+  .mh-7.is-hovering .mh-outline { opacity: 1; }
+  .mh-7 .mh-card { transition: opacity 0.5s; }
+  .mh-7.is-hovering .mh-card { opacity: 0.35; }
+  /* 8 */
+  .mh-fan { position: relative; width: 100%; height: 100%; }
+  .mh-fan img { position: absolute; left: 20%; top: 25%; width: 60%; height: auto; border-radius: 8px; box-shadow: 0 18px 40px oklch(0 0 0 / 0.45); transform-origin: 50% 160%; rotate: 0deg; transition: rotate 0.7s var(--ease), translate 0.7s var(--ease); }
+  .mh-8 .mh-pv.is-on .mh-fan img { rotate: calc(var(--k) * 9deg); translate: calc(var(--k) * 8px) 0; }
+</style>

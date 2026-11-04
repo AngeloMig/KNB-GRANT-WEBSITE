@@ -27,7 +27,7 @@ const services = [
   </section>
   <VideoReviews />
   <section id="services" class="services-section">
-    <SectionTitle title="SERVICES" detail="From the first build to what comes next" />
+    <SectionTitle title="SERVICES" detail="From the first build to what comes next" dots />
     <div class="intro-split section-intro" data-reveal><div class="intro-aside"><span class="tiny-heading">What I do</span><p>Build, migrate, improve<br />and support websites</p></div><p class="lead" data-lines>Your vision. <br />The right development.</p></div>
     <div class="services-list">{services.map((service, index) => <a class="service-row" data-reveal style={`--reveal-index:${index}`} href={withBase(service.href ?? '/contact/')}><h3>{service.name}</h3><div><p>{service.text}</p><span>{service.tags}</span></div><Arrow diagonal /></a>)}</div>
   </section>

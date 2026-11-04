@@ -1,0 +1,840 @@
+---
+// Design preview: 20 improvements and new designs across the whole site (homepage, project pages,
+// About, footer, 404 and site-wide touches). Local preview only: in a build this route has no pages.
+// Open http://localhost:4321/ideas/site/ while `npm run dev` runs. Only real projects and pages are used.
+import { withBase } from '../../utils/paths';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import Arrow from '../../components/Arrow.astro';
+import IdeaLegend from '../../components/IdeaLegend.astro';
+import { projects } from '../../data/projects';
+
+export function getStaticPaths() {
+  return import.meta.env.DEV ? [{ params: { preview: 'ideas' } }] : [];
+}
+
+const IDEAS = [
+  [1, '“Drag” cursor on the orbit'], [2, 'Pause button for the orbit'], [3, 'Marquee that follows your scroll'], [4, 'Grid or list view of work'],
+  [5, 'Dotted project images'], [6, 'Project cards that stack'], [7, 'Section titles in dots'], [8, 'Dotted service numbers'],
+  [9, 'Colour that follows the section'], [10, 'Scroll through the site'], [11, 'Desktop / phone switch'], [12, 'Project pages in their own colour'],
+  [13, 'Bigger “Next project”'], [14, 'Skills that link to proof'], [15, 'Footer name in dots'], [16, 'A 404 in dots'],
+  [17, 'Quick jump (⌘K)'], [18, 'Dot page transition'], [19, 'Scrambled link hover'], [20, 'Motion switch'],
+] as const;
+const AREAS: Record<number, string> = { 1: 'Hero', 3: 'Homepage', 10: 'Project pages', 14: 'About', 15: 'Footer & 404', 17: 'Site-wide' };
+const NOTES: Record<number, [string, string]> = {
+  1: ['move over the cards', 'Nothing tells visitors the orbit can be dragged. Over the cards, the cursor becomes a round “Drag” label, like the “View” circle on the project grid.'],
+  2: ['the ring counts down to the next project', 'Anything that moves on its own should be pausable (an accessibility rule). A small button beside the arrows shows when the orbit turns next, and stops it.'],
+  3: ['scroll up and down here', 'The platform strip runs faster while you scroll and turns round when you scroll back up, so it feels connected to the page.'],
+  4: ['switch views, then hover a row', 'A compact list for visitors who want to scan everything quickly; hovering a row shows its screenshot beside the cursor.'],
+  5: ['hover a card', 'Screenshots drawn in the hero’s dot style until you hover, then the real site fades in. Ties the grid to the hero.'],
+  6: ['scroll down through them', 'Each project slides up over the last and the one underneath steps back. A big, slow reveal of six projects.'],
+  7: ['scroll it into view, or press replay', 'Section headings (SERVICES, EXPERIENCE) assemble from scattered dots the first time they come into view.'],
+  8: ['hover a service', 'Each service gets a number in dots; a ripple runs through it on hover.'],
+  9: ['scroll through the three panels', 'The page background eases into a faint shade of whichever project is on screen, as the hero already does with the header.'],
+  10: ['keep scrolling: the site scrolls with you', 'On a project page, the full-page screenshot scrolls inside a browser window as you scroll, from the top of the site to the footer.'],
+  11: ['press Phone / Desktop', 'One frame that changes shape between the desktop and phone screenshots, instead of showing both side by side.'],
+  12: ['pick a project', 'Each project page takes a deep shade of its project’s colour for the title and a faint wash for the background.'],
+  13: ['hover it', 'The small “Next project” link becomes a full-width panel in the next project’s colour, with its site rising into view.'],
+  14: ['pick a skill', 'On About, each platform or agency shows the projects that prove it.'],
+  15: ['move over the name', 'The footer’s big GRANT DEV14 in the same dots as the hero, so the page opens and closes with the name.'],
+  16: ['move over it, or shuffle', 'The 404 page’s number in dots, with a real project suggested so the visit isn’t wasted.'],
+  17: ['press ⌘K or Ctrl K, or the button', 'Type to jump to any page or project. Handy for agencies who come back to check specific work.'],
+  18: ['press the button', 'Between pages, dots grow out from where you clicked to cover the screen, then shrink away on the new page.'],
+  19: ['hover the links', 'Menu and footer links shuffle their letters for a moment on hover, then settle.'],
+  20: ['turn motion off', 'A switch in the footer for anyone who finds motion distracting. It stops the orbit, dots and strips, and is remembered on that visitor’s browser.'],
+};
+const tag = (n: number) => ({ n, name: IDEAS[n - 1][1], note: NOTES[n][0], why: NOTES[n][1] });
+
+const hues: Record<string, number> = { olive: 105, lilac: 295, violet: 285, rose: 20, blue: 245, clay: 60 };
+const img = (slug: string, size = '-640') => withBase(`/images/projects/${slug}${size}.webp`);
+const host = (url: string) => new URL(url).hostname.replace('www.', '');
+const withHue = projects.map((p) => ({ ...p, hue: hues[p.canvas] ?? 60 }));
+const marqueeItems = ['Shopify', 'Webflow', 'WordPress', 'Migrations', 'Technical SEO', 'Integrations'];
+const services = [
+  { name: 'Shopify development', tags: 'Shopify · Shopify Plus · Liquid' },
+  { name: 'Webflow development', tags: 'Webflow · Finsweet Client-First · GSAP' },
+  { name: 'WordPress development', tags: 'WordPress · WooCommerce · PHP' },
+  { name: 'Migrations & technical SEO', tags: 'Migrations · APIs · Technical SEO' },
+];
+// Skills for idea 14: each platform and agency, with the projects behind it.
+const skills = [
+  ...[...new Set(projects.map((p) => p.platform))].map((s) => ({ label: s, match: (p: (typeof projects)[number]) => p.platform === s })),
+  ...[...new Set(projects.map((p) => p.agency).filter(Boolean))].map((a) => ({ label: `With ${a}`, match: (p: (typeof projects)[number]) => p.agency === a })),
+].map((s) => ({ label: s.label, slugs: projects.filter(s.match).map((p) => p.slug) }));
+const pages = [
+  { label: 'Home', hint: 'Page', href: withBase('/') },
+  { label: 'Selected work', hint: 'Homepage section', href: withBase('/#work') },
+  { label: 'Services', hint: 'Homepage section', href: withBase('/#services') },
+  { label: 'About Grant', hint: 'Page', href: withBase('/about/') },
+  { label: 'Estimate a project', hint: 'Page', href: withBase('/estimate/') },
+  { label: 'Get in touch', hint: 'Page', href: withBase('/contact/') },
+  { label: 'Free website audit', hint: 'Page', href: withBase('/contact/#audit') },
+  ...projects.map((p) => ({ label: p.name, hint: `${p.platform} · ${p.category}`, href: withBase(`/work/${p.slug}/`) })),
+];
+const first = withHue[0];
+---
+<BaseLayout title="Site ideas | Grant Dev14" description="Local design preview." noindex>
+  <IdeaLegend ideas={IDEAS} links={[{ label: 'Compare with the current homepage', href: '/' }, { label: 'A project page', href: `/work/${first.slug}/` }]} />
+
+  <div class="wrap sx-page">
+    <header class="sx-head">
+      <span class="tiny-heading">Preview · 20 site ideas</span>
+      <h1 class="display">Twenty ideas<br />for the whole site</h1>
+      <p>Improvements and new designs for the hero, homepage, project pages, About, footer and 404, plus a few site-wide touches. Every demo works; try each one. Pick the numbers you like and I’ll build them into the real pages.</p>
+    </header>
+
+    {IDEAS.map(([n]) => {
+      const t = tag(n);
+      return (
+        <section class="sx" id={`idea-${n}`}>
+          {AREAS[n] && <p class="sx-area">{AREAS[n]}</p>}
+          <div class="sx-top">
+            <span class="idea-tag"><b>{n}</b>{t.name}<em>{t.note}</em></span>
+            <p class="sx-why">{t.why}</p>
+          </div>
+
+          {n === 1 && (
+            <div class="sx-orbit" data-drag>
+              <div class="sx-orbit-cards">{withHue.slice(0, 3).map((p, i) => <span class={`sx-orbit-card sx-oc-${i}`}><img src={img(p.slug)} alt="" width="640" height="360" loading="lazy" /></span>)}</div>
+              <span class="sx-drag-cursor" aria-hidden="true">← Drag →</span>
+            </div>
+          )}
+
+          {n === 2 && (
+            <div class="sx-pause" data-pause>
+              <button type="button" class="ob-arrow sx-round" data-step="-1" aria-label="Previous project">←</button>
+              <div class="sx-pause-captions">{withHue.map((p, i) => <p class:list={['sx-pause-cap', { 'is-on': i === 0 }]}><strong>{p.name}</strong><span>{p.platform} · {p.category}</span></p>)}</div>
+              <button type="button" class="ob-arrow sx-round" data-step="1" aria-label="Next project">→</button>
+              <button type="button" class="sx-pause-btn" aria-label="Pause the orbit" aria-pressed="false">
+                <svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="22" class="sx-ring-bg" /><circle cx="24" cy="24" r="22" class="sx-ring" pathLength="100" /></svg>
+                <span class="sx-pause-icon" aria-hidden="true"></span>
+              </button>
+            </div>
+          )}
+
+          {n === 3 && (
+            <div class="sx-velo" aria-hidden="true"><div class="sx-velo-track">{[0, 1, 2].map(() => marqueeItems.map((item) => <><span>{item}</span><i></i></>))}</div></div>
+          )}
+
+          {n === 4 && (
+            <div class="sx-views" data-view="grid">
+              <div class="sx-views-bar">
+                <p>Selected work <span>({String(projects.length).padStart(2, '0')})</span></p>
+                <div class="sx-switch" role="group" aria-label="View"><button type="button" data-set="grid" aria-pressed="true">Grid</button><button type="button" data-set="list" aria-pressed="false">List</button></div>
+              </div>
+              <div class="sx-views-grid">{withHue.map((p) => <a href={withBase(`/work/${p.slug}/`)} class="sx-vg-card"><img src={img(p.slug, '-480')} alt="" width="480" height="270" loading="lazy" /><strong>{p.name}</strong><span>{p.platform} · {p.category}</span></a>)}</div>
+              <ol class="sx-views-list">{withHue.map((p, i) => <li><a href={withBase(`/work/${p.slug}/`)} data-img={img(p.slug, '-480')}><b>{String(i + 1).padStart(2, '0')}</b><strong>{p.name}</strong><span>{p.platform}</span><span>{p.category}</span><span>{p.agency ?? p.engagement}</span><Arrow diagonal /></a></li>)}</ol>
+              <img class="sx-views-float" alt="" width="480" height="270" aria-hidden="true" />
+            </div>
+          )}
+
+          {n === 5 && (
+            <div class="sx-dither">{withHue.slice(0, 3).map((p) => <a class="sx-dither-card" href={withBase(`/work/${p.slug}/`)} style={`--h:${p.hue}`}><span class="sx-dither-media"><img src={img(p.slug)} alt={`${p.name} homepage`} width="640" height="360" /><canvas></canvas></span><strong>{p.name}</strong><span>{p.platform} · {p.category}</span></a>)}</div>
+          )}
+
+          {n === 6 && (
+            <div class="sx-stack">{withHue.map((p, i) => <a class="sx-stack-card" href={withBase(`/work/${p.slug}/`)} style={`--i:${i};--h:${p.hue}`}><div class="sx-stack-copy"><b>{String(i + 1).padStart(2, '0')}</b><h3 class="display">{p.name}</h3><p>{p.description}</p><span>{p.platform} · {p.category}</span></div><img src={img(p.slug, '-960')} alt="" width="960" height="540" loading="lazy" /><span class="sx-stack-dim"></span></a>)}</div>
+          )}
+
+          {n === 7 && (
+            <div class="sx-title-demo"><canvas class="sx-dots" data-text="SERVICES" data-intro data-color="ink"></canvas><button type="button" class="sx-small-btn" data-replay>Replay</button></div>
+          )}
+
+          {n === 8 && (
+            <div class="sx-services">{services.map((s, i) => <a class="sx-service" href={withBase('/contact/')}><canvas class="sx-dots" data-text={String(i + 1).padStart(2, '0')} data-color="ink" data-row></canvas><h3>{s.name}</h3><span>{s.tags}</span><Arrow diagonal /></a>)}</div>
+          )}
+
+          {n === 9 && (
+            <div class="sx-wash" style={`--h:${withHue[0].hue}`}>{withHue.slice(0, 3).map((p) => <div class="sx-wash-panel" data-h={p.hue}><img src={img(p.slug)} alt="" width="640" height="360" loading="lazy" /><div><strong class="display">{p.name}</strong><p>{p.description}</p></div></div>)}</div>
+          )}
+
+          {n === 10 && (
+            <div class="sx-scrolly">
+              <div class="sx-scrolly-sticky">
+                <div class="sx-browser"><span class="ob-bar sx-bar"><i></i><i></i><i></i><b>{host(first.url)}</b></span><span class="sx-browser-view"><img src={img(first.slug, '-full')} alt={`${first.name}, full homepage`} width="640" height="1807" loading="lazy" /></span></div>
+                <div class="sx-scrolly-copy"><span class="tiny-heading">{first.name}</span><p class="sx-scrolly-line">{first.overview}</p><div class="sx-progress"><span></span></div><p class="sx-scrolly-hint">Scroll to explore the site</p></div>
+              </div>
+            </div>
+          )}
+
+          {n === 11 && (
+            <div class="sx-device-demo" data-mode="desktop">
+              <div class="sx-switch" role="group" aria-label="Screen"><button type="button" data-set="desktop" aria-pressed="true">Desktop</button><button type="button" data-set="phone" aria-pressed="false">Phone</button></div>
+              <div class="sx-device"><img class="sx-d-desk" src={img(withHue[1].slug, '-960')} alt={`${withHue[1].name} on desktop`} width="960" height="540" loading="lazy" /><img class="sx-d-phone" src={img(withHue[1].slug, '-mobile-440')} alt={`${withHue[1].name} on a phone`} loading="lazy" /></div>
+            </div>
+          )}
+
+          {n === 12 && (
+            <div class="sx-proj" style={`--h:${first.hue}`}>
+              <div class="sx-chips" role="group" aria-label="Project">{withHue.map((p, i) => <button type="button" data-h={p.hue} data-i={i} aria-pressed={i === 0 ? 'true' : 'false'}>{p.name}</button>)}</div>
+              <div class="sx-proj-page">
+                <span class="sx-proj-back">← All projects</span>
+                <h3 class="display sx-proj-title">{first.name}</h3>
+                <div class="sx-proj-row"><p class="sx-proj-desc">{first.description}</p><dl class="sx-proj-facts"><div><dt>Platform</dt><dd>{first.platform}</dd></div><div><dt>Category</dt><dd>{first.category}</dd></div><div><dt>Agency</dt><dd>{first.agency ?? '—'}</dd></div></dl></div>
+              </div>
+              <script type="application/json" class="sx-proj-data" set:html={JSON.stringify(withHue.map((p) => ({ name: p.name, description: p.description, platform: p.platform, category: p.category, agency: p.agency ?? '—' })))} />
+            </div>
+          )}
+
+          {n === 13 && (
+            <a class="sx-next" href={withBase(`/work/${withHue[1].slug}/`)} style={`--h:${withHue[1].hue}`}>
+              <span class="sx-next-label">Next project</span>
+              <strong class="display">{withHue[1].name}</strong>
+              <span class="sx-next-meta">{withHue[1].platform} · {withHue[1].category}</span>
+              <span class="sx-next-arrow"><Arrow diagonal /></span>
+              <img src={img(withHue[1].slug, '-960')} alt="" width="960" height="540" loading="lazy" />
+            </a>
+          )}
+
+          {n === 14 && (
+            <div class="sx-skills">
+              <div class="sx-chips" role="group" aria-label="Skill">{skills.map((s, i) => <button type="button" data-slugs={s.slugs.join(' ')} aria-pressed={i === 0 ? 'true' : 'false'}>{s.label} <span>{s.slugs.length}</span></button>)}</div>
+              <ul class="sx-skill-list">{withHue.map((p) => <li data-slug={p.slug} hidden={!skills[0].slugs.includes(p.slug)}><a href={withBase(`/work/${p.slug}/`)}><img src={img(p.slug, '-320')} alt="" width="320" height="180" loading="lazy" /><strong>{p.name}</strong><span>{p.platform} · {p.category}</span></a></li>)}</ul>
+            </div>
+          )}
+
+          {n === 15 && (
+            <div class="sx-footer"><div class="sx-footer-top"><p class="sx-footer-talk">Let’s talk.</p><span>Pages · Connect · Local time</span></div><canvas class="sx-dots" data-text="GRANT DEV14" data-color="ink"></canvas></div>
+          )}
+
+          {n === 16 && (
+            <div class="sx-404">
+              <canvas class="sx-dots" data-text="404" data-color="ink"></canvas>
+              <div class="sx-404-copy">
+                <h3 class="display">Lost in<br />the details?</h3>
+                <p>This page has moved or doesn’t exist. Here’s a project instead:</p>
+                <a class="sx-404-card" href={withBase(`/work/${first.slug}/`)}><img src={img(first.slug, '-480')} alt="" width="480" height="270" /><span><strong>{first.name}</strong><small>{first.platform} · {first.category}</small></span></a>
+                <button type="button" class="sx-small-btn" data-shuffle>Show another</button>
+              </div>
+              <script type="application/json" class="sx-404-data" set:html={JSON.stringify(withHue.map((p) => ({ name: p.name, meta: `${p.platform} · ${p.category}`, href: withBase(`/work/${p.slug}/`), img: img(p.slug, '-480') })))} />
+            </div>
+          )}
+
+          {n === 17 && (
+            <div class="sx-k">
+              <button type="button" class="sx-k-open"><span>Search pages and projects</span><kbd>⌘K</kbd></button>
+              <dialog class="sx-k-dialog" aria-label="Quick jump">
+                <input type="search" placeholder="Where to? Try “Shopify” or “about”" aria-label="Search pages and projects" />
+                <ul>{pages.map((p) => <li><a href={p.href}><strong>{p.label}</strong><span>{p.hint}</span></a></li>)}</ul>
+                <p class="sx-k-foot"><kbd>↑</kbd><kbd>↓</kbd> to move · <kbd>Enter</kbd> to open · <kbd>Esc</kbd> to close</p>
+              </dialog>
+            </div>
+          )}
+
+          {n === 18 && (
+            <div class="sx-dissolve"><p>Click anywhere in this box, as if it were a link.</p><button type="button" class="cta-primary">Go to About <Arrow diagonal /></button></div>
+          )}
+
+          {n === 19 && (
+            <nav class="sx-scramble" aria-label="Scramble demo">{['Selected work', 'About Grant', 'Services', 'Estimate a project', 'Get in touch'].map((l) => <a href="#idea-19" data-scramble>{l}</a>)}</nav>
+          )}
+
+          {n === 20 && (
+            <div class="sx-motion">
+              <label class="sx-toggle"><input type="checkbox" checked /><span></span>Motion</label>
+              <div class="sx-motion-demo">
+                <div class="sx-motion-strip" aria-hidden="true"><div>{[0, 1].map(() => marqueeItems.map((item) => <><span>{item}</span><i></i></>))}</div></div>
+                <canvas class="sx-dots" data-text="GRANT DEV14." data-color="ink" data-auto></canvas>
+              </div>
+            </div>
+          )}
+        </section>
+      );
+    })}
+  </div>
+  <canvas class="sx-veil" aria-hidden="true"></canvas>
+</BaseLayout>
+
+<script>
+  const root = document.documentElement;
+  const fine = matchMedia('(hover: hover) and (pointer: fine)').matches;
+  const ink = getComputedStyle(root).getPropertyValue('--ink').trim() || '#161616';
+  const clamp = (v: number, a = 0, b = 1) => Math.min(b, Math.max(a, v));
+  // Idea 20 can stop every demo that runs on its own.
+  let still = false;
+
+  // ── Shared: text drawn in dots (ideas 7, 8, 15, 16, 20). The cursor pushes dots away; each springs home.
+  type Dot = { x: number; y: number; vx: number; vy: number; hx: number; hy: number; ox: number; oy: number; delay: number; dur: number };
+  class Dots {
+    ctx: CanvasRenderingContext2D; dots: Dot[] = []; W = 0; H = 0; gap = 5; px = -1e4; py = -1e4; awake = true; on = false;
+    glideAt = 0; hue = 60;
+    constructor(public canvas: HTMLCanvasElement, public text: string, public intro = false) {
+      this.ctx = canvas.getContext('2d')!;
+      new IntersectionObserver(([e]) => { this.on = e.isIntersecting; if (this.on && this.intro && !this.glideAt) this.play(); }, { threshold: 0.4 }).observe(canvas);
+      const host = canvas.closest<HTMLElement>('.sx-service') ?? canvas;
+      if (fine) {
+        host.addEventListener('pointermove', (e) => { const r = canvas.getBoundingClientRect(); this.px = e.clientX - r.left; this.py = e.clientY - r.top; this.awake = true; });
+        host.addEventListener('pointerleave', () => { this.px = this.py = -1e4; });
+      }
+      this.build();
+    }
+    async build() {
+      await document.fonts.load('800 200px "Big Shoulders Display"');
+      const r = this.canvas.getBoundingClientRect();
+      this.W = Math.floor(r.width); this.H = Math.floor(r.height);
+      if (!this.W || !this.H) return;
+      const dpr = Math.min(2, devicePixelRatio || 1);
+      this.canvas.width = this.W * dpr; this.canvas.height = this.H * dpr;
+      this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      const { W, H } = this;
+      this.gap = H < 90 ? 3 : W < 640 ? 4 : 6;
+      const off = document.createElement('canvas'); off.width = W; off.height = H;
+      const o = off.getContext('2d')!;
+      let size = H * 1.12;
+      o.font = `800 ${size}px "Big Shoulders Display"`;
+      size = Math.min(size, (size * W * 0.98) / o.measureText(this.text).width);
+      o.font = `800 ${size}px "Big Shoulders Display"`;
+      o.textAlign = this.canvas.dataset.row !== undefined ? 'left' : 'center'; o.textBaseline = 'middle';
+      o.fillText(this.text, o.textAlign === 'left' ? 0 : W / 2, H / 2 + size * 0.04);
+      const data = o.getImageData(0, 0, W, H).data;
+      const g = this.gap;
+      this.dots = [];
+      for (let y = g / 2; y < H; y += g) for (let x = g / 2; x < W; x += g) {
+        if (data[((y | 0) * W + (x | 0)) * 4 + 3] > 128) this.dots.push({ hx: x, hy: y, x, y, vx: 0, vy: 0, ox: 0, oy: 0, delay: 0, dur: 1 });
+      }
+      if (this.intro && !this.glideAt) for (const d of this.dots) { d.x = -1e4; }
+      this.awake = true;
+      this.draw();
+    }
+    // Fly in from random points in the box (idea 7).
+    play() {
+      for (const d of this.dots) { d.ox = Math.random() * this.W - d.hx; d.oy = (Math.random() * 2 - 0.5) * this.H - d.hy; d.delay = Math.random() ** 1.7 * 700; d.dur = 500 + Math.random() * 700; }
+      this.glideAt = performance.now(); this.awake = true;
+    }
+    // A ripple swept along the text (ideas 8 and 20).
+    async sweep() {
+      for (let k = 0; k <= 20; k++) { this.px = (k / 20) * this.W; this.py = this.H / 2; this.awake = true; await new Promise((r) => setTimeout(r, 16)); }
+      this.px = this.py = -1e4;
+    }
+    step() {
+      if (this.glideAt) {
+        const T = performance.now() - this.glideAt;
+        let done = true;
+        for (const d of this.dots) {
+          const t = clamp((T - d.delay) / d.dur);
+          const left = t >= 1 ? 0 : 2 ** (-10 * t);
+          d.x = d.hx + d.ox * left; d.y = d.hy + d.oy * left;
+          if (t < 1) done = false;
+        }
+        if (done) this.glideAt = -1;
+        this.draw();
+        return;
+      }
+      let moving = 0;
+      const R = Math.max(40, Math.min(110, this.H * 0.6));
+      for (const d of this.dots) {
+        const dx = d.x - this.px, dy = d.y - this.py, dist = Math.hypot(dx, dy);
+        if (dist < R && dist > 0.1) { const f = (1 - dist / R) * 3.6; d.vx += (dx / dist) * f; d.vy += (dy / dist) * f; }
+        d.vx += (d.hx - d.x) * 0.05; d.vy += (d.hy - d.y) * 0.05;
+        d.vx *= 0.82; d.vy *= 0.82; d.x += d.vx; d.y += d.vy;
+        moving = Math.max(moving, Math.abs(d.vx) + Math.abs(d.vy), (Math.abs(d.hx - d.x) + Math.abs(d.hy - d.y)) * 0.1);
+      }
+      this.draw();
+      if (moving < 0.02 && this.px < -1e3) this.awake = false;
+    }
+    draw() {
+      const { ctx } = this, rad = this.gap * 0.36;
+      ctx.clearRect(0, 0, this.W, this.H);
+      const home = new Path2D(), moved = new Path2D();
+      for (const d of this.dots) { const p = Math.abs(d.x - d.hx) + Math.abs(d.y - d.hy) > 2 ? moved : home; p.moveTo(d.x + rad, d.y); p.arc(d.x, d.y, rad, 0, 6.2832); }
+      ctx.fillStyle = ink; ctx.fill(home);
+      ctx.fillStyle = `oklch(0.6 0.14 ${this.hue})`; ctx.fill(moved);
+    }
+  }
+  const allDots = [...document.querySelectorAll<HTMLCanvasElement>('canvas.sx-dots')].map((c) => new Dots(c, c.dataset.text!, c.dataset.intro !== undefined));
+  const loop = () => { for (const d of allDots) if (d.on && (d.awake || d.glideAt > 0)) d.step(); requestAnimationFrame(loop); };
+  requestAnimationFrame(loop);
+  let width = innerWidth;
+  addEventListener('resize', () => { if (Math.abs(innerWidth - width) > 40) { width = innerWidth; allDots.forEach((d) => { d.glideAt = d.intro ? -1 : 0; d.build(); }); } });
+
+  // 7: replay the fly-in.
+  document.querySelector('[data-replay]')?.addEventListener('click', () => allDots.find((d) => d.intro)?.play());
+  // 8: a ripple through the number when its row is hovered.
+  allDots.filter((d) => d.canvas.dataset.row !== undefined).forEach((d) => d.canvas.closest('.sx-service')!.addEventListener('pointerenter', () => d.sweep()));
+  // 20: the motion demo's name ripples every few seconds unless motion is off.
+  const autoDots = allDots.find((d) => d.canvas.dataset.auto !== undefined);
+  setInterval(() => { if (autoDots && !still) autoDots.sweep(); }, 2600);
+
+  // ── 1: "Drag" cursor over the cards.
+  const dragBox = document.querySelector<HTMLElement>('[data-drag]');
+  if (dragBox) {
+    const cur = dragBox.querySelector<HTMLElement>('.sx-drag-cursor')!;
+    const pos = { x: 0, y: 0 }, to = { x: 0, y: 0 };
+    let on = false;
+    const tick = () => { pos.x += (to.x - pos.x) * 0.2; pos.y += (to.y - pos.y) * 0.2; cur.style.translate = `${pos.x}px ${pos.y}px`; if (on) requestAnimationFrame(tick); };
+    dragBox.addEventListener('pointerenter', (e) => { const r = dragBox.getBoundingClientRect(); pos.x = to.x = e.clientX - r.left; pos.y = to.y = e.clientY - r.top; on = true; dragBox.classList.add('is-hover'); requestAnimationFrame(tick); });
+    dragBox.addEventListener('pointermove', (e) => { const r = dragBox.getBoundingClientRect(); to.x = e.clientX - r.left; to.y = e.clientY - r.top; });
+    dragBox.addEventListener('pointerleave', () => { on = false; dragBox.classList.remove('is-hover'); });
+    dragBox.addEventListener('pointerdown', () => dragBox.classList.add('is-down'));
+    addEventListener('pointerup', () => dragBox.classList.remove('is-down'));
+  }
+
+  // ── 2: countdown ring and pause.
+  const pause = document.querySelector<HTMLElement>('[data-pause]');
+  if (pause) {
+    const caps = [...pause.querySelectorAll<HTMLElement>('.sx-pause-cap')];
+    const ring = pause.querySelector<SVGCircleElement>('.sx-ring')!;
+    const btn = pause.querySelector<HTMLButtonElement>('.sx-pause-btn')!;
+    const WAIT = 4600;
+    let i = 0, elapsed = 0, paused = false, last = performance.now();
+    const go = (d: number) => { caps[i].classList.remove('is-on'); i = (i + d + caps.length) % caps.length; caps[i].classList.add('is-on'); elapsed = 0; };
+    pause.querySelectorAll<HTMLButtonElement>('[data-step]').forEach((b) => b.addEventListener('click', () => go(Number(b.dataset.step))));
+    btn.addEventListener('click', () => { paused = !paused; btn.setAttribute('aria-pressed', String(paused)); btn.setAttribute('aria-label', paused ? 'Play the orbit' : 'Pause the orbit'); });
+    const tick = (now: number) => {
+      if (!paused && !still) elapsed += now - last;
+      last = now;
+      if (elapsed >= WAIT) go(1);
+      ring.style.strokeDashoffset = String(100 - (elapsed / WAIT) * 100);
+      requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  }
+
+  // ── 3: marquee speed and direction follow the scroll.
+  const velo = document.querySelector<HTMLElement>('.sx-velo-track');
+  if (velo) {
+    let x = 0, dir = -1, boost = 0, lastY = scrollY;
+    addEventListener('scroll', () => { const d = scrollY - lastY; lastY = scrollY; if (d) dir = d > 0 ? -1 : 1; boost = Math.min(30, boost + Math.abs(d) * 0.25); }, { passive: true });
+    const tick = () => {
+      if (!still) { x += dir * (0.6 + boost); boost *= 0.92; }
+      const third = velo.scrollWidth / 3;
+      if (x < -third) x += third; if (x > 0) x -= third;
+      velo.style.transform = `translate3d(${x.toFixed(1)}px,0,0)`;
+      requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  }
+
+  // ── Two-option switches (ideas 4 and 11).
+  document.querySelectorAll<HTMLElement>('.sx-switch').forEach((sw) => {
+    const box = sw.closest<HTMLElement>('[data-view], [data-mode]')!;
+    sw.querySelectorAll<HTMLButtonElement>('button').forEach((b) => b.addEventListener('click', () => {
+      sw.querySelectorAll('button').forEach((o) => o.setAttribute('aria-pressed', String(o === b)));
+      if ('view' in box.dataset) box.dataset.view = b.dataset.set; else box.dataset.mode = b.dataset.set;
+    }));
+  });
+  // 4: the hovered row's screenshot follows the cursor.
+  const views = document.querySelector<HTMLElement>('.sx-views');
+  if (views) {
+    const float = views.querySelector<HTMLImageElement>('.sx-views-float')!;
+    views.querySelectorAll<HTMLAnchorElement>('.sx-views-list a').forEach((a) => {
+      a.addEventListener('pointerenter', () => { float.src = a.dataset.img!; views.classList.add('is-previewing'); });
+      a.addEventListener('pointerleave', () => views.classList.remove('is-previewing'));
+    });
+    views.addEventListener('pointermove', (e) => { const r = views.getBoundingClientRect(); float.style.translate = `${e.clientX - r.left + 24}px ${e.clientY - r.top - 80}px`; });
+  }
+
+  // ── 5: screenshots drawn as a halftone of dots.
+  document.querySelectorAll<HTMLElement>('.sx-dither-card').forEach((card) => {
+    const im = card.querySelector('img')!, cv = card.querySelector('canvas')!;
+    const paint = () => {
+      const r = cv.getBoundingClientRect(), W = Math.floor(r.width), H = Math.floor(r.height);
+      if (!W) return;
+      const dpr = Math.min(2, devicePixelRatio || 1), g = 6;
+      cv.width = W * dpr; cv.height = H * dpr;
+      const c = cv.getContext('2d')!; c.setTransform(dpr, 0, 0, dpr, 0, 0);
+      const cols = Math.ceil(W / g), rows = Math.ceil(H / g);
+      const s = document.createElement('canvas'); s.width = cols; s.height = rows;
+      const sc = s.getContext('2d', { willReadFrequently: true })!;
+      sc.drawImage(im, 0, 0, im.naturalWidth, im.naturalWidth * (H / W), 0, 0, cols, rows);
+      const px = sc.getImageData(0, 0, cols, rows).data;
+      c.fillStyle = `oklch(0.33 0.07 ${card.style.getPropertyValue('--h')})`;
+      const p = new Path2D();
+      for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++) {
+        const k = (y * cols + x) * 4, lum = (0.2126 * px[k] + 0.7152 * px[k + 1] + 0.0722 * px[k + 2]) / 255;
+        const rad = (1 - lum) * g * 0.55;
+        if (rad > 0.35) { p.moveTo(x * g + g / 2 + rad, y * g + g / 2); p.arc(x * g + g / 2, y * g + g / 2, rad, 0, 6.2832); }
+      }
+      c.fill(p);
+    };
+    im.decode().then(paint).catch(() => im.addEventListener('load', paint, { once: true }));
+  });
+
+  // ── 6: the card underneath steps back as the next one slides over it.
+  const stackCards = [...document.querySelectorAll<HTMLElement>('.sx-stack-card')];
+  const stackTick = () => {
+    stackCards.forEach((c, i) => {
+      const next = stackCards[i + 1];
+      if (!next) return;
+      const a = c.getBoundingClientRect(), b = next.getBoundingClientRect();
+      const cover = clamp((a.bottom - b.top) / a.height);
+      c.style.scale = String(1 - cover * 0.06);
+      (c.querySelector('.sx-stack-dim') as HTMLElement).style.opacity = String(cover * 0.45);
+    });
+  };
+  if (stackCards.length) { addEventListener('scroll', () => requestAnimationFrame(stackTick), { passive: true }); stackTick(); }
+
+  // ── 9: the box takes the shade of the panel in the middle of the screen.
+  const wash = document.querySelector<HTMLElement>('.sx-wash');
+  if (wash) {
+    const io = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) wash.style.setProperty('--h', (e.target as HTMLElement).dataset.h!); }), { rootMargin: '-45% 0px -45% 0px' });
+    wash.querySelectorAll('.sx-wash-panel').forEach((p) => io.observe(p));
+  }
+
+  // ── 10: the full-page screenshot scrolls with the page.
+  const scrolly = document.querySelector<HTMLElement>('.sx-scrolly');
+  if (scrolly) {
+    const view = scrolly.querySelector<HTMLElement>('.sx-browser-view')!, shot = view.querySelector('img')!, bar = scrolly.querySelector<HTMLElement>('.sx-progress span')!;
+    const tick = () => {
+      const r = scrolly.getBoundingClientRect();
+      const p = clamp(-r.top / (r.height - innerHeight));
+      shot.style.transform = `translate3d(0, ${-(shot.offsetHeight - view.offsetHeight) * p}px, 0)`;
+      bar.style.scale = `${p} 1`;
+    };
+    addEventListener('scroll', () => requestAnimationFrame(tick), { passive: true });
+    tick();
+  }
+
+  // ── 12: the project page mock takes the chosen project's colour.
+  const proj = document.querySelector<HTMLElement>('.sx-proj');
+  if (proj) {
+    const data = JSON.parse(proj.querySelector('.sx-proj-data')!.textContent!);
+    const set = (sel: string, v: string) => { proj.querySelector(sel)!.textContent = v; };
+    proj.querySelectorAll<HTMLButtonElement>('.sx-chips button').forEach((b) => b.addEventListener('click', () => {
+      proj.querySelectorAll('.sx-chips button').forEach((o) => o.setAttribute('aria-pressed', String(o === b)));
+      const p = data[Number(b.dataset.i)];
+      proj.style.setProperty('--h', b.dataset.h!);
+      set('.sx-proj-title', p.name); set('.sx-proj-desc', p.description);
+      const dds = proj.querySelectorAll('dd'); dds[0].textContent = p.platform; dds[1].textContent = p.category; dds[2].textContent = p.agency;
+    }));
+  }
+
+  // ── 14: skills filter the projects.
+  const skillBox = document.querySelector<HTMLElement>('.sx-skills');
+  if (skillBox) skillBox.querySelectorAll<HTMLButtonElement>('.sx-chips button').forEach((b) => b.addEventListener('click', () => {
+    skillBox.querySelectorAll('.sx-chips button').forEach((o) => o.setAttribute('aria-pressed', String(o === b)));
+    const slugs = b.dataset.slugs!.split(' ');
+    skillBox.querySelectorAll<HTMLElement>('.sx-skill-list li').forEach((li) => { li.hidden = !slugs.includes(li.dataset.slug!); });
+  }));
+
+  // ── 16: suggest another project.
+  const lost = document.querySelector<HTMLElement>('.sx-404');
+  if (lost) {
+    const list = JSON.parse(lost.querySelector('.sx-404-data')!.textContent!);
+    let at = 0;
+    lost.querySelector('[data-shuffle]')!.addEventListener('click', () => {
+      at = (at + 1 + Math.floor(Math.random() * (list.length - 1))) % list.length;
+      const p = list[at], a = lost.querySelector<HTMLAnchorElement>('.sx-404-card')!;
+      a.href = p.href; a.querySelector('img')!.src = p.img; a.querySelector('strong')!.textContent = p.name; a.querySelector('small')!.textContent = p.meta;
+      a.animate([{ opacity: 0, transform: 'translateY(8px)' }, { opacity: 1, transform: 'none' }], { duration: 400, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' });
+    });
+  }
+
+  // ── 17: quick jump.
+  const k = document.querySelector<HTMLElement>('.sx-k');
+  if (k) {
+    const dialog = k.querySelector('dialog')!, input = dialog.querySelector('input')!;
+    const items = [...dialog.querySelectorAll<HTMLLIElement>('li')];
+    let sel = 0;
+    const visible = () => items.filter((li) => !li.hidden);
+    const mark = () => { visible().forEach((li, i) => li.classList.toggle('is-sel', i === sel)); };
+    const open = () => { dialog.showModal(); input.value = ''; items.forEach((li) => (li.hidden = false)); sel = 0; mark(); input.focus(); };
+    k.querySelector('.sx-k-open')!.addEventListener('click', open);
+    addEventListener('keydown', (e) => { if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); dialog.open ? dialog.close() : open(); } });
+    input.addEventListener('input', () => {
+      const q = input.value.trim().toLowerCase();
+      items.forEach((li) => { li.hidden = !!q && !li.textContent!.toLowerCase().includes(q); });
+      sel = 0; mark();
+    });
+    input.addEventListener('keydown', (e) => {
+      const v = visible();
+      if (e.key === 'ArrowDown') { e.preventDefault(); sel = Math.min(v.length - 1, sel + 1); mark(); }
+      if (e.key === 'ArrowUp') { e.preventDefault(); sel = Math.max(0, sel - 1); mark(); }
+      if (e.key === 'Enter' && v[sel]) v[sel].querySelector('a')!.click();
+    });
+    dialog.addEventListener('click', (e) => { if (e.target === dialog) dialog.close(); });
+  }
+
+  // ── 18: dots grow out from the click to cover the screen, then shrink away.
+  const veil = document.querySelector<HTMLCanvasElement>('.sx-veil')!;
+  document.querySelector('.sx-dissolve')?.addEventListener('click', (e) => {
+    const ev = e as MouseEvent, ox = ev.clientX, oy = ev.clientY;
+    const W = innerWidth, H = innerHeight, g = 34, dpr = Math.min(2, devicePixelRatio || 1);
+    veil.width = W * dpr; veil.height = H * dpr;
+    const c = veil.getContext('2d')!; c.setTransform(dpr, 0, 0, dpr, 0, 0);
+    veil.classList.add('is-on');
+    const far = Math.hypot(Math.max(ox, W - ox), Math.max(oy, H - oy));
+    const start = performance.now(), IN = 650, HOLD = 180, OUT = 650;
+    const ease = (t: number) => 1 - (1 - t) ** 3;
+    const tick = (now: number) => {
+      const T = now - start;
+      c.clearRect(0, 0, W, H);
+      c.fillStyle = ink;
+      const p = new Path2D();
+      for (let y = g / 2; y < H + g; y += g) for (let x = g / 2; x < W + g; x += g) {
+        const d = Math.hypot(x - ox, y - oy) / far;
+        const grow = ease(clamp((T - d * 380) / (IN - 380)));
+        const shrink = ease(clamp((T - IN - HOLD - (1 - d) * 380) / (OUT - 380)));
+        const r = g * 0.75 * grow * (1 - shrink);
+        if (r > 0.3) { p.moveTo(x + r, y); p.arc(x, y, r, 0, 6.2832); }
+      }
+      c.fill(p);
+      if (T < IN + HOLD + OUT + 60) requestAnimationFrame(tick); else { c.clearRect(0, 0, W, H); veil.classList.remove('is-on'); }
+    };
+    requestAnimationFrame(tick);
+  });
+
+  // ── 19: letters shuffle, then settle from left to right.
+  const glyphs = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
+  document.querySelectorAll<HTMLElement>('[data-scramble]').forEach((el) => {
+    const text = el.textContent!;
+    let frame = 0;
+    el.addEventListener('pointerenter', () => {
+      cancelAnimationFrame(frame);
+      el.style.minWidth = `${el.offsetWidth}px`;
+      const start = performance.now();
+      const tick = (now: number) => {
+        const t = clamp((now - start) / 450);
+        const fixed = Math.floor(t * text.length);
+        el.textContent = [...text].map((ch, i) => (i < fixed || ch === ' ' ? ch : glyphs[(Math.random() * glyphs.length) | 0])).join('');
+        if (t < 1) frame = requestAnimationFrame(tick); else el.textContent = text;
+      };
+      frame = requestAnimationFrame(tick);
+    });
+  });
+
+  // ── 20: turning motion off stops this page's moving demos.
+  const motionBox = document.querySelector<HTMLInputElement>('.sx-toggle input');
+  motionBox?.addEventListener('change', () => { still = !motionBox.checked; document.querySelector('.sx-motion')!.classList.toggle('is-still', still); });
+</script>
+
+<style is:global>
+  .sx-page { padding-bottom: 160px; }
+  .sx-head { display: grid; gap: 18px; max-width: 820px; padding-block: 24px 40px; }
+  .sx-head h1 { margin: 0; font-size: clamp(56px, 8vw, 130px); }
+  .sx-head p { margin: 0; color: var(--muted); font-size: 17px; line-height: 1.5; }
+  .sx { padding-block: 56px; border-top: 1px solid var(--line); }
+  .sx-area { margin: 0 0 20px; font: 800 clamp(28px, 3vw, 44px) / 1 "Big Shoulders Display", sans-serif; text-transform: uppercase; letter-spacing: -0.01em; }
+  .sx-top { display: grid; gap: 4px; margin-bottom: 28px; }
+  .sx-why { max-width: 680px; margin: 0; color: var(--muted); font-size: 15px; line-height: 1.5; }
+  .sx-small-btn { padding: 8px 16px; border: 1px solid var(--ink); border-radius: 99px; background: none; color: var(--ink); font: 500 13px Archivo, sans-serif; cursor: pointer; }
+  .sx-small-btn:hover { background: var(--ink); color: var(--bg); }
+  .sx-switch { display: inline-flex; padding: 4px; border-radius: 99px; background: var(--surface); }
+  .sx-switch button, .sx-chips button { padding: 8px 16px; border: 0; border-radius: 99px; background: none; color: var(--ink); font: 500 13px Archivo, sans-serif; cursor: pointer; transition: background 0.25s, color 0.25s; }
+  .sx-switch button[aria-pressed="true"], .sx-chips button[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+  .sx-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 24px; }
+  .sx-chips button { border: 1px solid var(--line); }
+  .sx-chips button span { opacity: 0.55; margin-left: 4px; }
+
+  /* 1 */
+  .sx-orbit { position: relative; height: 340px; border-radius: 20px; background: var(--surface); overflow: hidden; perspective: 1400px; }
+  .sx-orbit.is-hover { cursor: none; }
+  .sx-orbit-cards { position: absolute; inset: 0; display: grid; place-items: center; transform-style: preserve-3d; }
+  .sx-orbit-card { grid-area: 1 / 1; width: min(52%, 420px); border-radius: 10px; overflow: hidden; box-shadow: 0 30px 60px oklch(0 0 0 / 0.2); }
+  .sx-orbit-card img { display: block; width: 100%; height: auto; }
+  .sx-oc-1 { transform: translateX(-46%) rotateY(38deg) scale(0.85); opacity: 0.75; }
+  .sx-oc-2 { transform: translateX(46%) rotateY(-38deg) scale(0.85); opacity: 0.75; }
+  .sx-oc-0 { position: relative; z-index: 2; }
+  .sx-drag-cursor { position: absolute; z-index: 5; left: 0; top: 0; display: grid; place-items: center; width: 92px; height: 92px; margin: -46px 0 0 -46px; border-radius: 50%; background: var(--ink); color: var(--bg); font-size: 12.5px; font-weight: 500; white-space: nowrap; pointer-events: none; scale: 0; transition: scale 0.35s var(--ease); }
+  .sx-orbit.is-hover .sx-drag-cursor { scale: 1; }
+  .sx-orbit.is-down .sx-drag-cursor { scale: 0.8; }
+
+  /* 2 */
+  .sx-pause { display: grid; grid-template-columns: 48px 1fr 48px 48px; align-items: center; gap: 20px; max-width: 640px; }
+  .sx-round { width: 48px; height: 48px; border-radius: 50%; border: 1px solid currentColor; background: none; color: inherit; font-size: 18px; cursor: pointer; }
+  .sx-pause-captions { display: grid; text-align: center; }
+  .sx-pause-cap { grid-area: 1 / 1; display: grid; gap: 4px; margin: 0; opacity: 0; transform: translateY(6px); transition: opacity 0.4s, transform 0.5s var(--ease); }
+  .sx-pause-cap.is-on { opacity: 1; transform: none; }
+  .sx-pause-cap strong { font-size: 20px; font-weight: 500; }
+  .sx-pause-cap span { font-size: 12px; opacity: 0.7; }
+  .sx-pause-btn { position: relative; display: grid; place-items: center; width: 48px; height: 48px; padding: 0; border: 0; border-radius: 50%; background: none; cursor: pointer; }
+  .sx-pause-btn svg { position: absolute; inset: 0; rotate: -90deg; }
+  .sx-pause-btn circle { fill: none; stroke-width: 2; }
+  .sx-ring-bg { stroke: var(--line); }
+  .sx-ring { stroke: var(--ink); stroke-dasharray: 100; stroke-linecap: round; }
+  .sx-pause-icon { width: 12px; height: 14px; border-inline: 4px solid var(--ink); }
+  .sx-pause-btn[aria-pressed="true"] .sx-pause-icon { width: 0; height: 0; border-block: 7px solid transparent; border-inline: 12px solid var(--ink) 0; margin-left: 4px; }
+
+  /* 3, 20 */
+  .sx-velo, .sx-motion-strip { overflow: hidden; padding-block: 22px; border-block: 1px solid var(--line); }
+  .sx-velo-track, .sx-motion-strip > div { display: flex; align-items: center; gap: 40px; width: max-content; will-change: transform; }
+  .sx-velo span, .sx-motion-strip span { font: 800 clamp(40px, 5vw, 76px) / 1 "Big Shoulders Display", sans-serif; text-transform: uppercase; }
+  .sx-velo i, .sx-motion-strip i { width: 12px; height: 12px; border-radius: 50%; background: var(--ink); }
+
+  /* 4 */
+  .sx-views { position: relative; }
+  .sx-views-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+  .sx-views-bar p { margin: 0; font-size: 15px; }
+  .sx-views-bar p span { opacity: 0.5; }
+  .sx-views-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+  .sx-vg-card { display: grid; gap: 4px; }
+  .sx-vg-card img { width: 100%; height: auto; border-radius: 10px; margin-bottom: 8px; }
+  .sx-vg-card strong { font-weight: 500; }
+  .sx-vg-card span { font-size: 13px; color: var(--muted); }
+  .sx-views-list { display: none; margin: 0; padding: 0; list-style: none; border-top: 1px solid var(--line); }
+  .sx-views[data-view="list"] .sx-views-grid { display: none; }
+  .sx-views[data-view="list"] .sx-views-list { display: block; }
+  .sx-views-list a { display: grid; grid-template-columns: 50px 1.4fr 1fr 1fr 1fr 24px; align-items: center; gap: 16px; padding: 18px 0; border-bottom: 1px solid var(--line); transition: padding 0.4s var(--ease), color 0.3s; }
+  .sx-views-list a:hover { padding-inline: 12px; }
+  .sx-views-list b { font-weight: 400; font-size: 12px; color: var(--muted); }
+  .sx-views-list strong { font: 800 clamp(24px, 2.4vw, 36px) / 1 "Big Shoulders Display", sans-serif; text-transform: uppercase; }
+  .sx-views-list span { font-size: 13.5px; color: var(--muted); }
+  .sx-views-float { position: absolute; left: 0; top: 0; z-index: 4; width: 280px; height: auto; border-radius: 10px; box-shadow: 0 24px 50px oklch(0 0 0 / 0.25); pointer-events: none; opacity: 0; scale: 0.9; transition: opacity 0.25s, scale 0.35s var(--ease); }
+  .sx-views.is-previewing .sx-views-float { opacity: 1; scale: 1; }
+
+  /* 5 */
+  .sx-dither { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+  .sx-dither-card { display: grid; gap: 4px; }
+  .sx-dither-media { position: relative; display: block; aspect-ratio: 16 / 9; margin-bottom: 8px; border-radius: 10px; overflow: hidden; background: oklch(0.982 0.009 var(--h)); }
+  .sx-dither-media img, .sx-dither-media canvas { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: top; }
+  .sx-dither-media img { opacity: 0; scale: 1.04; transition: opacity 0.6s, scale 0.9s var(--ease); }
+  .sx-dither-media canvas { transition: opacity 0.6s; }
+  .sx-dither-card:hover img { opacity: 1; scale: 1; }
+  .sx-dither-card:hover canvas { opacity: 0; }
+  .sx-dither-card strong { font-weight: 500; }
+  .sx-dither-card > span:last-child { font-size: 13px; color: var(--muted); }
+
+  /* 6 */
+  .sx-stack { display: grid; gap: 40px; padding-bottom: 20px; }
+  .sx-stack-card { position: sticky; top: calc(96px + var(--i) * 18px); display: grid; grid-template-columns: 0.8fr 1.2fr; align-items: center; gap: 40px; min-height: 380px; padding: 36px; border-radius: 24px; background: oklch(0.96 0.02 var(--h)); overflow: hidden; transform-origin: 50% 0; box-shadow: 0 -10px 40px -20px oklch(0 0 0 / 0.25); }
+  .sx-stack-copy { display: grid; gap: 10px; align-content: start; }
+  .sx-stack-copy b { font-size: 12px; font-weight: 500; opacity: 0.6; }
+  .sx-stack-copy h3 { margin: 0; font-size: clamp(44px, 5vw, 80px); text-transform: uppercase; color: oklch(0.3 0.06 var(--h)); }
+  .sx-stack-copy p { margin: 0; max-width: 380px; line-height: 1.5; }
+  .sx-stack-copy span { font-size: 13px; color: var(--muted); }
+  .sx-stack-card img { width: 100%; height: auto; border-radius: 12px; box-shadow: 0 24px 50px oklch(0 0 0 / 0.2); }
+  .sx-stack-dim { position: absolute; inset: 0; background: #000; opacity: 0; pointer-events: none; }
+
+  /* 7 */
+  .sx-title-demo { display: grid; gap: 16px; justify-items: start; }
+  .sx-title-demo canvas { display: block; width: 100%; height: clamp(110px, 14vw, 230px); }
+
+  /* 8 */
+  .sx-services { border-top: 1px solid var(--line); }
+  .sx-service { display: grid; grid-template-columns: clamp(90px, 10vw, 150px) 1fr 1fr 24px; align-items: center; gap: 24px; padding: 22px 0; border-bottom: 1px solid var(--line); }
+  .sx-service canvas { display: block; width: 100%; height: clamp(54px, 6vw, 84px); }
+  .sx-service h3 { margin: 0; font-size: clamp(20px, 2vw, 28px); font-weight: 500; }
+  .sx-service > span { font-size: 13.5px; color: var(--muted); }
+
+  /* 9 */
+  .sx-wash { display: grid; gap: 0; border-radius: 24px; background: oklch(0.965 0.025 var(--h)); transition: background-color 1.2s var(--ease); }
+  .sx-wash-panel { display: grid; grid-template-columns: 1fr 1fr; align-items: center; gap: 48px; min-height: 60vh; padding: 48px; }
+  .sx-wash-panel img { width: 100%; height: auto; border-radius: 12px; box-shadow: 0 24px 50px oklch(0 0 0 / 0.18); }
+  .sx-wash-panel strong { display: block; font-size: clamp(44px, 5vw, 80px); text-transform: uppercase; color: oklch(0.3 0.07 var(--h)); transition: color 1.2s var(--ease); }
+  .sx-wash-panel p { max-width: 380px; line-height: 1.5; }
+
+  /* 10 */
+  .sx-scrolly { height: 260vh; }
+  .sx-scrolly-sticky { position: sticky; top: 90px; display: grid; grid-template-columns: 1.3fr 0.7fr; align-items: center; gap: 48px; height: calc(100vh - 120px); }
+  .sx-browser { display: flex; flex-direction: column; height: 100%; max-height: 640px; border-radius: 14px; overflow: hidden; box-shadow: 0 30px 70px oklch(0 0 0 / 0.22); }
+  .sx-bar { display: flex; align-items: center; gap: 5px; height: 28px; padding-inline: 12px; background: #f4f4f5; border-bottom: 1px solid #e4e4e7; }
+  .sx-bar i { width: 8px; height: 8px; border-radius: 50%; background: #d4d4d8; }
+  .sx-bar b { margin-inline: auto; padding: 2px 12px; border-radius: 5px; background: #e4e4e7; font-size: 11px; font-weight: 400; color: #52525b; }
+  .sx-browser-view { flex: 1; overflow: hidden; }
+  .sx-browser-view img { display: block; width: 100%; height: auto; will-change: transform; }
+  .sx-scrolly-copy { display: grid; gap: 16px; }
+  .sx-scrolly-line { margin: 0; font-size: 18px; line-height: 1.5; }
+  .sx-progress { height: 2px; background: var(--line); }
+  .sx-progress span { display: block; height: 100%; background: var(--ink); transform-origin: 0 50%; scale: 0 1; }
+  .sx-scrolly-hint { margin: 0; font-size: 13px; color: var(--muted); }
+
+  /* 11 */
+  .sx-device-demo { display: grid; justify-items: center; gap: 28px; padding: 36px 20px; border-radius: 24px; background: var(--surface); }
+  .sx-device { position: relative; width: min(100%, 760px); height: clamp(260px, 32vw, 428px); border-radius: 14px; overflow: hidden; background: #fff; box-shadow: 0 0 0 8px var(--ink), 0 30px 60px oklch(0 0 0 / 0.25); transition: width 0.8s var(--ease), height 0.8s var(--ease), border-radius 0.8s var(--ease); }
+  .sx-device-demo[data-mode="phone"] .sx-device { width: 230px; height: 480px; border-radius: 34px; }
+  .sx-device img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: top; transition: opacity 0.5s; }
+  .sx-d-phone { opacity: 0; }
+  .sx-device-demo[data-mode="phone"] .sx-d-phone { opacity: 1; transition-delay: 0.2s; }
+  .sx-device-demo[data-mode="phone"] .sx-d-desk { opacity: 0; }
+
+  /* 12 */
+  .sx-proj-page { padding: 32px clamp(20px, 3vw, 44px) 40px; border-radius: 24px; background: oklch(0.975 0.015 var(--h)); color: oklch(0.3 0.06 var(--h)); transition: background-color 1s var(--ease), color 1s var(--ease); }
+  .sx-proj-back { font-size: 13px; }
+  .sx-proj-title { margin: 18px 0 24px; padding-top: 18px; border-top: 1px solid oklch(0.3 0.06 var(--h) / 0.35); font-size: clamp(56px, 8vw, 130px); text-transform: uppercase; }
+  .sx-proj-row { display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 48px; }
+  .sx-proj-desc { margin: 0; font-size: clamp(18px, 1.8vw, 24px); line-height: 1.35; color: var(--ink); }
+  .sx-proj-facts { margin: 0; }
+  .sx-proj-facts div { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid oklch(0.3 0.06 var(--h) / 0.25); font-size: 13px; }
+  .sx-proj-facts dd { margin: 0; color: var(--ink); }
+
+  /* 13 */
+  .sx-next { position: relative; display: grid; align-content: start; gap: 10px; min-height: 420px; padding: 40px; border-radius: 28px; overflow: hidden; background: oklch(0.3 0.07 var(--h)); color: #fff; }
+  .sx-next-label { font-size: 13px; opacity: 0.7; }
+  .sx-next strong { position: relative; z-index: 2; font-size: clamp(64px, 11vw, 190px); text-transform: uppercase; }
+  .sx-next-meta { position: relative; z-index: 2; font-size: 14px; opacity: 0.75; }
+  .sx-next-arrow { position: absolute; z-index: 2; right: 40px; top: 40px; display: grid; place-items: center; width: 64px; height: 64px; border-radius: 50%; background: #fff; color: var(--ink); transition: rotate 0.6s var(--ease); }
+  .sx-next:hover .sx-next-arrow { rotate: 45deg; }
+  .sx-next img { position: absolute; right: 40px; bottom: 0; width: min(46%, 560px); height: auto; border-radius: 12px 12px 0 0; translate: 0 70%; transition: translate 0.9s var(--ease); box-shadow: 0 -20px 50px oklch(0 0 0 / 0.3); }
+  .sx-next:hover img { translate: 0 12%; }
+
+  /* 14 */
+  .sx-skill-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 20px; margin: 0; padding: 0; list-style: none; }
+  .sx-skill-list li { animation: reveal-rise 0.6s var(--ease); }
+  .sx-skill-list li[hidden] { display: none; }
+  .sx-skill-list a { display: grid; gap: 4px; }
+  .sx-skill-list img { width: 100%; height: auto; border-radius: 10px; margin-bottom: 6px; }
+  .sx-skill-list strong { font-weight: 500; }
+  .sx-skill-list span { font-size: 13px; color: var(--muted); }
+
+  /* 15 */
+  .sx-footer { padding: 36px clamp(20px, 3vw, 44px) 28px; border-radius: 24px; background: var(--surface); }
+  .sx-footer-top { display: flex; justify-content: space-between; align-items: baseline; padding-bottom: 28px; margin-bottom: 20px; border-bottom: 1px solid var(--line); }
+  .sx-footer-talk { margin: 0; font-size: clamp(32px, 3vw, 48px); font-weight: 500; letter-spacing: -0.03em; }
+  .sx-footer-top span { font-size: 13px; color: var(--muted); }
+  .sx-footer canvas { display: block; width: 100%; height: clamp(110px, 15vw, 250px); }
+
+  /* 16 */
+  .sx-404 { display: grid; grid-template-columns: 1.1fr 0.9fr; align-items: center; gap: 40px; }
+  .sx-404 canvas { display: block; width: 100%; height: clamp(200px, 24vw, 380px); }
+  .sx-404-copy { display: grid; gap: 14px; justify-items: start; }
+  .sx-404-copy h3 { margin: 0; font-size: clamp(44px, 5vw, 76px); text-transform: uppercase; }
+  .sx-404-copy p { margin: 0; color: var(--muted); }
+  .sx-404-card { display: flex; align-items: center; gap: 14px; padding: 10px; padding-right: 20px; border: 1px solid var(--line); border-radius: 14px; }
+  .sx-404-card img { width: 120px; height: auto; border-radius: 8px; }
+  .sx-404-card span { display: grid; gap: 2px; }
+  .sx-404-card strong { font-weight: 500; }
+  .sx-404-card small { font-size: 12.5px; color: var(--muted); }
+
+  /* 17 */
+  .sx-k-open { display: flex; align-items: center; justify-content: space-between; gap: 40px; width: min(100%, 440px); padding: 14px 14px 14px 20px; border: 1px solid var(--line); border-radius: 14px; background: var(--bg); color: var(--muted); font: 14px Archivo, sans-serif; cursor: pointer; }
+  .sx-k kbd { padding: 3px 7px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); color: var(--ink); font: 500 11.5px Archivo, sans-serif; }
+  .sx-k-dialog { width: min(560px, calc(100vw - 32px)); max-height: min(560px, 80vh); margin-top: 14vh; padding: 0; border: 0; border-radius: 18px; background: var(--bg); color: var(--ink); box-shadow: 0 40px 90px -20px oklch(0 0 0 / 0.45); }
+  .sx-k-dialog::backdrop { background: oklch(0.16 0 0 / 0.35); backdrop-filter: blur(3px); }
+  .sx-k-dialog[open] { animation: reveal-rise 0.35s var(--ease); }
+  .sx-k-dialog input { width: 100%; padding: 20px 22px; border: 0; border-bottom: 1px solid var(--line); background: none; font: 18px Archivo, sans-serif; color: var(--ink); outline: none; }
+  .sx-k-dialog ul { max-height: 360px; overflow: auto; margin: 0; padding: 8px; list-style: none; }
+  .sx-k-dialog li a { display: flex; justify-content: space-between; gap: 16px; padding: 12px 14px; border-radius: 10px; }
+  .sx-k-dialog li.is-sel a, .sx-k-dialog li a:hover { background: var(--surface); }
+  .sx-k-dialog li span { font-size: 13px; color: var(--muted); }
+  .sx-k-foot { margin: 0; padding: 12px 22px; border-top: 1px solid var(--line); font-size: 12px; color: var(--muted); }
+
+  /* 18 */
+  .sx-dissolve { display: grid; place-items: center; gap: 18px; min-height: 260px; border-radius: 24px; background: var(--surface); cursor: pointer; text-align: center; }
+  .sx-dissolve p { margin: 0; color: var(--muted); }
+  .sx-veil { position: fixed; inset: 0; z-index: 60; width: 100vw; height: 100vh; pointer-events: none; display: none; }
+  .sx-veil.is-on { display: block; }
+
+  /* 19 */
+  .sx-scramble { display: grid; gap: 4px; }
+  .sx-scramble a { display: inline-block; width: fit-content; font: 800 clamp(36px, 4.4vw, 68px) / 1.05 "Big Shoulders Display", sans-serif; text-transform: uppercase; white-space: nowrap; }
+
+  /* 20 */
+  .sx-motion { display: grid; gap: 24px; }
+  .sx-toggle { display: inline-flex; align-items: center; gap: 12px; width: fit-content; font-size: 15px; cursor: pointer; }
+  .sx-toggle input { position: absolute; opacity: 0; }
+  .sx-toggle span { position: relative; width: 46px; height: 26px; border-radius: 99px; background: var(--line); transition: background 0.3s; }
+  .sx-toggle span::after { content: ''; position: absolute; left: 3px; top: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; transition: translate 0.35s var(--ease); }
+  .sx-toggle input:checked + span { background: var(--ink); }
+  .sx-toggle input:checked + span::after { translate: 20px 0; }
+  .sx-toggle input:focus-visible + span { outline: 2px solid var(--ink); outline-offset: 3px; }
+  .sx-motion-demo { display: grid; gap: 20px; }
+  .sx-motion-strip > div { animation: marquee 22s linear infinite; }
+  .sx-motion.is-still .sx-motion-strip > div { animation-play-state: paused; }
+  .sx-motion-demo canvas { display: block; width: 100%; height: clamp(90px, 12vw, 190px); }
+
+  @media (max-width: 900px) {
+    .sx-views-grid, .sx-dither { grid-template-columns: 1fr 1fr; }
+    .sx-views-list a { grid-template-columns: 36px 1fr 1fr 24px; }
+    .sx-views-list a span:nth-of-type(n + 2) { display: none; }
+    .sx-stack-card, .sx-wash-panel, .sx-404, .sx-proj-row { grid-template-columns: 1fr; }
+    .sx-scrolly-sticky { grid-template-columns: 1fr; height: auto; }
+    .sx-browser { height: 60vh; }
+    .sx-service { grid-template-columns: 80px 1fr 24px; }
+    .sx-service > span { display: none; }
+  }
+  @media (max-width: 640px) {
+    .sx-views-grid, .sx-dither { grid-template-columns: 1fr; }
+    .sx-pause { grid-template-columns: 48px 1fr 48px; }
+    .sx-pause-btn { grid-column: 1 / -1; justify-self: center; }
+    .sx-next img { display: none; }
+  }
+</style>

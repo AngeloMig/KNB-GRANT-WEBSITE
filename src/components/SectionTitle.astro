@@ -1,11 +1,19 @@
 ---
-interface Props { title: string; detail?: string; id?: string; as?: 'h1' | 'h2'; }
-const { title, detail, id, as: Tag = 'h2' } = Astro.props;
+interface Props { title: string; detail?: string; id?: string; as?: 'h1' | 'h2'; hue?: number; dots?: boolean; }
+const { title, detail, id, as: Tag = 'h2', hue } = Astro.props;
+// Page titles (h1) are always drawn in dots; a section title can ask for it with `dots`.
+const dots = Astro.props.dots ?? Tag === 'h1';
 // Titles at the top of a page animate in on load with CSS, so they are painted immediately (good for LCP).
 const onLoad = Astro.props.as === 'h1' || id === 'top-title';
 ---
-<div class:list={['section-title', { 'is-in': onLoad }]} id={id} data-reveal={onLoad ? 'load' : ''}>
+<div class:list={['section-title', { 'is-in': onLoad, 'has-dots': dots }]} id={id} data-reveal={onLoad ? 'load' : ''}>
   <span class="section-rule" aria-hidden="true"></span>
-  <Tag class="display">{title}</Tag>
+  {/* Drawn in dots that build the title (src/scripts/dot-title.ts). */}
+  <Tag class="display" data-dots={dots ? '' : undefined} style={hue !== undefined ? `--dot-accent:oklch(0.6 0.14 ${hue})` : undefined}>{title}</Tag>
   {detail && <span class="section-detail">{detail}</span>}
 </div>
+
+<script>
+  import { dotTitles } from '../scripts/dot-title';
+  dotTitles();
+</script>

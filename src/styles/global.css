@@ -471,6 +471,38 @@ html.menu-closing,
 .section-title .display {
   font-size: clamp(76px, 10.3vw, 164px);
 }
+/* Page titles drawn in dots (src/scripts/dot-title.ts): the text stays for search engines and screen
+   readers but is drawn by the canvas; without motion (or if a title wraps) it shows as plain text. */
+[data-dots] {
+  position: relative;
+}
+.motion [data-dots]:not(.dots-off) {
+  color: transparent;
+  animation: none !important;
+}
+/* A dotted section title fades in with its section but doesn't rise, so the dots land where it ends up. */
+.motion .section-title.has-dots[data-reveal]:not(.is-in) {
+  transform: none;
+}
+.dot-title-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+.dots-off .dot-title-canvas {
+  display: none;
+}
+/* While the dots fly in they're drawn on a full-screen layer, above the page. */
+.dot-title-fly {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+}
 .section-detail {
   font-size: 12px;
   max-width: 180px;
@@ -4564,6 +4596,60 @@ main {
   bottom: 5%;
   width: 16%;
 }
+/* Desktop / Phone switch: one device at a time. The laptop grows into the middle, or the phone comes
+   to the middle while the laptop steps back and fades. */
+.detail-canvas .device-laptop,
+.detail-canvas .device-phone {
+  transition: left 0.8s var(--ease), right 0.8s var(--ease), top 0.8s var(--ease), bottom 0.8s var(--ease), width 0.8s var(--ease), opacity 0.5s, transform 0.8s var(--ease);
+}
+.detail-canvas[data-mode="desktop"] .device-laptop {
+  left: 15%;
+  top: 9%;
+  width: 70%;
+}
+.detail-canvas[data-mode="desktop"] .device-phone {
+  opacity: 0;
+  transform: translate(40%, 12%) scale(0.85);
+  pointer-events: none;
+}
+.detail-canvas[data-mode="phone"] .device-laptop {
+  opacity: 0;
+  transform: scale(0.9);
+  pointer-events: none;
+}
+.detail-canvas[data-mode="phone"] .device-phone {
+  right: 38.5%;
+  bottom: 7%;
+  width: 23%;
+  transition-delay: 0.08s;
+}
+.device-switch {
+  position: absolute;
+  z-index: 2;
+  left: 20px;
+  top: 20px;
+  display: flex;
+  padding: 4px;
+  border-radius: 999px;
+  background: oklch(1 0 0 / 0.72);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
+.device-switch button {
+  padding: 8px 16px;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background-color 0.3s, color 0.3s;
+}
+.device-switch button[aria-pressed="true"] {
+  background: var(--ink);
+  color: var(--bg);
+}
 .detail-canvas .browser-bar {
   height: 28px;
   font-size: 10px;
@@ -4601,27 +4687,74 @@ main {
   line-height: 1.8;
   max-width: 600px;
 }
+/* "Next project": a full-width panel in a deep shade of the next project's colour. Hovering raises its
+   site into view and turns the arrow. */
 .next-project {
-  border-block: 1px solid var(--line);
-  padding-block: 30px;
-  display: flex;
-  align-items: center;
-  gap: 30px;
+  position: relative;
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  min-height: clamp(360px, 34vw, 520px);
+  margin-bottom: 40px;
+  padding: clamp(28px, 3.4vw, 56px);
+  border-radius: 28px;
+  overflow: hidden;
+  background: oklch(0.3 0.07 var(--next-hue));
+  color: #fff;
 }
-.next-project > span {
-  font-size: 12px;
-  color: var(--muted);
-  flex: 1;
+.next-project-label {
+  font-size: 13px;
+  opacity: 0.7;
 }
 .next-project > strong {
-  font-size: clamp(22px, 3vw, 40px);
-  font-weight: 500;
-  letter-spacing: -0.035em;
+  position: relative;
+  z-index: 2;
+  max-width: 60%;
+  font-size: clamp(64px, 10vw, 180px);
+  text-transform: uppercase;
 }
-.next-project .arrow-icon {
-  width: 36px;
-  height: 36px;
-  margin-left: 20px;
+.next-project-meta {
+  position: relative;
+  z-index: 2;
+  font-size: 14px;
+  opacity: 0.75;
+}
+.next-project-arrow {
+  position: absolute;
+  z-index: 2;
+  top: clamp(28px, 3.4vw, 56px);
+  right: clamp(28px, 3.4vw, 56px);
+  display: grid;
+  place-items: center;
+  width: 68px;
+  height: 68px;
+  border-radius: 50%;
+  background: #fff;
+  color: var(--ink);
+  transition: rotate 0.6s var(--ease);
+}
+.next-project-arrow .arrow-icon {
+  width: 24px;
+  height: 24px;
+}
+.next-project > img {
+  position: absolute;
+  right: clamp(28px, 3.4vw, 56px);
+  bottom: 0;
+  width: min(44%, 620px);
+  height: auto;
+  border-radius: 12px 12px 0 0;
+  box-shadow: 0 -20px 50px oklch(0 0 0 / 0.3);
+  translate: 0 62%;
+  transition: translate 0.9s var(--ease);
+}
+.next-project:hover > img,
+.next-project:focus-visible > img {
+  translate: 0 14%;
+}
+.next-project:hover .next-project-arrow,
+.next-project:focus-visible .next-project-arrow {
+  rotate: 45deg;
 }
 .not-found {
   padding-block: 35px 80px;
@@ -4638,6 +4771,16 @@ main {
     opacity: 0;
     transform: translateX(40px);
   }
+}
+/* On phones the links drop in from above, following the page as it slides down. */
+@keyframes menu-link-up {
+  from {
+    opacity: 0;
+    transform: translateY(-18px);
+  }
+}
+.menu-handle {
+  display: none;
 }
 @media (min-width: 1500px) {
   .intro-split {
@@ -4690,6 +4833,30 @@ main {
   .menu-close {
     width: 49px;
     height: 49px;
+  }
+  /* In thumb reach: the menu button floats bottom-right on every page, and the close button takes
+     the same spot when the menu is open. */
+  /* The button lives in the header, so the header's layer must sit above the page content. */
+  .site-header,
+  .footer-reveal .site-header {
+    position: relative;
+    z-index: 45;
+  }
+  .menu-toggle,
+  .menu-toggle.is-floating {
+    position: fixed;
+    top: auto;
+    right: 16px;
+    bottom: calc(14px + env(safe-area-inset-bottom));
+    z-index: calc(var(--z-menu) - 1);
+    box-shadow: 0 8px 22px oklch(0.16 0 0 / 0.28);
+  }
+  .menu-dialog .menu-close {
+    position: fixed;
+    top: auto;
+    right: 16px;
+    bottom: calc(14px + env(safe-area-inset-bottom));
+    box-shadow: 0 8px 22px oklch(0 0 0 / 0.3);
   }
   .header-contact {
     display: none;
@@ -4978,6 +5145,24 @@ main {
     bottom: 6%;
     width: 27%;
   }
+  .detail-canvas[data-mode="desktop"] .device-laptop {
+    left: 8%;
+    top: 20%;
+    width: 84%;
+  }
+  .detail-canvas[data-mode="phone"] .device-phone {
+    right: 35%;
+    bottom: 6%;
+    width: 30%;
+  }
+  .device-switch {
+    left: 12px;
+    top: 12px;
+  }
+  .device-switch button {
+    padding: 6px 12px;
+    font-size: 12px;
+  }
   .detail-canvas .browser-bar {
     height: 20px;
     font-size: 7px;
@@ -5002,43 +5187,73 @@ main {
     font-size: 14px;
   }
   .next-project {
-    gap: 15px;
-    padding-block: 24px;
-    flex-wrap: wrap;
-  }
-  .next-project > span {
-    flex-basis: 100%;
-    font-size: 10px;
+    min-height: 0;
+    padding-bottom: 46%;
+    border-radius: 22px;
   }
   .next-project > strong {
-    flex: 1;
+    max-width: none;
+    padding-right: 56px;
+    font-size: clamp(48px, 15vw, 80px);
   }
-  .next-project > .arrow-icon {
-    width: 26px;
-    height: 26px;
-    margin: 0;
+  .next-project-arrow {
+    width: 52px;
+    height: 52px;
+  }
+  .next-project > img {
+    right: 8%;
+    width: 84%;
+    translate: 0 30%;
   }
   .back-link {
     font-size: 11px;
     margin-bottom: 18px;
   }
+  /* Phones: the page slides down instead of left, leaving its top edge peeking up from the bottom, and
+     the links fill the width above it. Swipe the menu down (or tap the page) to close. */
   .menu-dialog {
     padding-top: 24px;
+    padding-bottom: 21dvh;
+    transition: translate 0.45s var(--ease);
+  }
+  .page-shell {
+    transform-origin: 50% 0;
   }
   .menu-open .page-shell {
-    transform: translateX(-70%) scale(0.78);
+    transform: translateY(80dvh) scale(0.9);
+    border-radius: 28px;
+  }
+  .menu-handle {
+    display: block;
+    flex: none;
+    width: 38px;
+    height: 4px;
+    margin: 14px auto 0;
+    border-radius: 4px;
+    background: oklch(1 0 0 / 0.3);
+    animation: menu-link-up 0.6s var(--ease) 0.2s both;
   }
   .menu-links,
   .menu-bottom {
-    width: 66vw;
+    width: 100%;
   }
+  .menu-links {
+    padding-block: 12px;
+  }
+  /* Sized by the screen's height too, so all six links and the contact row fit above the page. */
   .menu-links a {
-    padding-block: 16px;
-    font-size: 25px;
+    padding-block: clamp(5px, 1.1dvh, 14px);
+    font-size: clamp(21px, min(8.2vw, 4dvh), 36px);
+    animation-name: menu-link-up;
+  }
+  .menu-links .arrow-icon {
+    width: 28px;
+    height: 28px;
   }
   .menu-bottom {
-    flex-direction: column;
+    flex: none;
     font-size: 12px;
+    animation-name: menu-link-up;
   }
 }
 /* Scroll reveals (homepage motion level 2). Only hidden when JS has enabled motion. */
@@ -6775,6 +6990,12 @@ html:active-view-transition-type(grow)::view-transition-new(root) {
     opacity: 1;
     transform: none;
     pointer-events: auto;
+  }
+}
+/* Phones: the menu button sits bottom-right, so the estimate button stops short of it. */
+@media (max-width: 640px) {
+  .mobile-cta {
+    right: 75px;
   }
 }
 

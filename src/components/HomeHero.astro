@@ -17,6 +17,7 @@ import ProjectOrbit from './ProjectOrbit.astro';
   <div class="home-hero-stage">
     <canvas class="home-hero-track" aria-hidden="true"></canvas>
     <ProjectOrbit card="var(--hero-card)" />
+    <span class="hero-cursor" aria-hidden="true"><span class="hero-cursor-drag">← Drag →</span><span class="hero-cursor-view">View ↗</span></span>
   </div>
   <div class="wrap home-hero-row">
     <p class="home-hero-lead">Thoughtful websites, built to work beautifully. I’m Grant: I turn designs into custom websites and ecommerce for brands and agencies.</p>
@@ -45,15 +46,19 @@ import ProjectOrbit from './ProjectOrbit.astro';
   // card, then it steps to the next project every few seconds. Drag or swipe with momentum; it settles on the nearest project. Arrows move one.
   class Orbit {
     rot = 0; front = -1;
-    constructor(el: HTMLElement, onFront: (card: HTMLElement) => void, introEl: HTMLElement = el) {
+    // A little extra turn and tilt while the page scrolls away from the hero (set by the hero).
+    nudge = { rot: 0, tilt: 0 };
+    // start: a card to open at the front, with no entrance (coming back from that project's page).
+    constructor(el: HTMLElement, onFront: (card: HTMLElement) => void, introEl: HTMLElement = el, start = -1) {
       const ring = el.querySelector<HTMLElement>('.ob-ring')!;
       const spin = el.querySelector<HTMLElement>('.ob-spin')!;
       const cards = [...el.querySelectorAll<HTMLElement>('.ob-card')];
       const angles = cards.map((c) => Number(c.dataset.angle));
       const shades = cards.map((c) => c.querySelector<HTMLElement>('.ob-shade')!);
+      const mirrors = [...el.querySelectorAll<HTMLElement>('.ob-mirror')];
       // Last values written, so a frame only touches the DOM when something actually changed.
       let lastKey = '';
-      const lastOpacity: string[] = [], lastShade: string[] = [];
+      const lastOpacity: string[] = [], lastShade: string[] = [], lastBlur: string[] = [];
       const captions = [...el.querySelectorAll<HTMLElement>('.ob-caption')];
       const step = 360 / cards.length;
       const seen = watch(el);
@@ -72,7 +77,8 @@ import ProjectOrbit from './ProjectOrbit.astro';
       // a little past their places and settle back (ease-out with a soft overshoot).
       const INTRO = 1900, RISE = 110, TILT = 16;
       const backOut = (t: number) => 1 + 2.2 * (t - 1) ** 3 + 1.2 * (t - 1) ** 2;
-      let intro = motion, introAt = 0, spread = motion ? 0 : 1, tilt = 0;
+      let intro = motion && start < 0, introAt = 0, spread = intro ? 0 : 1, tilt = 0;
+      if (start >= 0) { this.rot = -angles[start]; next = performance.now() + 3400; }
       const endIntro = () => { intro = false; spread = 1; tilt = 0; spin.style.setProperty('--spread', '1'); introEl.style.opacity = ''; introEl.style.translate = ''; introEl.style.scale = ''; introEl.style.willChange = ''; next = performance.now() + 3400; onFront(cards[this.front]); };
       // During the load animation the stage gets its own layer, so its fade and rise don't repaint the cards.
       if (intro) { introEl.style.opacity = '0'; introEl.style.translate = `0 ${RISE}px`; introEl.style.scale = '0.9'; introEl.style.willChange = 'opacity, translate, scale'; }
@@ -102,17 +108,24 @@ import ProjectOrbit from './ProjectOrbit.astro';
           else if (Math.abs(this.rot - nearest()) > 0.05) { vel = 0; turnTo(nearest(), 700, out); }
           else if (motion && !hover && !document.hidden && time > Math.max(pausedUntil, next)) { turnTo(nearest() - step, 1400); next = time + 1400 + 3200; }
         }
-        const key = `${this.rot.toFixed(3)}|${spread.toFixed(4)}`;
+        const turn = this.rot + this.nudge.rot;
+        const key = `${turn.toFixed(3)}|${spread.toFixed(4)}|${this.nudge.tilt.toFixed(2)}`;
         if (key !== lastKey) {
           lastKey = key;
-          spin.style.transform = `translateZ(calc(var(--r) * -1)) rotateX(${tilt.toFixed(3)}deg) rotateY(${this.rot.toFixed(3)}deg)`;
+          spin.style.transform = `translateZ(calc(var(--r) * -1)) rotateX(${(tilt + this.nudge.tilt).toFixed(3)}deg) rotateY(${turn.toFixed(3)}deg)`;
           cards.forEach((card, i) => {
-            const d = ((((angles[i] * spread + this.rot) % 360) + 540) % 360) - 180;
+            const d = ((((angles[i] * spread + turn) % 360) + 540) % 360) - 180;
             const f = 1 - Math.abs(d) / 180;
-            // Solid cards, dimmed with distance; the back half fades out.
-            const opacity = Math.max(0, Math.min(1, (170 - Math.abs(d)) / 70)).toFixed(3);
+            // Solid cards, dimmed with distance; the back half fades out. On load the other cards stay hidden
+            // until they've fanned out clear of the front card (closer in, they'd cut across it).
+            const fan = intro && i !== this.front ? Math.max(0, Math.min(1, (spread - 0.82) / 0.18)) : 1;
+            const opacity = (Math.max(0, Math.min(1, (170 - Math.abs(d)) / 70)) * fan).toFixed(3);
             const shade = (0.38 * (1 - f ** 2)).toFixed(3);
-            if (opacity !== lastOpacity[i]) { card.style.opacity = opacity; lastOpacity[i] = opacity; }
+            if (opacity !== lastOpacity[i]) { card.style.opacity = opacity; mirrors[i].style.opacity = opacity; lastOpacity[i] = opacity; }
+            // Depth: the side cards are a touch soft and the cards behind more so. Only three steps, so
+            // the blur changes just as a card passes a step, not on every frame of a turn.
+            const blur = Math.abs(d) < 25 ? '' : Math.abs(d) < 80 ? 'blur(0.6px)' : 'blur(1.8px)';
+            if (blur !== lastBlur[i]) { card.style.filter = blur; lastBlur[i] = blur; }
             if (shade !== lastShade[i]) { shades[i].style.opacity = shade; lastShade[i] = shade; }
             const reachable = Math.abs(d) < step / 2;
             if (card.tabIndex !== (reachable ? 0 : -1)) { card.tabIndex = reachable ? 0 : -1; card.style.pointerEvents = reachable ? 'auto' : 'none'; }
@@ -129,20 +142,34 @@ import ProjectOrbit from './ProjectOrbit.astro';
         requestAnimationFrame(frame);
       };
       requestAnimationFrame(frame);
+      // A press becomes a drag only once it has moved a few pixels. Until then the pointer isn't captured,
+      // so a plain click still reaches the card's link (a captured pointer sends the click to the ring).
+      let pressed = false, pointer = 0;
       ring.addEventListener('pointerdown', (e) => {
         if (e.button !== 0) return;
         // Stop the mouse press from starting a text selection, focusing the card or dragging its image.
         if (e.pointerType === 'mouse') e.preventDefault();
         if (intro) endIntro();
-        dragging = true; lastX = e.clientX; moved = 0; vel = 0; tween = null;
-        ring.setPointerCapture(e.pointerId);
-        root.classList.add('is-orbit-dragging');
+        pressed = true; pointer = e.pointerId; lastX = e.clientX; moved = 0; vel = 0; tween = null;
         getSelection()?.removeAllRanges();
       });
-      ring.addEventListener('pointermove', (e) => { if (!dragging) return; const dx = e.clientX - lastX; lastX = e.clientX; moved += Math.abs(dx); this.rot += dx * 0.22; vel = dx * 0.22; });
-      const release = () => { dragging = false; pausedUntil = performance.now() + 2500; root.classList.remove('is-orbit-dragging'); };
-      ring.addEventListener('pointerup', release);
-      ring.addEventListener('pointercancel', release);
+      ring.addEventListener('pointermove', (e) => {
+        if (!pressed) return;
+        // Let go outside the window, where the release wasn't seen: end the press.
+        if (e.pointerType === 'mouse' && !e.buttons) { release(); return; }
+        const dx = e.clientX - lastX; lastX = e.clientX; moved += Math.abs(dx);
+        if (!dragging) {
+          if (moved < 5) return;
+          dragging = true;
+          try { ring.setPointerCapture(pointer); } catch {}
+          root.classList.add('is-orbit-dragging');
+        }
+        this.rot += dx * 0.22; vel = dx * 0.22;
+      });
+      const release = () => { if (!pressed) return; pressed = false; dragging = false; pausedUntil = performance.now() + 2500; root.classList.remove('is-orbit-dragging'); };
+      // On the window: before a drag starts the pointer isn't captured, so it may be let go anywhere.
+      addEventListener('pointerup', release);
+      addEventListener('pointercancel', release);
       ring.addEventListener('click', (e) => { if (moved > 6) e.preventDefault(); }, true);
       ring.addEventListener('pointerenter', () => { hover = true; });
       ring.addEventListener('pointerleave', () => { hover = false; });
@@ -378,6 +405,39 @@ import ProjectOrbit from './ProjectOrbit.astro';
       full.src = img.dataset.full!;
       full.decode().then(() => { img.src = full.src; img.height = 1807; }).catch(() => {});
     };
+    // ── Opening a project from the orbit: the front card grows into the project page, with the browser's
+    // page transition (as the project grid's cards do). For the trip the card borrows the transition name
+    // of the grid card for that project; coming back, the orbit opens on that project so the page shrinks
+    // back into its card.
+    const VT_KEY = 'gp-orbit-vt';
+    const slugOf = (c: HTMLElement) => c.getAttribute('href')!.replace(/\/$/, '').split('/').pop()!;
+    const borrow = (c: HTMLElement, on: boolean) => {
+      const name = `project-${slugOf(c)}`;
+      const grid = [...document.querySelectorAll<HTMLElement>('.project-grid [style*="view-transition-name"]')].find((el) => el.style.viewTransitionName === name || el.dataset.vt === name);
+      c.style.viewTransitionName = on ? name : '';
+      if (grid) { grid.dataset.vt = name; grid.style.viewTransitionName = on ? 'none' : name; }
+    };
+    let start = -1, lent: HTMLElement | null = null;
+    try {
+      const saved = JSON.parse(sessionStorage.getItem(VT_KEY) || 'null');
+      sessionStorage.removeItem(VT_KEY);
+      // The page we came from: on Back, only the Navigation API knows it (the referrer is the original one).
+      const prev = (window as unknown as { navigation?: { activation?: { from?: { url?: string } } } }).navigation?.activation?.from?.url || document.referrer;
+      const from = prev ? new URL(prev).pathname : '';
+      if (saved && Date.now() - saved.t < 30 * 60e3 && !location.hash && from.endsWith(`/work/${saved.slug}/`)) start = obCards.findIndex((c) => slugOf(c) === saved.slug);
+    } catch {}
+    const giveBack = (c: HTMLElement) => setTimeout(() => { borrow(c, false); if (lent === c) lent = null; }, 1500);
+    if (start >= 0) { lent = obCards[start]; borrow(lent, true); giveBack(lent); }
+    obCards.forEach((c) => c.addEventListener('click', (e) => {
+      if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || !c.classList.contains('is-front')) return;
+      if (lent) borrow(lent, false);
+      borrow(c, true); lent = c;
+      try { sessionStorage.setItem(VT_KEY, JSON.stringify({ slug: slugOf(c), t: Date.now() })); } catch {}
+    }));
+    // Back from the project page out of the browser's page cache: the card still has the name, so the page
+    // shrinks back into it; then the grid card gets its name back.
+    addEventListener('pageshow', (e) => { if (e.persisted && lent) giveBack(lent); });
+
     const orbit = new Orbit(ob, (card) => {
       hue = card.dataset.hue!;
       loadFull(card);
@@ -388,7 +448,48 @@ import ProjectOrbit from './ProjectOrbit.astro';
       root.style.setProperty('--hero-wash', `oklch(0.982 0.009 ${hue})`);
       root.style.setProperty('--hero-ink', `oklch(0.33 0.07 ${hue})`);
       root.style.setProperty('--hero-hue', hue);
-    }, stageEl);
+    }, stageEl, start);
+
+    // ── The front card tilts a little towards the cursor, with a soft light following it.
+    if (fine && motion) {
+      let box: DOMRect | null = null;
+      const untilt = (c: HTMLElement) => { c.classList.remove('is-tilting'); c.style.removeProperty('--tx'); c.style.removeProperty('--ty'); box = null; };
+      obCards.forEach((c) => {
+        c.addEventListener('pointermove', (e) => {
+          if (!c.classList.contains('is-front') || root.classList.contains('is-orbit-dragging')) { if (c.classList.contains('is-tilting')) untilt(c); return; }
+          // Measured once per visit, so the tilt doesn't feed back into the next reading.
+          box ??= c.getBoundingClientRect();
+          const x = Math.min(1, Math.max(0, (e.clientX - box.left) / box.width)), y = Math.min(1, Math.max(0, (e.clientY - box.top) / box.height));
+          c.style.setProperty('--tx', `${((0.5 - y) * 8).toFixed(2)}deg`);
+          c.style.setProperty('--ty', `${((x - 0.5) * 11).toFixed(2)}deg`);
+          c.style.setProperty('--gx', `${(x * 100).toFixed(1)}%`);
+          c.style.setProperty('--gy', `${(y * 100).toFixed(1)}%`);
+          c.classList.add('is-tilting');
+        });
+        c.addEventListener('pointerleave', () => untilt(c));
+        c.addEventListener('pointerdown', () => untilt(c));
+      });
+    }
+
+    // ── Over the ring the cursor becomes a round label (mouse and trackpad only): "Drag" over the ring,
+    // "View" over the front card, so visitors know they can spin it and open a project.
+    const cursor = stage.querySelector<HTMLElement>('.hero-cursor')!;
+    const obRing = ob.querySelector<HTMLElement>('.ob-ring')!;
+    if (fine && motion) {
+      const pos = { x: 0, y: 0 }, to = { x: 0, y: 0 };
+      let following = false;
+      const follow = () => {
+        pos.x += (to.x - pos.x) * 0.22; pos.y += (to.y - pos.y) * 0.22;
+        cursor.style.translate = `${pos.x.toFixed(1)}px ${pos.y.toFixed(1)}px`;
+        if (following) requestAnimationFrame(follow);
+      };
+      const at = (e: PointerEvent) => { const r = stage.getBoundingClientRect(); to.x = e.clientX - r.left; to.y = e.clientY - r.top; };
+      obRing.addEventListener('pointerenter', (e) => { at(e); pos.x = to.x; pos.y = to.y; following = true; hero.classList.add('has-cursor'); requestAnimationFrame(follow); });
+      obRing.addEventListener('pointermove', (e) => { at(e); hero.classList.toggle('cursor-view', !!(e.target as HTMLElement).closest('.is-front') && !root.classList.contains('is-orbit-dragging')); });
+      obRing.addEventListener('pointerleave', () => { following = false; hero.classList.remove('has-cursor', 'cursor-view'); });
+      obRing.addEventListener('pointerdown', () => { hero.classList.add('cursor-down'); hero.classList.remove('cursor-view'); });
+      addEventListener('pointerup', () => hero.classList.remove('cursor-down'));
+    }
 
     // ── The dotted track: a ring of dots under the cards that turns with them; the dots under the
     // front card light up in its colour, and the cursor nudges them aside.
@@ -399,12 +500,13 @@ import ProjectOrbit from './ProjectOrbit.astro';
     const card = hero.querySelector<HTMLElement>('.ob-card')!;
     const ring = hero.querySelector<HTMLElement>('.ob-ring')!;
     // The ring's geometry, measured once (and again on resize) instead of every frame.
-    let cw = 0, R = 0, cx = 0, horizon = 0, floor = 0, lastRot = NaN;
+    let cw = 0, R = 0, cx = 0, horizon = 0, floor = 0, lastRot = NaN, heroH = 1;
     const size = () => {
       // Read every measurement first, then write, so the browser lays out the page only once.
       const r = track.getBoundingClientRect();
       const ringBox = ring.getBoundingClientRect();
       cw = card.offsetWidth; R = cw * 1.05;
+      heroH = hero.offsetHeight;
       W = Math.floor(r.width); H = Math.floor(r.height);
       const dpr = Math.min(2, devicePixelRatio || 1);
       track.width = W * dpr; track.height = H * dpr;
@@ -416,6 +518,11 @@ import ProjectOrbit from './ProjectOrbit.astro';
     };
     requestAnimationFrame(size);
     addEventListener('resize', size);
+    // ── Scrolling on from the hero turns the ring a little and tips it back.
+    if (motion) addEventListener('scroll', () => {
+      const p = Math.min(1, Math.max(0, scrollY / (heroH * 0.75)));
+      orbit.nudge = { rot: p * 22, tilt: p * 12 };
+    }, { passive: true });
     if (fine) {
       stage.addEventListener('pointermove', (e) => { const r = track.getBoundingClientRect(); px = e.clientX - r.left; py = e.clientY - r.top; });
       stage.addEventListener('pointerleave', () => { px = py = -1e4; });
@@ -423,13 +530,21 @@ import ProjectOrbit from './ProjectOrbit.astro';
     let nudged = false;
     const draw = () => {
       // Redraw only while the ring turns, the cursor is near, or nudged dots are settling.
-      if (seen.on && (orbit.rot !== lastRot || px > -1e3 || nudged)) {
-        lastRot = orbit.rot;
+      const turn = orbit.rot + orbit.nudge.rot;
+      if (seen.on && (turn !== lastRot || px > -1e3 || nudged || name.lchTo)) {
+        lastRot = turn;
         nudged = false;
         const P = 1800;
         tctx.clearRect(0, 0, W, H);
+        // A soft pool of the front project's colour on the floor, under its reflection.
+        const glow = tctx.createRadialGradient(cx, floor, 0, cx, floor, cw * 0.85);
+        glow.addColorStop(0, `oklch(0.78 0.11 ${name.lch[2].toFixed(1)} / 0.4)`);
+        glow.addColorStop(1, `oklch(0.78 0.11 ${name.lch[2].toFixed(1)} / 0)`);
+        tctx.save(); tctx.translate(cx, floor); tctx.scale(1, 0.2); tctx.translate(-cx, -floor);
+        tctx.fillStyle = glow; tctx.fillRect(cx - cw, floor - cw, cw * 2, cw * 2);
+        tctx.restore();
         for (let i = 0; i < N; i++) {
-          const deg = (i / N) * 360 + orbit.rot;
+          const deg = (i / N) * 360 + turn;
           const a = deg * (Math.PI / 180);
           const k = P / (P - (Math.cos(a) * R - R));
           const o = off[i];
@@ -479,6 +594,17 @@ import ProjectOrbit from './ProjectOrbit.astro';
   :global(html.motion) .home-hero-actions { animation-delay: 0.9s; }
   :global(html.motion) .home-hero-row .intro-quote { animation-delay: 1s; }
   @keyframes hero-drop { from { opacity: 0.01; transform: translateY(-22px); } }
+
+  /* The round "Drag" / "View" label that stands in for the cursor over the ring. */
+  .hero-cursor { position: absolute; z-index: 4; left: 0; top: 0; display: grid; place-items: center; width: 96px; height: 96px; margin: -48px 0 0 -48px; border-radius: 50%; background: var(--ink); color: var(--bg); font-size: 12.5px; font-weight: 500; white-space: nowrap; pointer-events: none; scale: 0; transition: scale 0.35s var(--ease), background-color 0.3s; }
+  .hero-cursor > span { grid-area: 1 / 1; transition: opacity 0.25s, translate 0.35s var(--ease); }
+  .hero-cursor-view { opacity: 0; translate: 0 6px; }
+  .home-hero.has-cursor .hero-cursor { scale: 1; }
+  .home-hero.has-cursor :global(.ob-ring), .home-hero.has-cursor :global(.ob-ring *) { cursor: none; }
+  .home-hero.cursor-view .hero-cursor { background: var(--hero-ink, var(--ink)); }
+  .home-hero.cursor-view .hero-cursor-drag { opacity: 0; translate: 0 -6px; }
+  .home-hero.cursor-view .hero-cursor-view { opacity: 1; translate: none; }
+  .home-hero.cursor-down .hero-cursor { scale: 0.82; }
 
   /* While the orbit is being dragged nothing on the page can be selected. */
   :global(html.is-orbit-dragging), :global(html.is-orbit-dragging *) { -webkit-user-select: none; user-select: none; cursor: grabbing; }

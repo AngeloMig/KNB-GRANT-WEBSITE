@@ -1,0 +1,217 @@
+---
+// Design preview: 20 variants for the bottom of the hero orbit (the reflection, the dotted floor, the
+// caption and the arrows). Local preview only: in a build this route has no pages.
+// Open http://localhost:4321/ideas/orbit-floor/. Each variant runs on its own working orbit.
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import IdeaLegend from '../../components/IdeaLegend.astro';
+import ProjectOrbit from '../../components/ProjectOrbit.astro';
+import { projects } from '../../data/projects';
+
+export function getStaticPaths() {
+  return import.meta.env.DEV ? [{ params: { preview: 'ideas' } }] : [];
+}
+
+const IDEAS = [
+  [1, 'Softer, shorter reflection'], [2, 'A shadow instead'], [3, 'Reflection on the front card only'], [4, 'Glossy floor'], [5, 'Reflection in the project colour'],
+  [6, 'Glowing ring under the front card'], [7, 'A clean line for the ring'], [8, 'Position dots instead of the ring'], [9, 'Dotted stage floor'],
+  [10, 'Big project name'], [11, 'Caption on the left, with a counter'], [12, 'Caption on the card'], [13, '“View project” as a button'], [14, 'Name that scrambles in'],
+  [15, 'Arrows beside the card'], [16, 'One pill: ← 03 / 06 →'], [17, 'Countdown line'],
+  [18, 'Focus on the front card'], [19, 'Wider ring, back cards hidden'], [20, 'Colour spotlight'],
+] as const;
+const GROUPS: Record<number, string> = { 1: 'Reflection', 6: 'The ring', 10: 'Caption', 15: 'Arrows', 18: 'Whole stage' };
+const NOTES: Record<number, string> = {
+  1: 'The reflection fades out much sooner and is softer, so it no longer runs under the caption.',
+  2: 'No reflection: each card sits on a soft shadow, which is quieter and cleaner.',
+  3: 'Only the front card is reflected; the side cards float without one.',
+  4: 'A faint glossy band under the cards, like a polished floor, with the caption below it.',
+  5: 'The reflection takes the front project’s colour instead of a copy of the screenshot.',
+  6: 'The dotted ring glows in the project colour under the front card, and pulses when a new project arrives.',
+  7: 'A thin solid line instead of the dotted ring, for a calmer look.',
+  8: 'The ring is gone; a row of six dots under the card shows which project is at the front.',
+  9: 'A dotted floor in perspective, like a stage, that the cards stand on.',
+  10: 'The project name set big in the display type, with the platform and category under it.',
+  11: 'The caption sits on the left under the card, with “03 / 06” and a short line.',
+  12: 'The caption sits on the bottom of the front card as a label, which frees the floor.',
+  13: 'The project name with a platform chip, and “View project” as a solid button.',
+  14: 'The project name shuffles its letters for a moment each time a new project comes to the front.',
+  15: 'The arrows move up beside the front card’s edges, closer to what they turn.',
+  16: 'Both arrows and a counter in one small pill under the caption.',
+  17: 'A thin line under the caption fills until the orbit turns to the next project.',
+  18: 'The side and back cards are dimmer and softer, so the front card stands out.',
+  19: 'The cards sit further apart on a wider ring, and only the front three show.',
+  20: 'A soft light in the project colour glows behind the front card.',
+};
+---
+<BaseLayout title="Orbit floor ideas | Grant Dev14" description="Local design preview." noindex>
+  <IdeaLegend ideas={IDEAS} links={[{ label: 'Compare with the current homepage', href: '/' }, { label: 'The 10 orbit ideas', href: '/ideas/orbit/' }]} />
+  <div class="wrap of-page">
+    <header class="of-head">
+      <span class="tiny-heading">Preview · orbit floor and caption</span>
+      <h1 class="display">Twenty ways<br />to finish the orbit</h1>
+      <p>Variants for the bottom of the hero orbit: the reflection, the dotted ring, the caption and the arrows. Each runs on its own working orbit, tinted like the hero. Pick the numbers you like; several can be combined.</p>
+    </header>
+
+    {/* The recommended mix, on one orbit: a softer reflection (1), the glowing ring (6), the big name (10). */}
+    <section class="of of-mix" id="idea-mix">
+      <p class="of-group">Recommended mix</p>
+      <div class="of-top"><span class="idea-tag"><b>1+6+10</b>Softer reflection, glowing ring, big name</span><p class="of-why">The three together: the reflection fades out before the caption, the ring glows in the project colour under the front card, and the project name is set big like the page titles.</p></div>
+      <div class="of-demo v1 v6 v10" data-v="0"><div class="of-ring" aria-hidden="true"></div><ProjectOrbit card="var(--of-card)" /></div>
+    </section>
+
+    {IDEAS.map(([n, name]) => (
+      <section class="of" id={`idea-${n}`}>
+        {GROUPS[n] && <p class="of-group">{GROUPS[n]}</p>}
+        <div class="of-top"><span class="idea-tag"><b>{n}</b>{name}</span><p class="of-why">{NOTES[n]}</p></div>
+        <div class={`of-demo v${n}`} data-v={n}>
+          {n === 20 && <div class="of-spot" aria-hidden="true"></div>}
+          {n === 9 && <div class="of-grid" aria-hidden="true"></div>}
+          {n === 4 && <div class="of-band" aria-hidden="true"></div>}
+          {![7, 8, 9].includes(n) && <div class="of-ring" aria-hidden="true"></div>}
+          {n === 7 && <div class="of-ring of-ring-line" aria-hidden="true"></div>}
+          <ProjectOrbit card="var(--of-card)" />
+          {n === 8 && <div class="of-posdots" aria-hidden="true">{projects.map(() => <i></i>)}</div>}
+          {n === 11 && <p class="of-count" aria-hidden="true"><b>01</b> / {String(projects.length).padStart(2, '0')}</p>}
+          {n === 16 && <div class="of-pill"><button type="button" data-d="1" aria-label="Previous project">←</button><span class="of-pill-count"><b>01</b> / {String(projects.length).padStart(2, '0')}</span><button type="button" data-d="-1" aria-label="Next project">→</button></div>}
+          {n === 17 && <div class="of-progress" aria-hidden="true"><span></span></div>}
+        </div>
+      </section>
+    ))}
+  </div>
+</BaseLayout>
+
+<script>
+  import { Orbit, type Hooks } from './_orbit-demo';
+  const glyphs = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
+  const scramble = (el: HTMLElement) => {
+    const text = el.dataset.text ?? (el.dataset.text = el.textContent!);
+    const start = performance.now();
+    const tick = (now: number) => { const t = Math.min(1, (now - start) / 520), fixed = Math.floor(t * text.length); el.textContent = [...text].map((c, i) => (i < fixed || c === ' ' ? c : glyphs[(Math.random() * glyphs.length) | 0])).join(''); if (t < 1) requestAnimationFrame(tick); };
+    requestAnimationFrame(tick);
+  };
+
+  document.querySelectorAll<HTMLElement>('.of-demo').forEach((box) => {
+    const n = Number(box.dataset.v);
+    const ob = box.querySelector<HTMLElement>('.ob')!;
+    const pad = (i: number) => String(i + 1).padStart(2, '0');
+    const hooks: Hooks = {
+      onFront: (card, i) => {
+        box.style.setProperty('--h', card.dataset.hue!);
+        box.querySelectorAll<HTMLElement>('.of-count b, .of-pill-count b').forEach((b) => { b.textContent = pad(i); });
+        box.querySelectorAll('.of-posdots i').forEach((d, k) => d.classList.toggle('is-on', k === i));
+        if (box.classList.contains('v6')) { box.classList.remove('is-pulse'); void box.offsetWidth; box.classList.add('is-pulse'); }
+        if (n === 14) { const s = box.querySelector<HTMLElement>('.ob-caption.is-active strong'); if (s) scramble(s); }
+      },
+    };
+    // 3: only the front card keeps its reflection.
+    if (n === 3) hooks.onCard = (_c, d, m) => { if (m) m.style.opacity = String(Math.max(0, 1 - Math.abs(d) / 25)); };
+    // 18: the cards away from the front are dimmer and softer.
+    if (n === 18) { hooks.opacity = (d) => (Math.abs(d) < 30 ? 1 : Math.abs(d) < 90 ? 0.5 : 0.12); hooks.onCard = (c, d) => { const b = Math.abs(d) < 30 ? '' : 'blur(1.4px)'; if (c.style.filter !== b) c.style.filter = b; }; }
+    // 19: only the front three show.
+    if (n === 19) hooks.opacity = (d) => Math.max(0, Math.min(1, (95 - Math.abs(d)) / 30));
+    const o = new Orbit(ob, hooks);
+    // 16: the pill's arrows.
+    box.querySelectorAll<HTMLButtonElement>('.of-pill button').forEach((b) => b.addEventListener('click', () => o.by(Number(b.dataset.d))));
+    // 17: the countdown line.
+    if (n === 17) { const bar = box.querySelector<HTMLElement>('.of-progress span')!; const tick = () => { bar.style.scale = `${o.progress().toFixed(4)} 1`; requestAnimationFrame(tick); }; requestAnimationFrame(tick); }
+  });
+</script>
+
+<style is:global>
+  .of-page { padding-bottom: 160px; }
+  .of-head { display: grid; gap: 18px; max-width: 820px; padding-block: 24px 40px; }
+  .of-head h1 { margin: 0; font-size: clamp(56px, 8vw, 130px); }
+  .of-head p { margin: 0; color: var(--muted); font-size: 17px; line-height: 1.5; }
+  .of { padding-block: 48px; border-top: 1px solid var(--line); }
+  .of-group { margin: 0 0 20px; font: 800 clamp(28px, 3vw, 44px) / 1 "Big Shoulders Display", sans-serif; text-transform: uppercase; }
+  .of-top { display: grid; gap: 4px; margin-bottom: 22px; }
+  .of-why { max-width: 700px; margin: 0; color: var(--muted); font-size: 15px; line-height: 1.5; }
+
+  /* Each demo: a hero-like stage tinted with the front project's colour. */
+  .of-demo { --h: 245; --of-card: clamp(230px, 30vw, 440px); position: relative; padding: 56px 0 40px; border-radius: 28px; overflow: hidden; background: oklch(0.982 0.009 var(--h)); transition: background-color 1.4s var(--ease); isolation: isolate; }
+  .of-demo .ob { z-index: 1; }
+  .of-demo .ob-caption strong { color: oklch(0.33 0.07 var(--h)); transition: color 1.4s var(--ease); }
+  /* The dotted ring, standing in for the hero's track (centred on the floor under the front card). */
+  .of-ring { position: absolute; left: 50%; top: calc(56px + 24px + var(--of-card) * 0.5625 + 18px); width: calc(var(--of-card) * 2.6); height: 60px; translate: -50% -50%; border: 2px dotted oklch(0.16 0 0 / 0.3); border-radius: 50%; pointer-events: none; }
+
+  /* 1 */
+  .v1 .ob-mirror { -webkit-mask-image: linear-gradient(to top, rgb(0 0 0 / 0.2), transparent 22%); mask-image: linear-gradient(to top, rgb(0 0 0 / 0.2), transparent 22%); }
+  .v1 .ob-mirror img { filter: blur(3px) !important; }
+  /* 2: the reflection becomes a soft shadow under each card. */
+  /* (!important: the orbit component's own scoped styles are more specific.) */
+  .v2 .ob-mirror { aspect-ratio: auto !important; height: 46px !important; border-radius: 50% !important; -webkit-mask-image: none !important; mask-image: none !important; background: radial-gradient(ellipse at 50% 30%, oklch(0.16 0 0 / 0.3), transparent 68%); transform: rotateY(calc(var(--a) * var(--spread, 1))) translateZ(var(--r)) translateY(calc(24px + var(--card) * 0.5625 + 2px)) !important; }
+  .v2 .ob-mirror img { display: none !important; }
+  /* 4 */
+  .of-band { position: absolute; z-index: 0; left: 0; right: 0; top: calc(56px + 24px + var(--of-card) * 0.5625 + 8px); height: calc(var(--of-card) * 0.28); background: linear-gradient(to bottom, oklch(1 0 0 / 0.9), oklch(1 0 0 / 0)); border-top: 1px solid oklch(0.16 0 0 / 0.12); }
+  .v4 .ob-mirror { -webkit-mask-image: linear-gradient(to top, rgb(0 0 0 / 0.38), transparent 30%); mask-image: linear-gradient(to top, rgb(0 0 0 / 0.38), transparent 30%); }
+  .v4 .ob-foot { margin-top: 70px; }
+  /* 5 */
+  .v5 .ob-mirror img { filter: grayscale(1) blur(2px) !important; }
+  .v5 .ob-mirror::after { content: ''; position: absolute; inset: 0; background: oklch(0.6 0.14 var(--h)); mix-blend-mode: color; transition: background-color 1.4s var(--ease); }
+  /* 6 */
+  .v6 .of-ring::after { content: ''; position: absolute; left: 50%; bottom: -12px; width: 46%; height: 40px; translate: -50% 0; border-radius: 50%; background: radial-gradient(ellipse, oklch(0.7 0.15 var(--h) / 0.55), transparent 70%); transition: background 1.4s var(--ease); }
+  .v6 .of-ring { border-color: oklch(0.16 0 0 / 0.22); }
+  .v6.is-pulse .of-ring::after { animation: of-pulse 1.2s var(--ease); }
+  @keyframes of-pulse { 0% { scale: 0.5; opacity: 0; } 40% { scale: 1.25; opacity: 1; } 100% { scale: 1; } }
+  .v6:not(.v1) .ob-mirror { opacity: 0 !important; }
+  /* 7 */
+  .of-ring-line { border: 1.5px solid oklch(0.16 0 0 / 0.18); }
+  .v7 .ob-mirror { opacity: 0 !important; }
+  /* 8 */
+  .v8 .ob-mirror { opacity: 0 !important; }
+  .of-posdots { position: absolute; z-index: 2; left: 50%; top: calc(56px + 24px + var(--of-card) * 0.5625 + 18px); display: flex; gap: 8px; translate: -50% 0; }
+  .of-posdots i { width: 8px; height: 8px; border-radius: 99px; background: oklch(0.16 0 0 / 0.2); transition: width 0.5s var(--ease), background-color 0.4s; }
+  .of-posdots i.is-on { width: 26px; background: oklch(0.33 0.07 var(--h)); }
+  /* 9 */
+  .of-grid { position: absolute; z-index: 0; left: -20%; right: -20%; top: calc(56px + var(--of-card) * 0.42); height: calc(var(--of-card) * 1.2); background: radial-gradient(circle, oklch(0.16 0 0 / 0.3) 1.4px, transparent 1.6px) 0 0 / 22px 22px; transform: perspective(600px) rotateX(70deg); transform-origin: 50% 0; -webkit-mask-image: radial-gradient(ellipse at 50% 20%, #000 20%, transparent 65%); mask-image: radial-gradient(ellipse at 50% 20%, #000 20%, transparent 65%); }
+  .v9 .ob-mirror { opacity: 0 !important; }
+  /* 10 */
+  .v10 .ob-mirror, .v11 .ob-mirror, .v12 .ob-mirror, .v13 .ob-mirror, .v14 .ob-mirror, .v15 .ob-mirror, .v16 .ob-mirror, .v17 .ob-mirror { -webkit-mask-image: linear-gradient(to top, rgb(0 0 0 / 0.2), transparent 22%); mask-image: linear-gradient(to top, rgb(0 0 0 / 0.2), transparent 22%); }
+  .v10 .ob-foot { margin-top: 46px; max-width: 900px; }
+  .v10 .ob-caption strong { font: 800 clamp(48px, 6vw, 92px) / 0.9 "Big Shoulders Display", sans-serif !important; text-transform: uppercase; }
+  .v10 .ob-caption span { font-size: 13px; }
+  /* 11 */
+  .v11 .ob-foot { grid-template-columns: 1fr auto auto; max-width: calc(var(--of-card) + 40px); padding-inline: 0; gap: 10px; }
+  .v11 .ob-captions { grid-row: 1; grid-column: 1; text-align: left; }
+  .v11 .ob-caption { justify-items: start; }
+  .v11 .ob-caption a { justify-content: start; }
+  .v11 .ob-arrow:first-of-type { grid-column: 2; grid-row: 1; }
+  .v11 .ob-arrow:last-of-type { grid-column: 3; grid-row: 1; }
+  .of-count { position: absolute; z-index: 2; left: calc(50% - var(--of-card) / 2 - 20px); top: calc(56px + 24px + var(--of-card) * 0.5625 + 30px); margin: 0; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .of-count b { color: oklch(0.33 0.07 var(--h)); font-weight: 600; }
+  .v11 .ob-foot { margin-top: 56px; }
+  /* 12: the caption as a label on the bottom of the front card. */
+  .v12 .ob-foot { margin-top: calc(var(--of-card) * -0.12); z-index: 5; }
+  .v12 .ob-caption { padding: 12px 22px; border-radius: 16px; background: oklch(0.16 0 0 / 0.82); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); color: #fff; justify-self: center; width: fit-content; }
+  .v12 .ob-caption strong { color: #fff !important; }
+  .v12 .ob-caption a { color: #fff; }
+  .v12 .ob-card::after { display: none; }
+  .v12 .ob-arrow { translate: 0 calc(var(--of-card) * 0.12 + 20px); }
+  /* 13 */
+  .v13 .ob-caption span { justify-self: center; padding: 3px 10px; border-radius: 99px; background: oklch(0.33 0.07 var(--h) / 0.1); color: oklch(0.33 0.07 var(--h)); opacity: 1; }
+  .v13 .ob-caption a { justify-self: center; margin-top: 10px; padding: 11px 20px; border-radius: 99px; background: var(--ink); color: var(--bg); text-decoration: none; }
+  /* 15: the arrows beside the front card. */
+  .v15 .ob-foot { position: static; }
+  .v15 .ob-arrow { position: absolute; z-index: 4; top: calc(56px + var(--of-card) * 0.3); width: 56px; height: 56px; background: var(--bg); border-color: transparent; box-shadow: 0 10px 30px -10px oklch(0 0 0 / 0.35); }
+  .v15 .ob-arrow[data-dir="-1"] { left: calc(50% - var(--of-card) / 2 - 28px); }
+  .v15 .ob-arrow[data-dir="1"] { right: calc(50% - var(--of-card) / 2 - 28px); }
+  .v15 .ob-captions { grid-column: 1 / -1; }
+  /* 16 */
+  .v16 .ob-arrow { display: none; }
+  .v16 .ob-foot { grid-template-columns: 1fr; }
+  .of-pill { position: relative; z-index: 3; display: flex; align-items: center; gap: 4px; width: fit-content; margin: 16px auto 0; padding: 4px; border-radius: 99px; background: var(--bg); box-shadow: 0 0 0 1px oklch(0.16 0 0 / 0.12); }
+  .of-pill button { width: 40px; height: 40px; border: 0; border-radius: 50%; background: none; color: var(--ink); font-size: 16px; cursor: pointer; transition: background 0.25s, color 0.25s; }
+  .of-pill button:hover { background: var(--ink); color: var(--bg); }
+  .of-pill-count { padding-inline: 8px; font-size: 13px; font-variant-numeric: tabular-nums; }
+  .of-pill-count b { color: oklch(0.33 0.07 var(--h)); }
+  /* 17 */
+  .of-progress { position: relative; z-index: 3; width: 120px; height: 2px; margin: 14px auto 0; border-radius: 2px; background: oklch(0.16 0 0 / 0.12); overflow: hidden; }
+  .of-progress span { display: block; height: 100%; background: oklch(0.45 0.12 var(--h)); transform-origin: 0 50%; scale: 0 1; }
+  /* 18 */
+  .v18 .ob-mirror { -webkit-mask-image: linear-gradient(to top, rgb(0 0 0 / 0.2), transparent 22%); mask-image: linear-gradient(to top, rgb(0 0 0 / 0.2), transparent 22%); }
+  /* 19 */
+  .v19 .ob { --r: calc(var(--card) * 1.45) !important; }
+  .v19 .ob-mirror { -webkit-mask-image: linear-gradient(to top, rgb(0 0 0 / 0.2), transparent 22%); mask-image: linear-gradient(to top, rgb(0 0 0 / 0.2), transparent 22%); }
+  /* 20 */
+  .of-spot { position: absolute; z-index: 0; left: 50%; top: calc(56px + var(--of-card) * 0.3); width: calc(var(--of-card) * 2); height: calc(var(--of-card) * 1.1); translate: -50% -50%; border-radius: 50%; background: radial-gradient(ellipse, oklch(0.78 0.12 var(--h) / 0.6), transparent 65%); transition: background 1.4s var(--ease); pointer-events: none; }
+  .v20 .ob-mirror { -webkit-mask-image: linear-gradient(to top, rgb(0 0 0 / 0.2), transparent 22%); mask-image: linear-gradient(to top, rgb(0 0 0 / 0.2), transparent 22%); }
+</style>
