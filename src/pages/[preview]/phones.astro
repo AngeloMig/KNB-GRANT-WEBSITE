@@ -1,0 +1,11 @@
+---
+// Development-only concept. Compare with the chosen homepage before adopting it.
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import PhoneHero from '../../components/PhoneHero.astro';
+export function getStaticPaths() {
+  return import.meta.env.DEV ? [{ params: { preview: 'ideas' } }] : [];
+}
+---
+<BaseLayout title="3D phone hero preview | Grant Dev14" description="Local preview of two interactive 3D phone models showing Grant’s website projects." noindex>
+  <PhoneHero />
+</BaseLayout>

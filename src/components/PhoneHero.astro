@@ -1,0 +1,56 @@
+---
+import { projects } from '../data/projects';
+import { withBase } from '../utils/paths';
+import Arrow from './Arrow.astro';
+const previews = projects.map(p => ({ name: p.name, image: withBase(`/images/projects/${p.slug}-mobile-440.webp`), href: withBase(`/work/${p.slug}/`), bg: p.mobileBar.bg, fg: p.mobileBar.fg }));
+---
+<section class="phone-concept wrap" data-phone-hero data-projects={JSON.stringify(previews)}>
+  <div class="phone-concept-bar"><a href={withBase('/')}>← Compare with the current hero</a><span>3D phone concept</span></div>
+  <div class="phone-concept-grid">
+    <div class="phone-concept-copy">
+      <p class="phone-concept-byline">Grant Dev14. / Web developer</p>
+      <h1 class="display">BUILT FOR<br />EVERY SCREEN.</h1>
+      <p class="phone-concept-intro">Thoughtful websites, built to work beautifully. Shopify, Webflow & WordPress development for brands and agencies.</p>
+      <a class="cta-primary" href={withBase('/estimate/')}>Get a free estimate <Arrow diagonal /></a>
+      <p class="phone-concept-detail">Real projects. Two different perspectives.</p>
+    </div>
+    <div class="phone-concept-demo">
+      <div class="phone-scene" data-phone-scene>
+        <div class="phone-scene-fallback" aria-hidden="true">{previews.slice(0,2).map((p,i)=><div class:list={['fallback-handset',{'squared':i===1}]}><img src={p.image} alt="" width="440" height="956" /><i></i></div>)}</div>
+        <canvas class="phone-webgl" aria-hidden="true"></canvas>
+        <span class="phone-drag-note" data-scene-note>Drag to turn the phones</span>
+      </div>
+      <div class="phone-scene-controls" aria-label="3D phone controls">
+        <div class="phone-rotation-controls"><button type="button" data-rotate="-1" aria-label="Rotate phones left">↶</button><button type="button" data-reset>Reset view</button><button type="button" data-rotate="1" aria-label="Rotate phones right">↷</button></div>
+        <button type="button" data-motion aria-pressed="false">Pause motion</button>
+      </div>
+      <div class="phone-projects" aria-live="polite"><a href={previews[0].href} data-project-link="0"><span>iPhone-style / Titanium</span><strong>{previews[0].name} ↗</strong></a><a href={previews[1].href} data-project-link="1"><span>Galaxy-style / Graphite</span><strong>{previews[1].name} ↗</strong></a><button type="button" data-next>Next projects <Arrow /></button></div>
+    </div>
+  </div>
+  <p class="phone-preview-note">Design preview · Custom 3D device designs inspired by the two phone styles, rather than exact manufacturer models.</p>
+</section>
+<script>
+  const root = document.querySelector<HTMLElement>('[data-phone-hero]');
+  if (root) {
+    const observer = new IntersectionObserver(async ([entry]) => {
+      if (!entry.isIntersecting) return;
+      observer.disconnect();
+      try {
+        const { mountPhoneScene } = await import('../scripts/phone-scene');
+        await mountPhoneScene(root);
+      } catch {
+        const note = root.querySelector('[data-scene-note]');
+        if (note) note.textContent = 'Project previews';
+        root.querySelectorAll<HTMLButtonElement>('.phone-scene-controls button').forEach(button => button.disabled = true);
+      }
+    }, { rootMargin: '200px' });
+    observer.observe(root);
+  }
+</script>
+<style>
+  .phone-concept{padding-bottom:28px}.phone-concept-bar{border-block:1px solid var(--line);padding-block:14px;display:flex;justify-content:space-between;gap:20px;font-size:11px;color:var(--muted)}.phone-concept-bar a:hover{color:var(--ink)}.phone-concept-grid{display:grid;grid-template-columns:.9fr 1.1fr;align-items:center;gap:20px;min-height:650px}.phone-concept-copy{padding-block:54px;position:relative;z-index:1}.phone-concept-byline{font-size:12px;margin-bottom:26px}.phone-concept-copy h1{font-size:clamp(58px,6.7vw,106px);line-height:.98;letter-spacing:-.025em}.phone-concept-intro{font-size:14px;line-height:1.7;max-width:365px;margin:27px 0 30px;color:var(--muted)}.phone-concept-copy .cta-primary{display:inline-flex;gap:30px;align-items:center}.phone-concept-detail{font-size:11px;color:var(--muted);margin-top:30px}.phone-concept-demo{min-width:0}.phone-scene{height:510px;position:relative;touch-action:pan-y;cursor:grab;user-select:none}.phone-scene:active{cursor:grabbing}.phone-webgl{display:block;width:100%;height:100%;opacity:0;position:relative;z-index:1;transition:opacity .3s}.phone-scene:global(.ready) .phone-webgl{opacity:1}.phone-scene-fallback{position:absolute;inset:45px 25px;display:flex;align-items:center;justify-content:center;gap:20px;transition:opacity .3s}.phone-scene:global(.ready) .phone-scene-fallback{opacity:0;pointer-events:none}.fallback-handset{position:relative;width:40%;max-width:190px;border:7px solid #252525;border-radius:30px;overflow:hidden;transform:rotate(-10deg);background:#111;box-shadow:8px 15px 0 #c2c1bf}.fallback-handset img{width:100%;aspect-ratio:440/956;object-fit:cover;object-position:top}.fallback-handset.squared{border-radius:14px;transform:rotate(9deg) translateY(-10px);box-shadow:7px 12px 0 #424347}.fallback-handset i{position:absolute;top:7px;left:50%;transform:translateX(-50%);width:30%;height:12px;border-radius:20px;background:#111}.fallback-handset.squared i{width:7px;height:7px}.phone-drag-note{position:absolute;left:0;right:0;bottom:5px;text-align:center;font-size:10px;color:var(--muted);z-index:2;pointer-events:none}.phone-scene-controls{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:15px}.phone-scene-controls button{background:transparent;font-size:10px;padding:9px 10px;border-radius:999px}.phone-scene-controls button:hover{background:var(--surface)}.phone-scene-controls button:disabled{opacity:.45;cursor:default}.phone-rotation-controls{display:flex;align-items:center;gap:2px}.phone-rotation-controls button[data-rotate]{font-size:21px;padding:3px 12px}.phone-projects{display:grid;grid-template-columns:1fr 1fr auto;gap:16px;border-top:1px solid var(--line);margin-top:16px;padding-top:20px}.phone-projects a{display:flex;flex-direction:column;gap:6px;align-items:flex-start}.phone-projects span{font-size:9px;color:var(--muted)}.phone-projects strong{font-size:13px;font-weight:500}.phone-projects button{font-size:10px;display:flex;align-items:center;gap:8px;background:transparent;align-self:center}.phone-projects button :global(svg){width:16px;height:16px}.phone-preview-note{border-top:1px solid var(--line);padding-top:17px;color:var(--muted);font-size:10px;line-height:1.6}.phone-concept :global(button:focus-visible){outline-offset:2px}
+  @media(min-width:1500px){.phone-scene{height:630px}.phone-concept-grid{min-height:760px}}
+  @media(max-width:850px){.phone-concept-grid{grid-template-columns:1fr;gap:0}.phone-concept-copy{padding-block:44px 0}.phone-concept-copy h1{font-size:clamp(64px,13vw,106px)}.phone-concept-intro{max-width:420px}.phone-concept-detail{display:none}.phone-concept-demo{max-width:650px;width:100%;margin-inline:auto}.phone-scene{height:530px}.phone-projects{margin-bottom:35px}}
+  @media(max-width:450px){.phone-concept-bar{font-size:9px;gap:14px}.phone-concept-copy h1{font-size:clamp(54px,14vw,66px)}.phone-concept-copy{padding-top:30px}.phone-concept-byline{font-size:10px;margin-bottom:20px}.phone-concept-intro{font-size:13px;margin-block:20px 24px}.phone-scene{height:400px;margin-top:12px}.phone-scene-fallback{inset:50px 8px;gap:18px}.fallback-handset{border-width:5px;border-radius:22px}.phone-projects{grid-template-columns:1fr 1fr;gap:20px 10px}.phone-projects button{grid-column:1/-1;justify-self:end}.phone-projects span{font-size:8px}.phone-scene-controls{gap:2px}.phone-scene-controls button{padding-inline:8px;font-size:9px}}
+  @media(prefers-reduced-motion:reduce){.phone-webgl,.phone-scene-fallback{transition:none}}
+</style>
