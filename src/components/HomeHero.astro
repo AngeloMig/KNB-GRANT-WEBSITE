@@ -540,7 +540,8 @@ import ProjectOrbit from './ProjectOrbit.astro';
       cw = card.offsetWidth; R = cw * 1.05;
       heroH = hero.offsetHeight;
       W = Math.floor(r.width); H = Math.floor(r.height);
-      const dpr = Math.min(2, devicePixelRatio || 1);
+      // A little less sharp on phones (1.5×): the ring is thin dots, and the canvas is tall there.
+      const dpr = Math.min(matchMedia('(max-width: 640px)').matches ? 1.5 : 2, devicePixelRatio || 1);
       track.width = W * dpr; track.height = H * dpr;
       tctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       cx = ringBox.left - r.left + ringBox.width / 2;
@@ -595,7 +596,9 @@ import ProjectOrbit from './ProjectOrbit.astro';
       // easing, or a resize): at rest it costs nothing.
       if (seen.on && W && (step !== 0 || moving > 0.004 || px > -1e3 || name.lchTo || W !== drawnW)) {
         drawnW = W;
-        tctx.clearRect(0, 0, W, H);
+        // Only the band the ring and its glow are drawn in needs clearing.
+        const band = Math.min(horizon, floor - cw * 0.2) - 12;
+        tctx.clearRect(0, band, W, floor + cw * 0.2 + 12 - band);
         // A soft pool of the front project's colour on the floor, under its reflection.
         const glow = tctx.createRadialGradient(cx, floor, 0, cx, floor, cw * 0.85);
         glow.addColorStop(0, `oklch(0.78 0.11 ${name.lch[2].toFixed(1)} / 0.4)`);

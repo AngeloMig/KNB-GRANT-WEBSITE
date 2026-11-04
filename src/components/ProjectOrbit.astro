@@ -8,6 +8,9 @@ import Arrow from './Arrow.astro';
 import { projects, canvasHues as hues } from '../data/projects';
 interface Props { card?: string }
 const { card = 'clamp(240px, 30vw, 460px)' } = Astro.props;
+// On phones each card is drawn as one of three flagship phone designs, in turn round the ring (each
+// with its own shape and camera, but no brand names or logos).
+const phoneStyles = ['pro', 'ultra', 'visor'];
 const host = (url: string) => new URL(url).hostname.replace('www.', '');
 const hasFull = (slug: string) => fs.existsSync(`public/images/projects/${slug}-full.webp`);
 // Each card's angle on the ring, signed so the cards can fan out both ways from the front card.
@@ -17,15 +20,15 @@ const angle = (i: number) => (i <= projects.length / 2 ? i : i - projects.length
 <div class="ob" style={`--card:${card};--r:calc(var(--card) * 1.05)`}>
   <div class="ob-ring" aria-roledescription="carousel" aria-label="Projects">
     <div class="ob-spin">{projects.map((p, i) => (
-      <a class="ob-card" href={withBase(`/work/${p.slug}/`)} style={`--a:${angle(i)}deg;--ph:${hues[p.canvas] ?? 0}`} data-angle={angle(i)} data-hue={hues[p.canvas] ?? 0} draggable="false">
+      <a class="ob-card" href={withBase(`/work/${p.slug}/`)} style={`--a:${angle(i)}deg;--ph:${hues[p.canvas] ?? 0}`} data-phone={phoneStyles[i % phoneStyles.length]} data-angle={angle(i)} data-hue={hues[p.canvas] ?? 0} draggable="false">
         <span class="ob-bar" aria-hidden="true"><i></i><i></i><i></i><b>{host(p.url)}</b></span>
         <span class="ob-shade" aria-hidden="true"></span>
         <span class="ob-glare" aria-hidden="true"></span>
         {/* Phones only: the card is a 3D phone. Its body is a stack of rounded slices between the screen and
             the back, so the metal sides are solid all the way round (corners too), with buttons on both sides. */}
-        <span class="ob-body" aria-hidden="true"><i style="--s:1"></i><i style="--s:2"></i><i style="--s:3"></i><i style="--s:4"></i><i style="--s:5"></i></span>
+        <span class="ob-body" aria-hidden="true"><i style="--s:1"></i><i style="--s:2"></i><i style="--s:3"></i></span>
         <span class="ob-edge ob-edge-l" aria-hidden="true"></span><span class="ob-edge ob-edge-r" aria-hidden="true"></span>
-        <span class="ob-back" aria-hidden="true"><span class="ob-cam"><i></i><i></i><i></i><b></b></span></span>
+        <span class="ob-back" aria-hidden="true"><span class="ob-cam"><i></i><i></i><i></i><i></i><b></b></span></span>
         {/* The light first-screen shot loads with the page; the tall full-page shot is swapped in later,
             when the card comes to the front (HomeHero.astro), so it never slows the first load.
             On phones the card is a phone showing the site's mobile screenshot instead. */}
@@ -90,7 +93,7 @@ const angle = (i: number) => (i <= projects.length / 2 ? i : i - projects.length
     .ob-shot, .ob-bar, .ob-shade, .ob-glare { -webkit-backface-visibility: hidden; backface-visibility: hidden; }
     .ob-shot, .ob-bar, .ob-edge, .ob-back, .ob-body i { opacity: var(--o, 1); }
     .ob-body { position: absolute; inset: 0; display: block; transform-style: preserve-3d; pointer-events: none; }
-    .ob-body i { position: absolute; inset: 0; border-radius: 26px; background: #a3a5aa; box-shadow: inset 0 0 0 1.5px #6d6f74; transform: translateZ(calc(var(--t) * var(--s) / -6)); }
+    .ob-body i { position: absolute; inset: 0; border-radius: 26px; background: #a3a5aa; box-shadow: inset 0 0 0 1.5px #6d6f74; transform: translateZ(calc(var(--t) * var(--s) / -4)); }
     .ob-shade, .ob-glare { border-radius: 26px; }
     /* The buttons, standing slightly proud of the sides: on the left the action button and the two
        volume buttons, on the right the side button and the camera button. */
@@ -105,10 +108,39 @@ const angle = (i: number) => (i <= projects.length / 2 ? i : i - projects.length
     .ob-cam i:nth-child(1) { left: 6%; top: 6%; }
     .ob-cam i:nth-child(2) { left: 6%; bottom: 6%; }
     .ob-cam i:nth-child(3) { left: 36%; top: 50%; translate: 0 -50%; }
+    .ob-cam i:nth-child(4) { display: none; }
     .ob-cam b { position: absolute; right: 12%; top: 50%; width: 9%; aspect-ratio: 1; translate: 0 -50%; border-radius: 50%; background: radial-gradient(circle, #fff7e0, #c9b98a 70%); }
     /* The browser bar becomes the phone's camera island. */
     .ob-bar { position: absolute; z-index: 3; left: 50%; top: 7px; width: 30%; height: 13px; padding: 0; translate: -50% 0; border: 0; border-radius: 99px; background: #0d0d0d; }
     .ob-bar > * { display: none; }
+    /* Lighter on phones: no reflections (they're barely visible at this size, and costly to move). */
+    .ob-mirror { display: none; }
+
+    /* "Ultra" style: squarer corners, a small punch-hole camera, and a column of separate camera rings. */
+    .ob-card[data-phone="ultra"] { border-radius: 12px; }
+    .ob-card[data-phone="ultra"] .ob-shot, .ob-card[data-phone="ultra"] .ob-back, .ob-card[data-phone="ultra"] .ob-body i, .ob-card[data-phone="ultra"] .ob-shade, .ob-card[data-phone="ultra"] .ob-glare { border-radius: 12px; }
+    .ob-card[data-phone="ultra"] .ob-shot { border-width: 4px; }
+    .ob-card[data-phone="ultra"] .ob-body i { background: #7c7e84; box-shadow: inset 0 0 0 1.5px #4d4f54; }
+    .ob-card[data-phone="ultra"] .ob-cam { left: 9%; right: auto; top: 3.5%; width: 26%; height: 50%; border-radius: 0; background: none; box-shadow: none; }
+    .ob-card[data-phone="ultra"] .ob-cam i { display: block; left: 0; width: 92%; translate: none; box-shadow: 0 0 0 2.5px #2b2c30, 0 0 0 4px #85878c; }
+    .ob-card[data-phone="ultra"] .ob-cam i:nth-child(1) { top: 0; }
+    .ob-card[data-phone="ultra"] .ob-cam i:nth-child(2) { top: 26%; bottom: auto; }
+    .ob-card[data-phone="ultra"] .ob-cam i:nth-child(3) { top: 52%; }
+    .ob-card[data-phone="ultra"] .ob-cam i:nth-child(4) { top: 78%; width: 60%; left: 16%; }
+    .ob-card[data-phone="ultra"] .ob-cam b { right: -110%; top: 14%; width: 30%; }
+
+    /* "Visor" style: a punch-hole camera, and a camera bar right across the back. */
+    .ob-card[data-phone="visor"] { border-radius: 22px; }
+    .ob-card[data-phone="visor"] .ob-shot, .ob-card[data-phone="visor"] .ob-back, .ob-card[data-phone="visor"] .ob-body i, .ob-card[data-phone="visor"] .ob-shade, .ob-card[data-phone="visor"] .ob-glare { border-radius: 22px; }
+    .ob-card[data-phone="visor"] .ob-cam { left: -1px; right: -1px; top: 15%; height: 11%; border-radius: 99px; background: linear-gradient(180deg, #2a2c31, #0d0e11); box-shadow: 0 3px 8px oklch(0 0 0 / 0.4), inset 0 1px 0 oklch(1 0 0 / 0.12); }
+    .ob-card[data-phone="visor"] .ob-cam i { width: auto; height: 70%; top: 15%; translate: none; box-shadow: none; }
+    .ob-card[data-phone="visor"] .ob-cam i:nth-child(1) { left: 12%; }
+    .ob-card[data-phone="visor"] .ob-cam i:nth-child(2) { left: 26%; bottom: auto; }
+    .ob-card[data-phone="visor"] .ob-cam i:nth-child(3) { left: 40%; }
+    .ob-card[data-phone="visor"] .ob-cam b { right: 22%; width: 6%; }
+
+    /* The punch-hole front camera (Ultra and Visor) instead of the pill island. */
+    .ob-card[data-phone="ultra"] .ob-bar, .ob-card[data-phone="visor"] .ob-bar { top: 9px; width: 11px; height: 11px; }
     /* The screen, inside the phone's black bezel. */
     .ob-shot { aspect-ratio: 450 / 966; border: 5px solid #0d0d0d; border-radius: 26px; background: #0d0d0d; }
     .ob-shot img { height: 100%; aspect-ratio: auto; object-fit: cover; object-position: top; }
