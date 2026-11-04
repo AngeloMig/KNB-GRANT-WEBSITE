@@ -113,3 +113,12 @@ Final QA images: `output/mobile-six-project-orbit.jpg`, `output/mobile-video-pla
 - These checks reproduce and verify the clipping regression and renderer lifecycle in a desktop browser at mobile width. They do not establish physical-phone FPS or an end-to-end scroll benchmark.
 
 Before/after QA captures: `output/orbit-scroll-cut-before.jpg` and `output/orbit-scroll-cut-fixed.jpg`.
+
+### Repeated screenshot report and publishing check
+
+- The supplied screenshot shows the public GitHub Pages site. Fetching that homepage confirmed it still used `HomeHero...Bdl8nn0N.js` and did not contain `--model-padding`; the local export contained the newer fix. This is a confirmed live/local version mismatch, not evidence that the local padding change was deployed.
+- GitHub metadata reported no push permission. The checkout's normal dry-run push was rejected with HTTP 403 for `Grant-Rivyl` to `AngeloMig/KNB-GRANT-WEBSITE`. No remote changes were made.
+- Further isolated the mobile canvas from the CSS perspective wrapper and allowed mobile hero vertical overflow. At 390px / scroll 101px, all six instances remained present and the projected upper bound was +107px inside the padded canvas. The rounded top was visibly intact. Body horizontal clipping and the desktop layout remain.
+- Motion now targets 60 fps with an adaptive moving buffer capped at 2× density (1.5× on constrained devices); a single full-density still frame is requested 180ms after the last pose change. This supersedes the earlier 30fps scroll setting. The renderer no longer draws solely because a native scroll event fired when the orbit pose is unchanged. These are configured limits, not physical-device FPS results.
+- Rechecked the remote during this work: an owner push advanced `main` to `dd42fc7`, and GitHub Pages run `41915418638` was still in progress while the public page served the older build. The latest canvas-isolation changes and regenerated export remain local; the agent did not create that owner commit or push it. The run's build and report jobs succeeded; its deployment job was still in progress at the final job-status check.
+- Repeated Next project through all six entries and back to Road Armor after the refinement. No horizontal overflow was detected. A subsequent idle read showed six instances, `still` quality, and a +108px upper projected bound. Final local QA image: `output/orbit-top-smooth-final.jpg`.

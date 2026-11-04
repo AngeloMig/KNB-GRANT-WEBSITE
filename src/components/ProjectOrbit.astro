@@ -18,8 +18,8 @@ const step = 360 / projects.length;
 const angle = (i: number) => (i <= projects.length / 2 ? i : i - projects.length) * step;
 ---
 <div class="ob" style={`--card:${card};--r:calc(var(--card) * 1.05)`} data-orbit-model={withBase('/models/iphone-17-pro-max-orbit.glb')} data-orbit-projects={JSON.stringify(projects.map(p => ({ name: p.name, image: withBase(`/images/projects/${p.slug}-mobile-440.webp`), href: withBase(`/work/${p.slug}/`), bg: p.mobileBar.bg, fg: p.mobileBar.fg })))}>
+  <canvas class="ob-model-canvas" aria-hidden="true"></canvas>
   <div class="ob-ring" aria-roledescription="carousel" aria-label="Projects">
-    <canvas class="ob-model-canvas" aria-hidden="true"></canvas>
     <div class="ob-spin">{projects.map((p, i) => (
       <a class="ob-card" href={withBase(`/work/${p.slug}/`)} style={`--a:${angle(i)}deg;--ph:${hues[p.canvas] ?? 0}`} data-phone={phoneStyles[i % phoneStyles.length]} data-angle={angle(i)} data-hue={hues[p.canvas] ?? 0} draggable="false">
         <span class="ob-bar" aria-hidden="true"><i></i><i></i><i></i><b>{host(p.url)}</b></span>
@@ -89,7 +89,7 @@ const angle = (i: number) => (i <= projects.length / 2 ? i : i - projects.length
   .ob-shot picture, .ob-mirror picture { display: contents; }
   .ob-edge, .ob-back, .ob-body { display: none; }
   @media (max-width: 640px) {
-    .ob-model-canvas{position:absolute;left:0;right:0;top:calc(-1 * var(--model-padding,0px));width:100%;height:calc(100% + 2 * var(--model-padding,0px));pointer-events:none;z-index:2;opacity:0}
+    .ob-model-canvas{position:absolute;left:0;right:0;top:calc(-1 * var(--model-padding,0px));width:100%;height:var(--model-height,0px);pointer-events:none;z-index:2;opacity:0}
     .ob:global(.ob-model-ready) .ob-model-canvas{display:block;opacity:1}
     .ob:global(.ob-model-ready) .ob-card{opacity:0!important}
     .ob-model-credit:not([hidden]){display:block;text-align:center;font-size:9px;line-height:1.5;color:var(--muted);margin:14px 24px 0}

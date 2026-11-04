@@ -100,7 +100,12 @@ export async function mountOrbitPhones(root: HTMLElement, initial: OrbitState) {
     });
     renderer.render(scene, camera); renders++;
     if (import.meta.env.DEV && scrolling) root.dataset.modelScrollFrames = String(++scrollRenders);
-    if (import.meta.env.DEV) root.dataset.modelQuality = moving ? 'motion' : 'still';
+    const renderState = moving ? 'moving' : 'idle';
+    if (root.dataset.modelState !== renderState) {
+      root.dataset.modelState = renderState;
+      root.dataset.modelFrames = String(renders);
+    }
+    if (import.meta.env.DEV && root.dataset.modelQuality !== (moving ? 'motion' : 'still')) root.dataset.modelQuality = moving ? 'motion' : 'still';
     if (time - reportedAt > 750) {
       root.dataset.modelState = moving ? 'moving' : 'idle';
       root.dataset.modelFrames = String(renders);
@@ -138,6 +143,7 @@ export async function mountOrbitPhones(root: HTMLElement, initial: OrbitState) {
     const padding = Math.ceil(cards[0].offsetWidth * 0.6);
     const renderHeight = height + padding * 2;
     root.style.setProperty('--model-padding', `${padding}px`);
+    root.style.setProperty('--model-height', `${renderHeight}px`);
     root.dataset.modelPadding = String(padding);
     phones.forEach((phone, i) => phone.group.scale.copy(scales[i]).multiplyScalar(phoneHeight / 5.7));
     // Match the existing CSS orbit's 1800px perspective and top-aligned cards.
