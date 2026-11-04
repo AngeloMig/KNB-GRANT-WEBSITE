@@ -41,7 +41,7 @@ import ProjectOrbit from './ProjectOrbit.astro';
     return state;
   };
 
-  // ── The orbit: once it's on screen (after the intro loader) the cards fan out from behind the front
+  // ── The orbit: once it's on screen it rises in and the cards fan out from behind the front
   // card, then it steps to the next project every few seconds. Drag or swipe with momentum; it settles on the nearest project. Arrows move one.
   class Orbit {
     rot = 0; front = -1;
@@ -68,27 +68,30 @@ import ProjectOrbit from './ProjectOrbit.astro';
         tween = { from: this.rot, to, start: performance.now(), dur, ease };
       };
       const nearest = () => Math.round(this.rot / step) * step;
-      const INTRO = 2200;
-      let intro = motion, introAt = 0, spread = motion ? 0 : 1;
-      const endIntro = () => { intro = false; spread = 1; spin.style.setProperty('--spread', '1'); introEl.style.opacity = ''; introEl.style.translate = ''; introEl.style.willChange = ''; next = performance.now() + 3400; onFront(cards[this.front]); };
+      // The entrance: the ring rises from below, tipped back, and straightens up while the cards fan out
+      // a little past their places and settle back (ease-out with a soft overshoot).
+      const INTRO = 1900, RISE = 110, TILT = 16;
+      const backOut = (t: number) => 1 + 2.2 * (t - 1) ** 3 + 1.2 * (t - 1) ** 2;
+      let intro = motion, introAt = 0, spread = motion ? 0 : 1, tilt = 0;
+      const endIntro = () => { intro = false; spread = 1; tilt = 0; spin.style.setProperty('--spread', '1'); introEl.style.opacity = ''; introEl.style.translate = ''; introEl.style.scale = ''; introEl.style.willChange = ''; next = performance.now() + 3400; onFront(cards[this.front]); };
       // During the load animation the stage gets its own layer, so its fade and rise don't repaint the cards.
-      if (intro) { introEl.style.opacity = '0'; introEl.style.translate = '0 32px'; introEl.style.willChange = 'opacity, translate'; }
+      if (intro) { introEl.style.opacity = '0'; introEl.style.translate = `0 ${RISE}px`; introEl.style.scale = '0.9'; introEl.style.willChange = 'opacity, translate, scale'; }
       const frame = () => {
         const time = performance.now(), dt = Math.min(3, (time - last) / 16.67);
         last = time;
         // Nothing to do while the hero is scrolled out of view.
         if (!seen.on) { requestAnimationFrame(frame); return; }
         if (intro) {
-          if (!introAt && !root.classList.contains('is-loading')) introAt = performance.now();
-          if (introAt) {
-            const t = Math.min(1, (performance.now() - introAt) / INTRO);
-            const e = 1 - (1 - t) ** 5;
-            spread = e;
-            spin.style.setProperty('--spread', e.toFixed(4));
-            introEl.style.opacity = String(out(Math.min(1, t / 0.6)));
-            introEl.style.translate = `0 ${(32 * (1 - e)).toFixed(1)}px`;
-            if (t >= 1) endIntro();
-          }
+          if (!introAt) introAt = time;
+          const t = Math.min(1, (time - introAt) / INTRO);
+          const e = 1 - (1 - t) ** 4;
+          spread = backOut(t);
+          tilt = TILT * (1 - e);
+          spin.style.setProperty('--spread', spread.toFixed(4));
+          introEl.style.opacity = String(out(Math.min(1, t / 0.45)));
+          introEl.style.translate = `0 ${(RISE * (1 - e)).toFixed(1)}px`;
+          introEl.style.scale = (0.9 + 0.1 * e).toFixed(4);
+          if (t >= 1) endIntro();
         } else if (!dragging) {
           if (tween) {
             const t = Math.min(1, (time - tween.start) / tween.dur);
@@ -102,7 +105,7 @@ import ProjectOrbit from './ProjectOrbit.astro';
         const key = `${this.rot.toFixed(3)}|${spread.toFixed(4)}`;
         if (key !== lastKey) {
           lastKey = key;
-          spin.style.transform = `translateZ(calc(var(--r) * -1)) rotateY(${this.rot.toFixed(3)}deg)`;
+          spin.style.transform = `translateZ(calc(var(--r) * -1)) rotateX(${tilt.toFixed(3)}deg) rotateY(${this.rot.toFixed(3)}deg)`;
           cards.forEach((card, i) => {
             const d = ((((angles[i] * spread + this.rot) % 360) + 540) % 360) - 180;
             const f = 1 - Math.abs(d) / 180;
@@ -158,7 +161,7 @@ import ProjectOrbit from './ProjectOrbit.astro';
 
   // ── The dot name: the letters are sampled into dots. Each dot springs back home; the cursor pushes
   // dots away (on touch screens a ripple runs through every few seconds). The colour eases between shades.
-  type Dot = { x: number; y: number; vx: number; vy: number; hx: number; hy: number; ox: number; oy: number; delay: number; dur: number };
+  type Dot = { x: number; y: number; vx: number; vy: number; hx: number; hy: number; ox: number; oy: number; delay: number; dur: number; t: number; kicked: boolean };
   class DotName {
     ctx: CanvasRenderingContext2D;
     dots: Dot[] = [];
@@ -169,6 +172,8 @@ import ProjectOrbit from './ProjectOrbit.astro';
     // they fly, the dots are drawn on a temporary full-screen layer (the name's canvas can't draw outside itself).
     gliding = false; glideStart = 0; fly: HTMLCanvasElement | null = null; flyCtx: CanvasRenderingContext2D | null = null;
     flyLeft = 0; flyTop = 0; flyScroll = 0;
+    // Once they've all landed, a ripple runs through the letters from left to right.
+    waveAt = 0;
     // Screen areas the flying dots must stay behind (the orbit's cards), each with how visible it is.
     cover: () => { r: DOMRect; a: number }[] = () => [];
     constructor(public canvas: HTMLCanvasElement, public text: string, public ready: () => void) {
@@ -183,7 +188,7 @@ import ProjectOrbit from './ProjectOrbit.astro';
       const loop = () => {
         // Scrolled away mid-flight: land the dots at once.
         if (this.gliding && this.glideStart && !this.seen.on) this.endGlide();
-        if (this.seen.on && this.awake && !root.classList.contains('is-loading')) this.step();
+        if (this.seen.on && this.awake) this.step();
         requestAnimationFrame(loop);
       };
       if (motion) requestAnimationFrame(loop);
@@ -223,7 +228,7 @@ import ProjectOrbit from './ProjectOrbit.astro';
           // Offsets from home to a random point anywhere in the viewport.
           const ox = scatter ? Math.random() * innerWidth - (r.left + x) : 0, oy = scatter ? Math.random() * innerHeight - (r.top + y) : 0;
           // Each dot has its own timing: most leave straight away, some wait; some are quick, some slow.
-          this.dots.push({ hx: x, hy: y, x: x + ox, y: y + oy, vx: 0, vy: 0, ox, oy, delay: Math.random() ** 1.7 * 1500, dur: 650 + Math.random() * 1250 });
+          this.dots.push({ hx: x, hy: y, x: x + ox, y: y + oy, vx: 0, vy: 0, ox, oy, delay: Math.random() ** 1.7 * 850, dur: 500 + Math.random() * 750, t: 0, kicked: !scatter });
         }
       }
       this.awake = true;
@@ -252,16 +257,20 @@ import ProjectOrbit from './ProjectOrbit.astro';
           const t = Math.min(1, Math.max(0, (T - d.delay) / d.dur));
           // Ease-out (expo): most of the way in an instant, then a soft landing.
           const left = t >= 1 ? 0 : 2 ** (-10 * t);
-          d.x = d.hx + d.ox * left; d.y = d.hy + d.oy * left;
+          d.x = d.hx + d.ox * left; d.y = d.hy + d.oy * left; d.t = t;
           if (t < 1) done = false;
         }
         this.stepTint();
-        if (done) this.endGlide(); else this.draw();
+        if (done) { this.endGlide(); this.waveAt = now; } else this.draw();
         return;
       }
       moving = this.stepTint();
       const R = 110;
+      // The landing ripple: each dot gets a small kick upwards as the wave passes it.
+      const wave = this.waveAt ? (performance.now() - this.waveAt) / 520 : -1;
+      if (wave > 1.2) this.waveAt = 0; else if (wave >= 0) moving = 1;
       for (const d of this.dots) {
+        if (!d.kicked && d.hx / this.W <= wave) { d.kicked = true; d.vy -= 2.2 + Math.random() * 1.6; d.vx += (Math.random() - 0.5) * 1.2; }
         const dx = d.x - this.px, dy = d.y - this.py, dist = Math.hypot(dx, dy);
         if (dist < R && dist > 0.1) { const f = (1 - dist / R) * 3.6; d.vx += (dx / dist) * f; d.vy += (dy / dist) * f; }
         d.vx += (d.hx - d.x) * 0.05; d.vy += (d.hy - d.y) * 0.05;
@@ -315,8 +324,11 @@ import ProjectOrbit from './ProjectOrbit.astro';
         const left = this.flyLeft, top = this.flyTop - (scrollY - this.flyScroll), rad = this.gap * 0.36, path = new Path2D();
         // Tiny squares while flying: far cheaper to draw than circles, and the same at this size and speed.
         const side = rad * 1.8;
-        for (const d of this.dots) path.rect(left + d.x - side / 2, top + d.y - side / 2, side, side);
-        f.fillStyle = this.color; f.fill(path);
+        // Dots still flying glow in the project's colour; the ones that have landed take the name's colour.
+        const landed = new Path2D();
+        for (const d of this.dots) (d.t >= 1 ? landed : path).rect(left + d.x - side / 2, top + d.y - side / 2, side, side);
+        f.fillStyle = this.lch[1] > 0.01 ? `oklch(0.62 0.16 ${this.lch[2].toFixed(1)})` : this.color; f.fill(path);
+        f.fillStyle = this.color; f.fill(landed);
         // The orbit stays in front: rub the dots out where a card is, as much as the card is showing.
         f.globalCompositeOperation = 'destination-out';
         for (const { r: c, a } of this.cover()) {
@@ -351,6 +363,8 @@ import ProjectOrbit from './ProjectOrbit.astro';
     const obCards = [...ob.querySelectorAll<HTMLElement>('.ob-card')];
     const stageEl = hero.querySelector<HTMLElement>('.home-hero-stage')!;
     const obFoot = ob.querySelector<HTMLElement>('.ob-foot')!;
+    // The name takes the first project's colour from the start, so the dots fly in already glowing in it.
+    name.tint(0.33, 0.07, Number(obCards[0].dataset.hue));
     name.cover = () => {
       const base = Number(stageEl.style.opacity || 1);
       return [...obCards.map((c) => ({ r: c.getBoundingClientRect(), a: base * Number(c.style.opacity || 1) })), { r: obFoot.getBoundingClientRect(), a: base }];
@@ -454,6 +468,17 @@ import ProjectOrbit from './ProjectOrbit.astro';
   .home-hero-lead { max-width: 460px; font-size: 16px; line-height: 1.5; }
   .home-hero-actions { display: flex; flex-wrap: wrap; gap: 10px; }
   .home-hero-row .intro-quote { margin: 0; }
+
+  /* The entrance (in place of a loading screen): the header drops in, the small heading and the row under
+     the orbit rise in one after another, while the dots fly into the name and the orbit comes up. */
+  :global(html.motion .site-header .wordmark), :global(html.motion .site-header .header-contact) { animation: hero-drop 0.9s var(--ease) backwards; }
+  :global(html.motion .site-header .header-contact) { animation-delay: 0.12s; }
+  :global(html.motion) .home-hero .tiny-heading { animation: reveal-rise 0.9s var(--ease) 0.35s backwards; }
+  :global(html.motion) .home-hero-row > * { animation: reveal-rise 1s var(--ease) backwards; }
+  :global(html.motion) .home-hero-lead { animation-delay: 0.8s; }
+  :global(html.motion) .home-hero-actions { animation-delay: 0.9s; }
+  :global(html.motion) .home-hero-row .intro-quote { animation-delay: 1s; }
+  @keyframes hero-drop { from { opacity: 0.01; transform: translateY(-22px); } }
 
   /* While the orbit is being dragged nothing on the page can be selected. */
   :global(html.is-orbit-dragging), :global(html.is-orbit-dragging *) { -webkit-user-select: none; user-select: none; cursor: grabbing; }
