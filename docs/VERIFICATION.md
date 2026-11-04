@@ -102,3 +102,14 @@ The homepage continues to render `HomeHero.astro`; its original desktop browser-
 - Source checks passed with zero errors/warnings and two existing preview hints. The GitHub Pages export is regenerated from source with existing quote-page encryption retained. Public deployment / GitHub push and physical iOS/Android performance are not verified by these local checks.
 
 Final QA images: `output/mobile-six-project-orbit.jpg`, `output/mobile-video-play-fixed.jpg` and `output/original-desktop-orbit-restored.jpg` (ignored, not included in the public export).
+
+## Scroll clipping and lower-page work — November 5, 2026
+
+- Reproduced the phone-top cut at 390px and scroll position 101px. Projected model bounds extended 12–29px above the old 441px-high canvas during tilt; these were actual clipped pixels, not a missing portion of the source model.
+- Added symmetric drawing padding without changing the ring height, project positions, or desktop presentation. At the same 101px scroll position the padded canvas measured 675px high, with 117px padding and projected upper bounds at +108px. Visual review confirmed intact rounded tops. Also checked continued downward scrolling to 169px.
+- Removed the scroll-stop freeze while the hero is visible. Dev counters recorded eight and then twelve frames rendered during scrolling, demonstrating updates occur before the scroll settles. Vertical-scroll rendering is capped at 30 fps to limit GPU work; idle/offscreen rendering still stops.
+- At the page bottom (scroll position 7,321px), model state was `offscreen` and its render count stayed at 912 across separate reads. The hero's orbit, name and dotted-track RAF callbacks now also suspend offscreen/hidden. Project parallax only reads intersecting devices and batches reads before writes; unchanged canvas dimensions no longer reallocate the track on resize.
+- The 1280px desktop browser-card orbit continued advancing with the model canvas hidden. The mobile renderer resumed after returning from the footer and the Next project control remained functional.
+- These checks reproduce and verify the clipping regression and renderer lifecycle in a desktop browser at mobile width. They do not establish physical-phone FPS or an end-to-end scroll benchmark.
+
+Before/after QA captures: `output/orbit-scroll-cut-before.jpg` and `output/orbit-scroll-cut-fixed.jpg`.

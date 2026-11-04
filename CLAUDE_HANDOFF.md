@@ -4,6 +4,8 @@
 
 ### Approved hero scope — mobile orbital models (November 5, 2026)
 
+Scroll clipping follow-up: preserve the orbital layout. The mobile WebGL canvas now has symmetric overscan padding (0.6× card width above/below) and an expanded camera frustum that keeps model positions aligned with the original CSS phones. Do not constrain the canvas to the ring's height: tilted phones extend above it. While the hero is visible, scrolling renders the updated orbit on demand, capped at 30 fps; the previous freeze-until-scroll-stops caused a visible jump. Offscreen/hidden rendering still stops. Hero orbit/name/track RAF loops also suspend offscreen, and project parallax measures only intersecting items before applying writes. `DEV`-only projected bounds and scroll-frame counters support checking this regression without shipping that measurement work.
+
 The homepage MUST keep `HomeHero.astro` and its existing six-project orbital layout. The user explicitly rejected replacing it with the two-phone concept. Only the mobile phones (up to 640px) are replaced by the supplied iPhone GLB. Keep desktop browser cards, typography, introduction, orbit, captions, arrows and project links intact.
 
 - `ProjectOrbit.astro` adds a mobile-only canvas over the existing six link hit areas. `HomeHero.astro` passes the existing orbit's turn/spread/tilt to `src/scripts/orbit-phone-scene.ts`; there is no second auto-rotation controller. Six instances show Tero, Road Armor, Omenz, Coptrz, Skinistry and Light My Bricks. Silver, Cosmic Orange and Deep Blue finishes repeat around the orbit, with independent screen materials and shared geometry.

@@ -58,17 +58,25 @@ const services = [
   const devices = [...document.querySelectorAll<HTMLElement>('.project-devices')];
   if (motionOn && devices.length) {
     let ticking = false;
+    const visibleDevices = new Set<HTMLElement>();
+    const deviceObserver = new IntersectionObserver(entries => {
+      entries.forEach(entry => { if (entry.isIntersecting) visibleDevices.add(entry.target as HTMLElement); else visibleDevices.delete(entry.target as HTMLElement); });
+      if (visibleDevices.size && !ticking) { ticking = true; requestAnimationFrame(update); }
+    }, { rootMargin: '100px' });
+    devices.forEach(box => deviceObserver.observe(box));
     const update = () => {
       ticking = false;
       const vh = innerHeight;
-      for (const box of devices) {
+      const positions: { box: HTMLElement; offset: string }[] = [];
+      for (const box of visibleDevices) {
         const r = box.getBoundingClientRect();
         if (r.bottom < -100 || r.top > vh + 100) continue;
         const p = Math.max(-1, Math.min(1, (r.top + r.height / 2 - vh / 2) / vh));
-        box.style.setProperty('--py', `${(p * 12).toFixed(1)}px`);
+        positions.push({ box, offset: `${(p * 12).toFixed(1)}px` });
       }
+      positions.forEach(({ box, offset }) => box.style.setProperty('--py', offset));
     };
-    addEventListener('scroll', () => { if (!ticking) { ticking = true; requestAnimationFrame(update); } }, { passive: true });
+    addEventListener('scroll', () => { if (visibleDevices.size && !ticking) { ticking = true; requestAnimationFrame(update); } }, { passive: true });
     update();
   }
 

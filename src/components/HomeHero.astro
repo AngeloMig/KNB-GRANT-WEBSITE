@@ -36,9 +36,21 @@ import ProjectOrbit from './ProjectOrbit.astro';
   const fine = matchMedia('(hover: hover) and (pointer: fine)').matches;
   const ink = getComputedStyle(root).getPropertyValue('--ink').trim() || '#161616';
   const watch = (el: Element) => {
-    const state = { on: false };
-    new IntersectionObserver(([e]) => { state.on = e.isIntersecting; }, { threshold: 0 }).observe(el);
+    const state: { on: boolean; update?: () => void } = { on: false };
+    new IntersectionObserver(([e]) => { state.on = e.isIntersecting; state.update?.(); }, { threshold: 0 }).observe(el);
     return state;
+  };
+  // Stop scheduling hero work altogether once visitors scroll to the lower page.
+  const animateWhileVisible = (seen: { on: boolean; update?: () => void }, draw: (time: number) => void, leave?: () => void) => {
+    let id = 0;
+    const queue = () => { if (!id && seen.on && !document.hidden) id = requestAnimationFrame(tick); };
+    const tick = (time: number) => { id = 0; if (!seen.on || document.hidden) return; draw(time); queue(); };
+    seen.update = () => {
+      if (seen.on && !document.hidden) queue();
+      else { cancelAnimationFrame(id); id = 0; leave?.(); }
+    };
+    document.addEventListener('visibilitychange', seen.update);
+    queue();
   };
 
   // ── The orbit: once it's on screen it rises in and the cards fan out from behind the front
@@ -92,7 +104,7 @@ import ProjectOrbit from './ProjectOrbit.astro';
         const time = performance.now(), dt = Math.min(3, (time - last) / 16.67);
         last = time;
         // Nothing to do while the hero is scrolled out of view.
-        if (!seen.on) { requestAnimationFrame(frame); return; }
+        if (!seen.on) return;
         if (intro) {
           if (!introAt) introAt = time;
           const t = Math.min(1, (time - introAt) / INTRO);
@@ -154,9 +166,8 @@ import ProjectOrbit from './ProjectOrbit.astro';
           captions.forEach((c, i) => c.classList.toggle('is-active', i === now));
           if (!intro) onFront(cards[now]);
         }
-        requestAnimationFrame(frame);
       };
-      requestAnimationFrame(frame);
+      animateWhileVisible(seen, frame);
       // A press becomes a drag only once it has moved a few pixels. Until then the pointer isn't captured,
       // so a plain click still reaches the card's link (a captured pointer sends the click to the ring).
       let pressed = false, pointer = 0, pressX = 0, pressY = 0;
@@ -249,9 +260,8 @@ import ProjectOrbit from './ProjectOrbit.astro';
         // Scrolled away mid-flight: land the dots at once.
         if (this.gliding && this.glideStart && !this.seen.on) this.endGlide();
         if (this.seen.on && this.awake) this.step();
-        requestAnimationFrame(loop);
       };
-      if (motion) requestAnimationFrame(loop);
+      if (motion) animateWhileVisible(this.seen, loop, () => { if (this.gliding) this.endGlide(); });
       this.build();
       let width = innerWidth, timer = 0;
       addEventListener('resize', () => { clearTimeout(timer); timer = window.setTimeout(() => { if (Math.abs(innerWidth - width) > 40) { width = innerWidth; this.build(); } }, 250); });
@@ -567,7 +577,9 @@ import ProjectOrbit from './ProjectOrbit.astro';
       W = Math.floor(r.width); H = Math.floor(r.height);
       // A little less sharp on phones (1.5×): the ring is thin dots, and the canvas is tall there.
       const dpr = Math.min(matchMedia('(max-width: 640px)').matches ? 1.5 : 2, devicePixelRatio || 1);
-      track.width = W * dpr; track.height = H * dpr;
+      if (track.width !== Math.round(W * dpr) || track.height !== Math.round(H * dpr)) {
+        track.width = Math.round(W * dpr); track.height = Math.round(H * dpr);
+      }
       tctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       cx = ringBox.left - r.left + ringBox.width / 2;
       horizon = ringBox.top - r.top + ringBox.height / 2;
@@ -663,10 +675,10 @@ import ProjectOrbit from './ProjectOrbit.astro';
         }
         tctx.globalAlpha = 1;
       }
-      if (motion) requestAnimationFrame(draw);
     };
     // Without motion the ring is drawn once, after the cards are laid out.
-    requestAnimationFrame(draw);
+    if (motion) animateWhileVisible(seen, draw);
+    else requestAnimationFrame(draw);
   }
 </script>
 
