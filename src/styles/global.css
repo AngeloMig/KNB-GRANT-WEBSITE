@@ -4835,8 +4835,8 @@ main {
     height: 49px;
   }
   /* In thumb reach: at the top of the page the menu button sits in the header, top-right; as you
-     scroll it glides down to the bottom-right corner (--menu-p, 0 to 1, set by Header.astro). The
-     close button takes the same spot when the menu is open. */
+     scroll it glides down to the bottom-right corner (Header.astro moves it). The close button takes
+     the same spot when the menu is open. */
   /* The button lives in the header, so the header's layer must sit above the page content. */
   .site-header,
   .footer-reveal .site-header {
@@ -4846,16 +4846,15 @@ main {
   .menu-toggle,
   .menu-toggle.is-floating,
   .menu-dialog .menu-close {
-    --menu-travel: calc(100dvh - 24px - 49px - 14px - env(safe-area-inset-bottom));
     position: fixed;
     top: 24px;
     right: 16px;
     bottom: auto;
-    /* From the header's corner (in line with the page edge) down to the bottom-right corner. */
-    transform: translate(calc((16px - var(--gutter)) * (1 - var(--menu-p, 0))), calc(var(--menu-travel) * var(--menu-p, 0)));
-    transition: transform 0.6s var(--ease), background-color 0.4s;
+    /* Its own layer, so moving it never repaints the page; a fixed shadow (a changing one repaints). */
+    will-change: transform;
+    transition: background-color 0.4s !important;
     animation: none;
-    box-shadow: 0 8px 22px oklch(0.16 0 0 / calc(0.3 * var(--menu-p, 0)));
+    box-shadow: 0 6px 18px oklch(0.16 0 0 / 0.2);
   }
   .menu-toggle,
   .menu-toggle.is-floating {
@@ -6995,10 +6994,16 @@ html:active-view-transition-type(grow)::view-transition-new(root) {
     pointer-events: auto;
   }
 }
-/* Phones: the menu button sits bottom-right, so the estimate button stops short of it. */
+/* Phones: the menu button sits bottom-right, so the estimate button stops short of it, and the two
+   match: the same height (the button's 49px), the same bottom edge, colour and shadow. */
 @media (max-width: 640px) {
   .mobile-cta {
     right: 75px;
+    height: 49px;
+    padding-block: 0;
+    border-color: var(--ink);
+    background: var(--ink);
+    box-shadow: 0 6px 18px oklch(0.16 0 0 / 0.2);
   }
 }
 

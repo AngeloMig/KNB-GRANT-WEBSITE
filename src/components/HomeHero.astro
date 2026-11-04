@@ -525,13 +525,14 @@ import ProjectOrbit from './ProjectOrbit.astro';
     // ── The dotted track: a ring of dots under the cards that turns with them; the dots under the
     // front card light up in its colour, and the cursor nudges them aside.
     const seen = watch(stage);
-    const N = 150;
-    const off = Array.from({ length: N }, () => ({ x: 0, y: 0, vx: 0, vy: 0 }));
+    // Dots spaced by distance (about 9px apart at the front), so a big desktop ring isn't sparse.
+    let N = 150;
+    let off = Array.from({ length: N }, () => ({ x: 0, y: 0, vx: 0, vy: 0 }));
     let px = -1e4, py = -1e4, W = 0, H = 0;
     const card = hero.querySelector<HTMLElement>('.ob-card')!;
     const ring = hero.querySelector<HTMLElement>('.ob-ring')!;
     // The ring's geometry, measured once (and again on resize) instead of every frame.
-    let cw = 0, R = 0, cx = 0, horizon = 0, floor = 0, lastRot = NaN, heroH = 1;
+    let cw = 0, R = 0, cx = 0, horizon = 0, floor = 0, heroH = 1;
     const size = () => {
       // Read every measurement first, then write, so the browser lays out the page only once.
       const r = track.getBoundingClientRect();
@@ -546,10 +547,27 @@ import ProjectOrbit from './ProjectOrbit.astro';
       horizon = ringBox.top - r.top + ringBox.height / 2;
       // Just under the cards' foot (on phones the cards are tall phone frames).
       floor = ringBox.top - r.top + card.offsetHeight + 16;
-      lastRot = NaN;
+      const n = Math.max(120, Math.round((Math.PI * 2 * R) / 9));
+      if (n !== N) { N = n; off = Array.from({ length: N }, () => ({ x: 0, y: 0, vx: 0, vy: 0 })); }
     };
     requestAnimationFrame(size);
     addEventListener('resize', size);
+    // ── The menu button keeps the project colour only while it's over the hero: once the hero has
+    // scrolled up past the button (wherever it is: top right, or gliding down on phones), it goes back
+    // to black. Checked once per frame while scrolling; the hero's bottom edge is measured on resize.
+    const menuBtn = document.querySelector<HTMLElement>('.menu-toggle');
+    let heroBottom = 0, checkQueued = false;
+    const measureHero = () => { heroBottom = hero.getBoundingClientRect().bottom + scrollY; };
+    const checkPast = () => {
+      checkQueued = false;
+      if (!menuBtn || root.classList.contains('menu-open') || root.classList.contains('menu-closing')) return;
+      const b = menuBtn.getBoundingClientRect();
+      root.classList.toggle('past-hero', heroBottom - scrollY < b.top + b.height / 2);
+    };
+    requestAnimationFrame(() => { measureHero(); checkPast(); });
+    addEventListener('resize', () => { measureHero(); checkPast(); });
+    addEventListener('scroll', () => { if (!checkQueued) { checkQueued = true; requestAnimationFrame(checkPast); } }, { passive: true });
+
     // ── Scrolling on from the hero turns the ring a little and tips it back.
     if (motion) addEventListener('scroll', () => {
       const p = Math.min(1, Math.max(0, scrollY / (heroH * 0.75)));
@@ -559,14 +577,24 @@ import ProjectOrbit from './ProjectOrbit.astro';
       stage.addEventListener('pointermove', (e) => { const r = track.getBoundingClientRect(); px = e.clientX - r.left; py = e.clientY - r.top; });
       stage.addEventListener('pointerleave', () => { px = py = -1e4; });
     }
-    let nudged = false;
-    const draw = () => {
-      // Redraw only while the ring turns, the cursor is near, or nudged dots are settling.
+    // ── The ring: a thin line, with dots only in the lit arc under the front card. At rest the dots are
+    // all one size. While the ring moves (turning, dragged, or nudged by scrolling) the dot on the side
+    // it's heading towards grows biggest and they get smaller towards the back, with a gentle wave
+    // travelling the same way; as it slows they ease back to one size.
+    let dir = -1, lastTurn = NaN, speed = 0, drawnW = 0;
+    const ARC = 32, TAU = Math.PI * 2, P = 1800;
+    const draw = (t: number) => {
       const turn = orbit.rot + orbit.nudge.rot;
-      if (seen.on && (turn !== lastRot || px > -1e3 || nudged || name.lchTo)) {
-        lastRot = turn;
-        nudged = false;
-        const P = 1800;
+      const step = Number.isNaN(lastTurn) ? 0 : turn - lastTurn;
+      if (Math.abs(step) > 0.02) dir = Math.sign(step);
+      lastTurn = turn;
+      speed = speed * 0.88 + Math.abs(step) * 0.12;
+      // 0 at rest, 1 while it's clearly moving.
+      const moving = Math.min(1, speed / 0.35);
+      // Redraw only while something changes (the ring moving or settling, the cursor near, the colour
+      // easing, or a resize): at rest it costs nothing.
+      if (seen.on && W && (step !== 0 || moving > 0.004 || px > -1e3 || name.lchTo || W !== drawnW)) {
+        drawnW = W;
         tctx.clearRect(0, 0, W, H);
         // A soft pool of the front project's colour on the floor, under its reflection.
         const glow = tctx.createRadialGradient(cx, floor, 0, cx, floor, cw * 0.85);
@@ -575,23 +603,37 @@ import ProjectOrbit from './ProjectOrbit.astro';
         tctx.save(); tctx.translate(cx, floor); tctx.scale(1, 0.2); tctx.translate(-cx, -floor);
         tctx.fillStyle = glow; tctx.fillRect(cx - cw, floor - cw, cw * 2, cw * 2);
         tctx.restore();
+        // The line, all the way round.
+        tctx.beginPath();
+        for (let i = 0; i <= 120; i++) {
+          const a = (i / 120) * TAU, k = P / (P - (Math.cos(a) * R - R));
+          const x = cx + Math.sin(a) * R * k, y = horizon + (floor - horizon) * k;
+          if (i) tctx.lineTo(x, y); else tctx.moveTo(x, y);
+        }
+        tctx.strokeStyle = 'oklch(0.16 0 0 / 0.2)'; tctx.lineWidth = 1.2; tctx.stroke();
+        // The dots in front, in the project's colour.
+        tctx.fillStyle = `oklch(0.55 0.15 ${hue})`;
         for (let i = 0; i < N; i++) {
-          const deg = (i / N) * 360 + turn;
-          const a = deg * (Math.PI / 180);
-          const k = P / (P - (Math.cos(a) * R - R));
-          const o = off[i];
+          const deg = (i / N) * 360 + turn, d = ((((deg % 360) + 540) % 360) - 180);
+          if (Math.abs(d) > ARC) continue;
+          const a = deg * (Math.PI / 180), k = P / (P - (Math.cos(a) * R - R)), o = off[i];
           let x = cx + Math.sin(a) * R * k, y = horizon + (floor - horizon) * k;
+          // The cursor still nudges them aside.
           const dx = x + o.x - px, dy = y + o.y - py, dist = Math.hypot(dx, dy);
           if (dist < 90 && dist > 0.1) { const f = (1 - dist / 90) * 4; o.vx += (dx / dist) * f; o.vy += (dy / dist) * f; }
           o.vx += -o.x * 0.07; o.vy += -o.y * 0.07; o.vx *= 0.8; o.vy *= 0.8; o.x += o.vx; o.y += o.vy;
-          if (Math.abs(o.x) + Math.abs(o.y) > 0.05) nudged = true;
           x += o.x; y += o.y;
-          const near = Math.abs((((deg % 360) + 540) % 360) - 180) < 22;
+          // 0 at the back of the arc, 1 at its leading edge (the side the ring is turning towards).
+          const lead = (d * dir + ARC) / (ARC * 2);
+          const leaning = (1.1 + 3.6 * lead ** 1.4) * (1 + 0.18 * Math.sin(lead * 9 - t / 260));
+          const size = 2.5 + (leaning - 2.5) * moving;
+          // Dots fade in and out at the ends of the arc, so they arrive and leave softly as it turns.
+          tctx.globalAlpha = Math.min(1, (ARC - Math.abs(d)) / 6);
           tctx.beginPath();
-          tctx.arc(x, y, (near ? 3.4 : 2) * k ** 1.5, 0, 6.2832);
-          tctx.fillStyle = near ? `oklch(0.55 0.15 ${hue})` : `oklch(0.16 0 0 / ${Math.min(0.85, 0.25 + 0.7 * (k - 0.6)).toFixed(2)})`;
+          tctx.arc(x, y, size * k ** 1.5, 0, TAU);
           tctx.fill();
         }
+        tctx.globalAlpha = 1;
       }
       if (motion) requestAnimationFrame(draw);
     };
@@ -643,7 +685,9 @@ import ProjectOrbit from './ProjectOrbit.astro';
   /* The header shares the hero's wash (full width), and its menu button and "Let's talk" the deep shade. */
   :global(html.hero-tinted .site-header) { background: transparent; isolation: isolate; }
   :global(html.hero-tinted .site-header)::before { content: ''; position: absolute; z-index: -1; inset: 0 calc(50% - 50vw); background: var(--hero-wash); transition: background-color 1.4s var(--ease); }
-  :global(html.hero-tinted .menu-toggle) { background-color: var(--hero-ink); transition: background-color 1.4s var(--ease), transform 0.3s var(--ease); }
+  :global(html.hero-tinted .menu-toggle) { transition: background-color 1.4s var(--ease), transform 0.3s var(--ease); }
+  /* Only over the hero: once it has scrolled past the button, the button eases back to black. */
+  :global(html.hero-tinted:not(.past-hero) .menu-toggle) { background-color: var(--hero-ink); }
   :global(html.hero-tinted .header-contact) { color: var(--hero-ink); transition: color 1.4s var(--ease); }
 
   /* Small laptops: the intro line gets its own row, with the buttons and the quote side by side below. */

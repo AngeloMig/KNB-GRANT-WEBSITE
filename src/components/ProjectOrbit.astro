@@ -21,7 +21,9 @@ const angle = (i: number) => (i <= projects.length / 2 ? i : i - projects.length
         <span class="ob-bar" aria-hidden="true"><i></i><i></i><i></i><b>{host(p.url)}</b></span>
         <span class="ob-shade" aria-hidden="true"></span>
         <span class="ob-glare" aria-hidden="true"></span>
-        {/* Phones only: the card is a 3D phone, with metal sides and a back with a camera block. */}
+        {/* Phones only: the card is a 3D phone. Its body is a stack of rounded slices between the screen and
+            the back, so the metal sides are solid all the way round (corners too), with buttons on both sides. */}
+        <span class="ob-body" aria-hidden="true"><i style="--s:1"></i><i style="--s:2"></i><i style="--s:3"></i><i style="--s:4"></i><i style="--s:5"></i></span>
         <span class="ob-edge ob-edge-l" aria-hidden="true"></span><span class="ob-edge ob-edge-r" aria-hidden="true"></span>
         <span class="ob-back" aria-hidden="true"><span class="ob-cam"><i></i><i></i><i></i><b></b></span></span>
         {/* The light first-screen shot loads with the page; the tall full-page shot is swapped in later,
@@ -78,20 +80,25 @@ const angle = (i: number) => (i <= projects.length / 2 ? i : i - projects.length
   :global(.ob-touch) .ob-card::after { content: none; }
   /* Phones: each card is a phone showing the site's mobile screenshot (one screen, so no scrolling). */
   .ob-shot picture, .ob-mirror picture { display: contents; }
-  .ob-edge, .ob-back { display: none; }
+  .ob-edge, .ob-back, .ob-body { display: none; }
   @media (max-width: 640px) {
     .ob-ring { height: calc(var(--card) * 2.26); }
     /* A 3D phone: the screen on the front, a back 9px behind it, and metal sides joining them. */
     /* (The card itself paints nothing and isn't faded, which would flatten it: each part fades with --o.) */
-    .ob-card { --t: 9px; overflow: visible; transform-style: preserve-3d; border-radius: 26px; background: none; box-shadow: none; }
+    /* Depth in proportion to a large phone: about a tenth of its width. */
+    .ob-card { --t: calc(var(--card) * 0.09); overflow: visible; transform-style: preserve-3d; border-radius: 26px; background: none; box-shadow: none; }
     .ob-shot, .ob-bar, .ob-shade, .ob-glare { -webkit-backface-visibility: hidden; backface-visibility: hidden; }
-    .ob-shot, .ob-bar, .ob-edge, .ob-back { opacity: var(--o, 1); }
+    .ob-shot, .ob-bar, .ob-edge, .ob-back, .ob-body i { opacity: var(--o, 1); }
+    .ob-body { position: absolute; inset: 0; display: block; transform-style: preserve-3d; pointer-events: none; }
+    .ob-body i { position: absolute; inset: 0; border-radius: 26px; background: #a3a5aa; box-shadow: inset 0 0 0 1.5px #6d6f74; transform: translateZ(calc(var(--t) * var(--s) / -6)); }
     .ob-shade, .ob-glare { border-radius: 26px; }
-    .ob-edge { position: absolute; top: 22px; bottom: 22px; display: block; width: var(--t); background: linear-gradient(90deg, #4a4a4f, #b9bac0 45%, #6c6d72); }
-    .ob-edge-l { left: 0; transform-origin: 0 50%; transform: rotateY(90deg); }
-    /* The right side carries the buttons. */
-    .ob-edge-r { right: 0; transform-origin: 100% 50%; transform: rotateY(-90deg); background: linear-gradient(180deg, transparent 18%, #2c2c30 18% 26%, transparent 26% 30%, #2c2c30 30% 34%, transparent 34%), linear-gradient(90deg, #6c6d72, #b9bac0 55%, #4a4a4f); }
-    .ob-back { position: absolute; inset: 0; display: block; border-radius: 26px; transform: translateZ(calc(var(--t) * -1)) rotateY(180deg); -webkit-backface-visibility: hidden; backface-visibility: hidden; background: radial-gradient(120% 80% at 30% 15%, oklch(0.55 0.06 var(--ph)), oklch(0.3 0.04 var(--ph)) 70%); box-shadow: inset 0 0 0 2px oklch(0.75 0.02 var(--ph) / 0.5); }
+    /* The buttons, standing slightly proud of the sides: on the left the action button and the two
+       volume buttons, on the right the side button and the camera button. */
+    .ob-edge { position: absolute; top: 0; bottom: 0; display: block; width: calc(var(--t) * 0.5); background: linear-gradient(180deg, transparent 19%, #7b7d82 19% 23.5%, transparent 23.5% 27%, #7b7d82 27% 34%, transparent 34% 36.5%, #7b7d82 36.5% 43.5%, transparent 43.5%); border-radius: 2px; }
+    .ob-edge-l { left: -1.5px; transform-origin: 0 50%; transform: translateZ(calc(var(--t) * -0.25)) rotateY(90deg) translateX(calc(var(--t) * -0.25)); }
+    .ob-edge-r { right: -1.5px; transform-origin: 100% 50%; transform: translateZ(calc(var(--t) * -0.25)) rotateY(-90deg) translateX(calc(var(--t) * 0.25)); background: linear-gradient(180deg, transparent 26%, #7b7d82 26% 36%, transparent 36% 58%, #74767b 58% 66%, transparent 66%); }
+    /* The back: matte glass in the project's colour, with a soft sheen and the metal rim. */
+    .ob-back { position: absolute; inset: 0; display: block; border-radius: 26px; transform: translateZ(calc(var(--t) * -1)) rotateY(180deg); -webkit-backface-visibility: hidden; backface-visibility: hidden; background: linear-gradient(115deg, oklch(1 0 0 / 0.16), transparent 35% 70%, oklch(1 0 0 / 0.08)), radial-gradient(120% 80% at 30% 15%, oklch(0.56 0.06 var(--ph)), oklch(0.32 0.045 var(--ph)) 72%); box-shadow: inset 0 0 0 1.5px #6d6f74, inset 0 0 0 3.5px oklch(0.4 0.03 var(--ph)); }
     /* The camera block: a bar across the top with three lenses and a flash. */
     .ob-cam { position: absolute; left: 7%; right: 7%; top: 3.5%; height: 21%; border-radius: 20px; background: linear-gradient(160deg, oklch(0.42 0.05 var(--ph)), oklch(0.24 0.03 var(--ph))); box-shadow: inset 0 1px 0 oklch(1 0 0 / 0.18), 0 4px 10px oklch(0 0 0 / 0.35); }
     .ob-cam i { position: absolute; width: 27%; aspect-ratio: 1; border-radius: 50%; background: radial-gradient(circle at 40% 35%, #59606e 0 8%, #11131a 22%, #050608 60%, #2b2d33 62% 70%, #0b0c0f 72%); box-shadow: 0 0 0 2px oklch(0.6 0.02 var(--ph) / 0.6); }
