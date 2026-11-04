@@ -8,7 +8,7 @@
 const FROM_KEY = 'gp-dots-from';
 const REPLAY = 'dot-title:replay';
 type From = { x: number; y: number; w: number; h: number };
-type Dot = { x: number; y: number; vx: number; vy: number; hx: number; hy: number; sx: number; sy: number; delay: number; dur: number };
+type Dot = { x: number; y: number; vx: number; vy: number; hx: number; hy: number; sx: number; sy: number; delay: number; dur: number; landed: boolean };
 
 /** Remember where a clicked link sits on screen, so the title it leads to can be built from there. */
 export function rememberFrom(el: Element) {
@@ -125,7 +125,7 @@ class DotTitle {
     const gap = (this.gap = size < 90 ? 3 : size < 130 ? 4 : 5);
     this.dots = [];
     for (let y = gap / 2; y < H; y += gap) for (let x = gap / 2; x < W; x += gap) {
-      if (data[((y | 0) * W + (x | 0)) * 4 + 3] >= 128) this.dots.push({ hx: x, hy: y, x, y, vx: 0, vy: 0, sx: 0, sy: 0, delay: 0, dur: 1 });
+      if (data[((y | 0) * W + (x | 0)) * 4 + 3] >= 128) this.dots.push({ hx: x, hy: y, x, y, vx: 0, vy: 0, sx: 0, sy: 0, delay: 0, dur: 1, landed: false });
     }
     this.el.classList.add('dots-ready');
     this.ready = true;
@@ -143,39 +143,46 @@ class DotTitle {
       // A slow, staggered build: most dots leave early, some wait; each takes its time to arrive.
       d.delay = Math.random() ** 1.6 * (f ? 700 : 900);
       d.dur = 900 + Math.random() * 1000;
-      d.x = d.hx; d.y = d.hy; d.vx = d.vy = 0;
+      d.x = d.hx; d.y = d.hy; d.vx = d.vy = 0; d.landed = false;
     }
     this.from = null;
     this.ctx.clearRect(0, 0, this.W, this.H);
     const fly = document.createElement('canvas');
     fly.className = 'dot-title-fly';
     fly.setAttribute('aria-hidden', 'true');
-    fly.width = vw; fly.height = vh;
+    // At the screen's own sharpness (capped at 2×), so the dots stay crisp on phones.
+    const dpr = Math.min(2, devicePixelRatio || 1);
+    fly.width = vw * dpr; fly.height = vh * dpr;
     document.body.append(fly);
     this.fly = fly; this.flyCtx = fly.getContext('2d')!;
+    this.flyCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
     this.ox = r.left; this.oy = r.top + scrollY;
     this.flyAt = performance.now();
   }
 
   stepFly() {
     const T = performance.now() - this.flyAt, f = this.flyCtx!;
-    const left = this.ox, top = this.oy - scrollY, full = this.gap * 0.66;
-    f.clearRect(0, 0, this.fly!.width, this.fly!.height);
-    const flying = new Path2D(), landed = new Path2D();
-    let done = true;
+    const left = this.ox, top = this.oy - scrollY, full = this.gap * 0.66, rad = this.gap * 0.36;
+    f.clearRect(0, 0, innerWidth, innerHeight);
+    const flying = new Path2D(), arrived = new Path2D();
+    let done = true, any = false;
     for (const d of this.dots) {
+      if (d.landed) continue;
       const t = (T - d.delay) / d.dur;
-      if (t < 1) done = false;
+      // A dot that has arrived becomes its final round dot in the title straight away, so there's
+      // no swap at the end; the flying layer only carries the dots still on their way.
+      if (t >= 1) { d.landed = true; arrived.moveTo(d.hx + rad, d.hy); arrived.arc(d.hx, d.hy, rad, 0, 6.2832); any = true; continue; }
+      done = false;
       // A dot that hasn't set off yet isn't drawn, so nothing piles up where the dots start.
       if (t <= 0) continue;
-      const k = Math.min(1, t), e = ease(k);
+      const e = ease(t);
       const x = d.sx + (left + d.hx - d.sx) * e, y = d.sy + (top + d.hy - d.sy) * e;
       // Each dot appears small and reaches full size a little way into its flight.
-      const side = full * Math.min(1, 0.3 + k * 2.2);
-      (k >= 1 ? landed : flying).rect(x - side / 2, y - side / 2, side, side);
+      const side = full * Math.min(1, 0.3 + t * 2.2);
+      flying.rect(x - side / 2, y - side / 2, side, side);
     }
     f.fillStyle = this.accent; f.fill(flying);
-    f.fillStyle = this.ink; f.fill(landed);
+    if (any) { this.ctx.fillStyle = this.ink; this.ctx.fill(arrived); }
     if (done) { this.flyAt = 0; this.built = true; this.fly!.remove(); this.fly = this.flyCtx = null; this.draw(); }
   }
 

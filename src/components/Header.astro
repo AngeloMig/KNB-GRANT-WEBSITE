@@ -61,6 +61,17 @@ const cta = path === withBase('/estimate/') || path === withBase('/contact/') ? 
       shell.classList.remove('is-frozen');
       window.scrollTo({ top, behavior: 'instant' });
     };
+    // Phones: the menu button starts in the header and glides down to the bottom-right corner over the
+    // first half-screen of scrolling (--menu-p, 0 to 1, eased). It stays put while the menu is open.
+    const phoneNav = matchMedia('(max-width: 640px)');
+    const placeButton = () => {
+      if (root.classList.contains('menu-open') || root.classList.contains('menu-closing') || shell?.classList.contains('is-frozen')) return;
+      const p = phoneNav.matches ? Math.min(1, Math.max(0, window.scrollY / (window.innerHeight * 0.5))) : 0;
+      root.style.setProperty('--menu-p', (p < 0.5 ? 2 * p * p : 1 - (-2 * p + 2) ** 2 / 2).toFixed(3));
+    };
+    window.addEventListener('scroll', placeButton, { passive: true });
+    window.addEventListener('resize', placeButton);
+    placeButton();
     toggle.addEventListener('click', () => {
       clearTimeout(closingTimer);
       root.classList.remove('menu-closing');
@@ -103,6 +114,7 @@ const cta = path === withBase('/estimate/') || path === withBase('/contact/') ? 
       closingTimer = window.setTimeout(() => {
         root.classList.remove('menu-closing');
         unfreeze();
+        placeButton();
       }, 800);
     });
     // Phones: swipe the menu down to close it. The links follow the finger a little, and spring back if

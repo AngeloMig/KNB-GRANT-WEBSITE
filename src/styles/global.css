@@ -4834,8 +4834,9 @@ main {
     width: 49px;
     height: 49px;
   }
-  /* In thumb reach: the menu button floats bottom-right on every page, and the close button takes
-     the same spot when the menu is open. */
+  /* In thumb reach: at the top of the page the menu button sits in the header, top-right; as you
+     scroll it glides down to the bottom-right corner (--menu-p, 0 to 1, set by Header.astro). The
+     close button takes the same spot when the menu is open. */
   /* The button lives in the header, so the header's layer must sit above the page content. */
   .site-header,
   .footer-reveal .site-header {
@@ -4843,20 +4844,22 @@ main {
     z-index: 45;
   }
   .menu-toggle,
-  .menu-toggle.is-floating {
-    position: fixed;
-    top: auto;
-    right: 16px;
-    bottom: calc(14px + env(safe-area-inset-bottom));
-    z-index: calc(var(--z-menu) - 1);
-    box-shadow: 0 8px 22px oklch(0.16 0 0 / 0.28);
-  }
+  .menu-toggle.is-floating,
   .menu-dialog .menu-close {
+    --menu-travel: calc(100dvh - 24px - 49px - 14px - env(safe-area-inset-bottom));
     position: fixed;
-    top: auto;
+    top: 24px;
     right: 16px;
-    bottom: calc(14px + env(safe-area-inset-bottom));
-    box-shadow: 0 8px 22px oklch(0 0 0 / 0.3);
+    bottom: auto;
+    /* From the header's corner (in line with the page edge) down to the bottom-right corner. */
+    transform: translate(calc((16px - var(--gutter)) * (1 - var(--menu-p, 0))), calc(var(--menu-travel) * var(--menu-p, 0)));
+    transition: transform 0.6s var(--ease), background-color 0.4s;
+    animation: none;
+    box-shadow: 0 8px 22px oklch(0.16 0 0 / calc(0.3 * var(--menu-p, 0)));
+  }
+  .menu-toggle,
+  .menu-toggle.is-floating {
+    z-index: calc(var(--z-menu) - 1);
   }
   .header-contact {
     display: none;

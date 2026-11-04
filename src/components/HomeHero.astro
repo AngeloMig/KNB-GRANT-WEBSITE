@@ -56,6 +56,7 @@ import ProjectOrbit from './ProjectOrbit.astro';
       const angles = cards.map((c) => Number(c.dataset.angle));
       const shades = cards.map((c) => c.querySelector<HTMLElement>('.ob-shade')!);
       const mirrors = [...el.querySelectorAll<HTMLElement>('.ob-mirror')];
+      const phone3d = matchMedia('(max-width: 640px)').matches;
       // Last values written, so a frame only touches the DOM when something actually changed.
       let lastKey = '';
       const lastOpacity: string[] = [], lastShade: string[] = [], lastBlur: string[] = [];
@@ -64,6 +65,10 @@ import ProjectOrbit from './ProjectOrbit.astro';
       const seen = watch(el);
       if (!fine) el.classList.add('ob-touch');
       let vel = 0, dragging = false, lastX = 0, moved = 0, pausedUntil = 0, hover = false, next = 0, last = performance.now();
+      // Dragging: where the finger has taken the ring (the ring follows it with light smoothing), and
+      // recent positions, for the speed at the moment of letting go.
+      let dragTo = 0;
+      const samples: { t: number; r: number }[] = [];
       // Every turn is a timed tween (same speed on any screen refresh rate): gentle in, gentle out.
       const inOut = (t: number) => (t < 0.5 ? 4 * t ** 3 : 1 - (-2 * t + 2) ** 3 / 2);
       const out = (t: number) => 1 - (1 - t) ** 3;
@@ -98,7 +103,10 @@ import ProjectOrbit from './ProjectOrbit.astro';
           introEl.style.translate = `0 ${(RISE * (1 - e)).toFixed(1)}px`;
           introEl.style.scale = (0.9 + 0.1 * e).toFixed(4);
           if (t >= 1) endIntro();
-        } else if (!dragging) {
+        } else if (dragging) {
+          // Follow the finger, smoothed a little so uneven touch events don't make the ring jump.
+          this.rot += (dragTo - this.rot) * (1 - 0.45 ** dt);
+        } else {
           if (tween) {
             const t = Math.min(1, (time - tween.start) / tween.dur);
             this.rot = tween.from + (tween.to - tween.from) * tween.ease(t);
@@ -120,11 +128,13 @@ import ProjectOrbit from './ProjectOrbit.astro';
             // until they've fanned out clear of the front card (closer in, they'd cut across it).
             const fan = intro && i !== this.front ? Math.max(0, Math.min(1, (spread - 0.82) / 0.18)) : 1;
             const opacity = (Math.max(0, Math.min(1, (170 - Math.abs(d)) / 70)) * fan).toFixed(3);
-            const shade = (0.38 * (1 - f ** 2)).toFixed(3);
-            if (opacity !== lastOpacity[i]) { card.style.opacity = opacity; mirrors[i].style.opacity = opacity; lastOpacity[i] = opacity; }
+            // On phones the card is a 3D phone: fading the card itself would flatten it, so its parts fade (--o).
+            const shade = (0.38 * (1 - f ** 2) * (phone3d ? Number(opacity) : 1)).toFixed(3);
+            if (opacity !== lastOpacity[i]) { if (phone3d) card.style.setProperty('--o', opacity); else card.style.opacity = opacity; mirrors[i].style.opacity = opacity; lastOpacity[i] = opacity; }
             // Depth: the side cards are a touch soft and the cards behind more so. Only three steps, so
             // the blur changes just as a card passes a step, not on every frame of a turn.
-            const blur = Math.abs(d) < 25 ? '' : Math.abs(d) < 80 ? 'blur(0.6px)' : 'blur(1.8px)';
+            // (Not on phones, where the cards are 3D phones: a blur would flatten them.)
+            const blur = phone3d || Math.abs(d) < 25 ? '' : Math.abs(d) < 80 ? 'blur(0.6px)' : 'blur(1.8px)';
             if (blur !== lastBlur[i]) { card.style.filter = blur; lastBlur[i] = blur; }
             if (shade !== lastShade[i]) { shades[i].style.opacity = shade; lastShade[i] = shade; }
             const reachable = Math.abs(d) < step / 2;
@@ -150,7 +160,7 @@ import ProjectOrbit from './ProjectOrbit.astro';
         // Stop the mouse press from starting a text selection, focusing the card or dragging its image.
         if (e.pointerType === 'mouse') e.preventDefault();
         if (intro) endIntro();
-        pressed = true; pointer = e.pointerId; lastX = e.clientX; moved = 0; vel = 0; tween = null;
+        pressed = true; pointer = e.pointerId; lastX = e.clientX; moved = 0; vel = 0; tween = null; dragTo = this.rot; samples.length = 0;
         getSelection()?.removeAllRanges();
       });
       ring.addEventListener('pointermove', (e) => {
@@ -164,9 +174,27 @@ import ProjectOrbit from './ProjectOrbit.astro';
           try { ring.setPointerCapture(pointer); } catch {}
           root.classList.add('is-orbit-dragging');
         }
-        this.rot += dx * 0.22; vel = dx * 0.22;
+        // A finger moves less far than a mouse for the same intent, so touch turns the ring a little more.
+        dragTo += dx * (e.pointerType === 'mouse' ? 0.22 : 0.3);
+        samples.push({ t: e.timeStamp, r: dragTo });
+        while (samples.length > 2 && e.timeStamp - samples[0].t > 120) samples.shift();
       });
-      const release = () => { if (!pressed) return; pressed = false; dragging = false; pausedUntil = performance.now() + 2500; root.classList.remove('is-orbit-dragging'); };
+      const release = (e?: PointerEvent) => {
+        if (!pressed) return;
+        pressed = false;
+        if (dragging) {
+          // Letting go: the speed over the last tenth of a second carries the ring on, and it glides in
+          // one movement to the card it would come to rest on (at most two cards further).
+          const t = e?.timeStamp ?? performance.now(), first = samples[0], lastS = samples[samples.length - 1];
+          const v = first && lastS && t - lastS.t < 80 && lastS.t - first.t > 8 ? (lastS.r - first.r) / (lastS.t - first.t) : 0;
+          const home = Math.round(dragTo / step) * step;
+          let target = Math.round((dragTo + v * 260) / step) * step;
+          target = Math.max(home - step * 2, Math.min(home + step * 2, target));
+          vel = 0;
+          turnTo(target, 450 + Math.min(700, Math.abs(target - this.rot) * 9), out);
+        }
+        dragging = false; pausedUntil = performance.now() + 2500; root.classList.remove('is-orbit-dragging');
+      };
       // On the window: before a drag starts the pointer isn't captured, so it may be let go anywhere.
       addEventListener('pointerup', release);
       addEventListener('pointercancel', release);
@@ -232,10 +260,12 @@ import ProjectOrbit from './ProjectOrbit.astro';
       this.canvas.width = this.W * dpr; this.canvas.height = this.H * dpr;
       this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       const { W, H } = this;
-      this.gap = W < 640 ? 4 : W < 1100 ? 5 : 6;
+      // Finer dots on phones, where the one-line name is small.
+      this.gap = W < 500 ? 3 : W < 640 ? 4 : W < 1100 ? 5 : 6;
       const off = document.createElement('canvas'); off.width = W; off.height = H;
       const o = off.getContext('2d')!;
-      const lines = W < 640 ? this.text.split(' ') : [this.text];
+      // Always one line, sized to fit the width.
+      const lines = [this.text];
       let size = (H / lines.length) * 1.12;
       o.font = `800 ${size}px "Big Shoulders Display"`;
       const widest = Math.max(...lines.map((l) => o.measureText(l).width));
@@ -399,7 +429,8 @@ import ProjectOrbit from './ProjectOrbit.astro';
     // Swap in a card's tall full-page screenshot once it's at the front (decoded first, so no flash).
     const loadFull = (card: HTMLElement) => {
       const img = card.querySelector<HTMLImageElement>('img[data-full]');
-      if (!img || img.dataset.loaded) return;
+      // Phones show the mobile screenshot, which doesn't scroll, so the tall desktop one isn't needed.
+      if (!img || img.dataset.loaded || matchMedia('(max-width: 640px)').matches) return;
       img.dataset.loaded = 'true';
       const full = new Image();
       full.src = img.dataset.full!;
@@ -513,7 +544,8 @@ import ProjectOrbit from './ProjectOrbit.astro';
       tctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       cx = ringBox.left - r.left + ringBox.width / 2;
       horizon = ringBox.top - r.top + ringBox.height / 2;
-      floor = ringBox.top - r.top + cw * 0.5625 + 40;
+      // Just under the cards' foot (on phones the cards are tall phone frames).
+      floor = ringBox.top - r.top + card.offsetHeight + 16;
       lastRot = NaN;
     };
     requestAnimationFrame(size);
@@ -624,7 +656,11 @@ import ProjectOrbit from './ProjectOrbit.astro';
     .home-hero-row { grid-template-columns: 1fr; }
     .home-hero-row .intro-quote { justify-self: start; }
   }
+  /* Phones: the name on one line across the screen, and the orbit's phone-shaped cards a little
+     bigger, rising over the bottom of the name. */
   @media (max-width: 640px) {
-    .home-hero-stage { margin-top: 12px; }
+    .home-hero { --hero-card: 50vw; }
+    .home-hero-dots { height: 23vw; }
+    .home-hero-stage { margin-top: -7vw; }
   }
 </style>
