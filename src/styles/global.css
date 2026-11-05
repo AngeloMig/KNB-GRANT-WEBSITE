@@ -4596,6 +4596,13 @@ main {
   aspect-ratio: 1.75;
   padding: 0;
 }
+.detail-canvas.project-devices[data-mode="phone"] {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  justify-items: center;
+  aspect-ratio: auto;
+  padding: 72px 32px 80px;
+}
 .detail-canvas .device-laptop {
   left: 12%;
   top: 11%;
@@ -4610,7 +4617,7 @@ main {
    to the middle while the laptop steps back and fades. */
 .detail-canvas .device-laptop,
 .detail-canvas .device-phone {
-  transition: left 0.8s var(--ease), right 0.8s var(--ease), top 0.8s var(--ease), bottom 0.8s var(--ease), width 0.8s var(--ease), opacity 0.5s, transform 0.8s var(--ease);
+  transition: opacity 0.35s, transform 0.5s var(--ease);
 }
 .detail-canvas[data-mode="desktop"] .device-laptop {
   left: 15%;
@@ -4628,10 +4635,14 @@ main {
   pointer-events: none;
 }
 .detail-canvas[data-mode="phone"] .device-phone {
-  right: 38.5%;
-  bottom: 7%;
-  width: 23%;
-  transition-delay: 0.08s;
+  position: relative;
+  inset: auto;
+  width: min(100%, 360px);
+  transform: none;
+}
+.detail-canvas[data-mode="phone"][data-phone-model="loading"] .device-phone,
+.detail-canvas[data-mode="phone"][data-phone-model="ready"] .device-phone {
+  visibility: hidden;
 }
 .device-switch {
   position: absolute;
@@ -5163,9 +5174,11 @@ main {
     width: 84%;
   }
   .detail-canvas[data-mode="phone"] .device-phone {
-    right: 35%;
-    bottom: 6%;
-    width: 30%;
+    inset: auto;
+    width: min(100%, 300px);
+  }
+  .detail-canvas.project-devices[data-mode="phone"] {
+    padding: 56px 16px 80px;
   }
   .device-switch {
     left: 12px;

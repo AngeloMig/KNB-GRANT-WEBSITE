@@ -17,8 +17,60 @@ const hasFull = (slug: string) => fs.existsSync(`public/images/projects/${slug}-
 const step = 360 / projects.length;
 const angle = (i: number) => (i <= projects.length / 2 ? i : i - projects.length) * step;
 ---
-<div class="ob" style={`--card:${card};--r:calc(var(--card) * 1.05)`} data-orbit-model={withBase('/models/iphone-17-pro-max-orbit.glb')} data-orbit-projects={JSON.stringify(projects.map(p => ({ name: p.name, image: withBase(`/images/projects/${p.slug}-mobile-720.webp`), href: withBase(`/work/${p.slug}/`), bg: p.mobileBar.bg, fg: p.mobileBar.fg })))}>
+<div class="ob" data-model-load="fallback" style={`--card:${card};--r:calc(var(--card) * 1.05)`} data-orbit-model={withBase('/models/iphone-17-pro-max-orbit.glb')} data-orbit-projects={JSON.stringify(projects.map(p => ({ name: p.name, image: withBase(`/images/projects/${p.slug}-mobile-720.webp`), href: withBase(`/work/${p.slug}/`), bg: p.mobileBar.bg, fg: p.mobileBar.fg })))}>
+  <script is:inline>
+    // Run before the phones are parsed so the older design never flashes first.
+    // This small watchdog also works if the main module cannot download or start.
+    (() => {
+      const root = document.currentScript.parentElement;
+      const mobile = matchMedia('(max-width: 640px)');
+      let timeout;
+      let attempted = false;
+      const settle = (state) => {
+        clearTimeout(timeout);
+        root.dataset.modelLoad = state;
+        root.querySelector('.ob-ring')?.setAttribute('aria-busy', 'false');
+        if (state === 'fallback') {
+          root.classList.remove('ob-model-ready');
+          const credit = root.querySelector('[data-model-credit]');
+          if (credit) credit.setAttribute('aria-hidden', 'true');
+        }
+      };
+      const begin = () => {
+        if (!mobile.matches || attempted) return;
+        attempted = true;
+        root.dataset.modelLoad = 'loading';
+        root.querySelector('.ob-ring')?.setAttribute('aria-busy', 'true');
+        // Keep the portfolio usable on slow connections; 3D can finish in the background.
+        timeout = setTimeout(() => settle('fallback'), 3500);
+      };
+      root.addEventListener('orbit-model-ready', () => settle('ready'));
+      root.addEventListener('orbit-model-error', () => settle('fallback'));
+      mobile.addEventListener('change', begin);
+      begin();
+      // The desktop cards also give feedback while their opening and first image prepare.
+      if (!mobile.matches) {
+        root.dataset.previewLoad = 'loading';
+        const finish = () => {
+          root.dataset.previewLoad = 'ready';
+          root.querySelector('.ob-ring')?.setAttribute('aria-busy', 'false');
+        };
+        const safety = setTimeout(finish, 3500);
+        root.addEventListener('orbit-preview-ready', () => {
+          const image = root.querySelector('.ob-card.is-front img');
+          const done = () => { clearTimeout(safety); finish(); };
+          if (image) image.decode().then(done, done); else done();
+        }, { once: true });
+      }
+    })();
+  </script>
   <canvas class="ob-model-canvas" aria-hidden="true"></canvas>
+  <div class="ob-loading" role="status" aria-live="polite">
+    <span class="ob-loading-indicator"><span>Loading projects</span><span class="ob-loading-dots" aria-hidden="true"><i></i><i></i><i></i></span></span>
+    <span class="ob-skeleton ob-skeleton-left" aria-hidden="true"></span>
+    <span class="ob-skeleton ob-skeleton-center" aria-hidden="true"></span>
+    <span class="ob-skeleton ob-skeleton-right" aria-hidden="true"></span>
+  </div>
   <div class="ob-ring" aria-roledescription="carousel" aria-label="Projects">
     <div class="ob-spin">{projects.map((p, i) => (
       <a class="ob-card" href={withBase(`/work/${p.slug}/`)} style={`--a:${angle(i)}deg;--ph:${hues[p.canvas] ?? 0}`} data-phone={phoneStyles[i % phoneStyles.length]} data-angle={angle(i)} data-hue={hues[p.canvas] ?? 0} draggable="false">
@@ -45,13 +97,28 @@ const angle = (i: number) => (i <= projects.length / 2 ? i : i - projects.length
     <div class="ob-captions" aria-live="polite">{projects.map((p, i) => <p class:list={['ob-caption', { 'is-active': i === 0 }]}><strong>{p.name}</strong><span>{p.platform} · {p.category}</span><a href={withBase(`/work/${p.slug}/`)}>View project <Arrow diagonal /></a></p>)}</div>
     <button type="button" class="ob-arrow" data-dir="1" aria-label="Next project">→</button>
   </div>
-  <p class="ob-model-credit" hidden data-model-credit>3D model: <a href="https://sketchfab.com/3d-models/iphone-17-pro-max-87fc1df741384124a8ce0226d2b2058d" target="_blank" rel="noopener noreferrer">MajdyModels</a> · <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer">CC BY 4.0</a>. Geometry optimized; screens and finishes adapted.</p>
+  <p class="ob-model-credit" aria-hidden="true" data-model-credit>3D model: <a href="https://sketchfab.com/3d-models/iphone-17-pro-max-87fc1df741384124a8ce0226d2b2058d" target="_blank" rel="noopener noreferrer">MajdyModels</a> · <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer">CC BY 4.0</a>. Geometry optimized; screens and finishes adapted.</p>
+  <script is:inline>
+    (() => {
+      const root = document.currentScript.parentElement;
+      root.querySelector('.ob-ring').setAttribute('aria-busy', String(root.dataset.modelLoad === 'loading' || root.dataset.previewLoad === 'loading'));
+    })();
+  </script>
 </div>
 
 <style>
   .ob { position: relative; }
   .ob-model-canvas{display:none}
   .ob-model-credit{display:none}
+  .ob-loading{display:none;position:absolute;inset:0 0 auto;height:calc(var(--card) * .66);pointer-events:none;z-index:3;color:var(--hero-ink,var(--ink))}
+  .ob-loading-indicator{position:absolute;left:50%;top:calc(100% + 8px);transform:translateX(-50%);display:inline-flex;align-items:center;gap:9px;font-size:12px;line-height:1.5;white-space:nowrap}
+  .ob-loading-dots{display:inline-flex;gap:3px}
+  .ob-loading-dots i{width:3px;height:3px;border-radius:50%;background:currentColor;animation:ob-loading-dot 1.2s ease-in-out infinite;opacity:.3}
+  .ob-loading-dots i:nth-child(2){animation-delay:.15s}
+  .ob-loading-dots i:nth-child(3){animation-delay:.3s}
+  @keyframes ob-loading-dot{50%{opacity:1}}
+  .ob-skeleton{display:none}
+  @media(min-width:641px){.ob[data-preview-load="loading"] .ob-loading{display:block}}
   .ob-ring { position: relative; height: calc(var(--card) * 0.66); perspective: 1800px; cursor: grab; touch-action: pan-y; -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; }
   .ob-ring:active { cursor: grabbing; }
   .ob-spin { position: absolute; left: 50%; top: 0; width: var(--card); margin-left: calc(var(--card) / -2); transform-style: preserve-3d; will-change: transform; }
@@ -89,10 +156,20 @@ const angle = (i: number) => (i <= projects.length / 2 ? i : i - projects.length
   .ob-shot picture, .ob-mirror picture { display: contents; }
   .ob-edge, .ob-back, .ob-body { display: none; }
   @media (max-width: 640px) {
+    .ob[data-model-load="loading"] .ob-spin{visibility:hidden;pointer-events:none}
+    .ob[data-model-load="loading"] .ob-loading{display:block}
+    .ob-loading{height:calc(var(--card) * 2.26)}
+    .ob-loading-indicator{top:50%;transform:translate(-50%,-50%)}
+    .ob-skeleton{display:block;position:absolute;left:50%;top:0;width:var(--card);height:calc(var(--card) * 2.16);margin-left:calc(var(--card) / -2);border:1px solid currentColor;border-radius:26px;background:color-mix(in oklch,currentColor 5%,var(--bg));opacity:.14}
+    .ob-skeleton-left{transform:translateX(-82%) scale(.83) rotate(-9deg);transform-origin:50% 75%}
+    .ob-skeleton-right{transform:translateX(82%) scale(.83) rotate(9deg);transform-origin:50% 75%}
+    .ob-skeleton-center{animation:ob-loading-pulse 1.8s ease-in-out infinite alternate}
+    @keyframes ob-loading-pulse{to{opacity:.28}}
     .ob-model-canvas{position:absolute;left:0;right:0;top:calc(-1 * var(--model-padding,0px));width:100%;height:var(--model-height,0px);pointer-events:none;z-index:2;opacity:0}
     .ob:global(.ob-model-ready) .ob-model-canvas{display:block;opacity:1}
     .ob:global(.ob-model-ready) .ob-card{opacity:0!important}
-    .ob-model-credit:not([hidden]){display:block;text-align:center;font-size:9px;line-height:1.5;color:var(--muted);margin:14px 24px 0}
+    .ob-model-credit{display:block;visibility:hidden;text-align:center;font-size:9px;line-height:1.5;color:var(--muted);margin:14px 24px 0}
+    .ob:global(.ob-model-ready) .ob-model-credit{visibility:visible}
     .ob-ring { height: calc(var(--card) * 2.26); }
     /* A 3D phone: the screen on the front, a back 9px behind it, and metal sides joining them. */
     /* (The card itself paints nothing and isn't faded, which would flatten it: each part fades with --o.) */
@@ -172,4 +249,7 @@ const angle = (i: number) => (i <= projects.length / 2 ? i : i - projects.length
   .ob-caption span { font-size: 12px; opacity: 0.7; }
   .ob-caption a { display: inline-flex; align-items: center; justify-content: center; gap: 8px; margin-top: 6px; font-size: 13px; text-decoration: underline; text-underline-offset: 4px; }
   .ob-caption a :global(.arrow-icon) { width: 16px; height: 16px; }
+  @media (prefers-reduced-motion: reduce) {
+    .ob-skeleton-center,.ob-loading-dots i{animation:none}
+  }
 </style>

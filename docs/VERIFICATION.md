@@ -134,3 +134,36 @@ Before/after QA captures: `output/orbit-scroll-cut-before.jpg` and `output/orbit
 - Publishing failure verified from GitHub check annotations: previous Pages deploy timed out; subsequent deploy rejected with HTTP 400 due to the earlier in-progress deployment. See run https://github.com/AngeloMig/KNB-GRANT-WEBSITE/actions/runs/41917049894. Local source/export are ready; remote publication remains unverified and the connected account lacks push permission.
 
 QA images: `output/hd-mobile-orbit-final.jpg`, `output/hd-desktop-orbit-final.jpg`, `output/hd-capture-contact-sheet.jpg`. Raw audit JSON and images are ignored local artifacts.
+
+## Mobile skeleton and fallback lifecycle — November 5, 2026
+
+- Tested the actual GitHub export through an ignored local static QA server at port 4322. Tests deliberately delayed the model response by 30 seconds, returned a 404 for the model, and separately returned a 404 for the main hero module. These failure modes are controlled by the QA server, not shipped application switches.
+- At 390 × 844, loading state hid the legacy orbit visuals (`visibility:hidden`) and displayed the skeleton. The inline 3.5-second watchdog restored the legacy design while a delayed model was still pending; the same page subsequently reached `ready`. A failed model request cleared `aria-busy`, hid the skeleton and showed the fallback. Blocking the main hero module independently also reached fallback, proving that the watchdog does not depend on that module.
+- Normal loading reached `ready` with six model instances and visible attribution. The first reveal follows a successful renderer frame. Steady mobile fallback and ready states both measured 612.1875px for the orbit container at the tested size, after reserving attribution space.
+- Desktop at 1280px hid both skeleton and model canvas. Switching back to 390px resumed the model renderer; frame count advanced and Next project remained functional. Fixed breakpoint caching in the orbit controller discovered during this resize test.
+- Source checks passed with zero errors/warnings and two existing hints; GitHub export built twelve pages and retained private quote encryption. The existing lazy Three.js chunk advisory remains. No repeated device-FPS or Lighthouse audit was performed for this loading-state change.
+
+Verified captures: `output/orbit-loading-placeholder-verified.jpg`, `output/orbit-loading-error-fallback.jpg`, `output/orbit-loading-ready-verified.jpg`.
+
+## Project detail phone enlargement — November 5, 2026
+
+- At 390 × 844, the old detail preview used a ~98px phone in a 327px-wide landscape canvas. Phone mode now measures 295px wide, with a portrait canvas sized to contain the complete device and its controls.
+- Checked 320px (phone ~225px), 390px (295px) and 1280px desktop (360px phone mode). No horizontal page overflow. The Desktop/Phone buttons worked with Enter and kept their pressed states synchronized. Fresh desktop navigation still selects Desktop.
+- Verified real navigation from the mobile homepage's front hero phone to `/work/tero/`; it opened directly in Phone mode at 295px. This shared project-page template applies to all six projects.
+- Source check: zero errors/warnings, two existing preview hints. QA image: `output/project-phone-large-mobile.jpg`. No new performance score is claimed for this sizing change.
+
+## Real supplied model in project Phone mode — November 5, 2026
+
+- Replaced the visible CSS phone in ready state with one actual supplied GLB instance on all six project pages. The large CSS phone remains as the reserved layout box and error fallback. Reuses the 315,504-byte orbital derivative, native 720px project screen and Apple-style finish adaptation; creator/license attribution stays linked in the viewer.
+- At 390px, inspected the front website, rotated back, camera housing, buttons and frame. Native horizontal dragging changed yaw to 0.960 radians; keyboard rotation reached 2.531; Home reset to 0. Rotate buttons and Front view worked. Screenshots of the actual GitHub export are combined in `output/project-actual-3d-proof.jpg`.
+- Renderer idle counter stayed 1 across reads. After interaction settled it stayed 200 across native page scrolling. At 1280px, initial Desktop mode had not mounted a model; selecting Phone reached ready with one instance and 360px layout bounds. Returning to Desktop hid the viewer with its frame counter unchanged. No horizontal overflow at checked widths 320, 390 and 1280px.
+- Real mobile hero-phone click opened `/work/tero/`, selected Phone automatically and reached ready with the correct Tero texture. The scene shares the six-page template.
+- Production export tested through ignored local static QA server: forced GLB 404 → visible image fallback, hidden viewer and cleared busy state; normal response → ready with one instance and `/KNB-GRANT-WEBSITE/models/iphone-17-pro-max-orbit.glb`. Verified all six exported project pages contain the correct viewer asset URL.
+- Source checks passed: zero errors/warnings and two existing hints. Twelve-page GitHub export passed with existing large lazy-chunk advisory and quote encryption retained. Preview server restarted to clear stale development dependency URLs. No new Lighthouse or physical-phone FPS result is claimed.
+
+## Orbital loading label — November 5, 2026
+
+- Added visible “Loading projects” and three opacity-only pulsing dots to the existing loading region. Mobile centers it in the skeleton; desktop places it between the orbital preview and caption. The indicator does not add layout height. Reduced-motion CSS disables the pulse.
+- At 390px in the built export, an intentionally delayed model showed the label/skeleton with carousel busy=true. Normal loading reached ready with label hidden and busy=false. A blocked hero module reached fallback and also hid the label and cleared busy.
+- At 1280px, observed desktop preview loading with label displayed and model canvas hidden, then preview ready with label hidden and busy=false after its opening/image readiness signal.
+- Source checks: zero errors/warnings, two existing hints. GitHub build: twelve pages, existing lazy-chunk advisory, private quote encryption retained. No new FPS or Lighthouse benchmark for this small feedback change. Screenshot: `output/orbit-subtle-loading-label.jpg`.

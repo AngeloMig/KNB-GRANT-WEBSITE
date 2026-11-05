@@ -69,10 +69,17 @@ import ProjectOrbit from './ProjectOrbit.astro';
       const angles = cards.map((c) => Number(c.dataset.angle));
       const shades = cards.map((c) => c.querySelector<HTMLElement>('.ob-shade')!);
       const mirrors = [...el.querySelectorAll<HTMLElement>('.ob-mirror')];
-      const phone3d = matchMedia('(max-width: 640px)').matches;
+      const phoneViewport = matchMedia('(max-width: 640px)');
+      let phone3d = phoneViewport.matches;
       // Last values written, so a frame only touches the DOM when something actually changed.
       let lastKey = '';
       const lastOpacity: string[] = [], lastShade: string[] = [], lastBlur: string[] = [];
+      phoneViewport.addEventListener('change', (event) => {
+        phone3d = event.matches;
+        lastKey = '';
+        lastOpacity.length = lastShade.length = lastBlur.length = 0;
+        cards.forEach(card => { card.style.removeProperty('opacity'); card.style.removeProperty('--o'); });
+      });
       const captions = [...el.querySelectorAll<HTMLElement>('.ob-caption')];
       const step = 360 / cards.length;
       const seen = watch(el);
@@ -96,6 +103,7 @@ import ProjectOrbit from './ProjectOrbit.astro';
       const INTRO = 1900, RISE = 110, TILT = 16;
       const backOut = (t: number) => 1 + 2.2 * (t - 1) ** 3 + 1.2 * (t - 1) ** 2;
       let intro = motion && start < 0, introAt = 0, spread = intro ? 0 : 1, tilt = 0;
+      let previewAnnounced = false;
       if (start >= 0) { this.rot = -angles[start]; next = performance.now() + 3400; }
       const endIntro = () => { intro = false; spread = 1; tilt = 0; spin.style.setProperty('--spread', '1'); introEl.style.opacity = ''; introEl.style.translate = ''; introEl.style.scale = ''; introEl.style.willChange = ''; next = performance.now() + 3400; onFront(cards[this.front]); };
       // During the load animation the stage gets its own layer, so its fade and rise don't repaint the cards.
@@ -165,6 +173,10 @@ import ProjectOrbit from './ProjectOrbit.astro';
           cards[now].classList.add('is-front');
           captions.forEach((c, i) => c.classList.toggle('is-active', i === now));
           if (!intro) onFront(cards[now]);
+        }
+        if (!intro && !previewAnnounced) {
+          previewAnnounced = true;
+          el.dispatchEvent(new Event('orbit-preview-ready'));
         }
       };
       animateWhileVisible(seen, frame);
@@ -508,6 +520,7 @@ import ProjectOrbit from './ProjectOrbit.astro';
         orbit.phoneRender = await mountOrbitPhones(ob, orbit.phoneState);
         orbit.phoneRender(orbit.phoneState);
       } catch (error) {
+        ob.dispatchEvent(new Event('orbit-model-error'));
         console.warn('The mobile orbit is using its lightweight fallback:', error);
       }
     };

@@ -55,7 +55,7 @@ export async function mountOrbitPhones(root: HTMLElement, initial: OrbitState) {
 
   const scales = phones.map(phone => phone.group.scale.clone());
   let state = initial, width = 0, height = 0, phoneHeight = 0, radius = 0;
-  let visible = false, disposed = false, scrolling = false, moving = false;
+  let visible = false, disposed = false, scrolling = false, moving = false, revealed = false;
   let frame = 0, scrollTimer = 0, qualityTimer = 0, lastPaint = 0, renders = 0, reportedAt = 0, slowFrames = 0, scrollRenders = 0;
   const events = new AbortController(), options = { signal: events.signal };
   const stop = (reason: string) => {
@@ -98,7 +98,24 @@ export async function mountOrbitPhones(root: HTMLElement, initial: OrbitState) {
       phone.group.position.set(Math.sin(radians) * radius, -phoneHeight / 2, Math.cos(radians) * radius);
       phone.group.rotation.y = radians;
     });
-    renderer.render(scene, camera); renders++;
+    try {
+      renderer.render(scene, camera);
+    } catch (error) {
+      disposed = true;
+      root.classList.remove('ob-model-ready');
+      root.dispatchEvent(new Event('orbit-model-error'));
+      stop('fallback');
+      console.warn('The mobile orbit could not draw its project previews:', error);
+      return;
+    }
+    renders++;
+    // Reveal only after a successful frame, never an empty canvas while shaders initialize.
+    if (!revealed) {
+      revealed = true;
+      root.classList.add('ob-model-ready');
+      root.querySelector<HTMLElement>('[data-model-credit]')!.setAttribute('aria-hidden', 'false');
+      root.dispatchEvent(new Event('orbit-model-ready'));
+    }
     if (import.meta.env.DEV && scrolling) root.dataset.modelScrollFrames = String(++scrollRenders);
     const renderState = moving ? 'moving' : 'idle';
     if (root.dataset.modelState !== renderState) {
@@ -171,6 +188,7 @@ export async function mountOrbitPhones(root: HTMLElement, initial: OrbitState) {
   }, { ...options, passive: true });
   canvas.addEventListener('webglcontextlost', event => {
     event.preventDefault(); root.classList.remove('ob-model-ready');
+    root.dispatchEvent(new Event('orbit-model-error'));
     stop('fallback'); disposed = true;
   }, options);
   function release() {
@@ -195,8 +213,6 @@ export async function mountOrbitPhones(root: HTMLElement, initial: OrbitState) {
   root.dataset.modelInstances = String(phones.length);
   root.dataset.modelScreenWidth = '720';
   root.dataset.modelPixelRatio = String(renderer.getPixelRatio());
-  root.classList.add('ob-model-ready');
-  root.querySelector<HTMLElement>('[data-model-credit]')!.hidden = false;
   request();
   return (next: OrbitState) => {
     const changed = next.turn !== state.turn || next.spread !== state.spread || next.tilt !== state.tilt;

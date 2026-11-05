@@ -123,3 +123,44 @@ Codex updated `DeviceFrames.astro`, `ProjectOrbit.astro`, `HomeHero.astro`, `orb
 - Mobile GLB screens use native 720px textures; desktop orbit remains browser cards. Desktop tall hover screenshots are the existing older 640px assets and now load only on pointer entry; they are not newly captured HD assets.
 - Development-only `?scroll-audit=1` samples RAF intervals during native keyboard scrolling and long tasks. It is removed from the production build. Reports: ignored `output/scroll-audit-mobile.json` and `output/scroll-audit-desktop.json`. These are computer-browser measurements, not physical-device GPU FPS, Lighthouse, or network-throttled audits.
 - GitHub Pages run 41915418638 timed out deploying dd42fc7. Run 41917049894 built a5a07b1 successfully but failed deployment with HTTP 400 because the earlier deployment remained in progress. The connected account has no push permission; normal Git push was rejected for Grant-Rivyl. Owner must clear the stuck Pages deployment, commit/push the current source AND generated docs, then rerun Pages. Do not claim these local changes are live.
+
+## Mobile orbit loading states — November 5, 2026
+
+Codex edited `src/components/ProjectOrbit.astro`, `src/components/HomeHero.astro`, and `src/scripts/orbit-phone-scene.ts`; generated `docs/` assets are rebuilt. Preserve these changes and avoid concurrent edits to these files.
+
+- Mobile now starts with a light three-phone skeleton, not the legacy phone artwork. An inline watchdog runs before the phone markup is parsed; if the main module fails to start, the fallback still appears after 3.5 seconds. Without JavaScript, server-rendered legacy phones remain available.
+- States are `data-model-load="loading|fallback|ready"`. Ready fires only after the first successful WebGL frame. Failed model/image/module downloads, rendering errors and lost WebGL contexts restore the fallback. A slow model can finish in the background and replace the fallback once ready.
+- Loading status is announced accessibly; busy state clears on fallback/ready. The opacity-only skeleton pulse respects reduced motion. Attribution space remains reserved using visibility, preventing a layout jump.
+- Fixed the orbit controller's cached mobile breakpoint so switching desktop → mobile updates the 3D pose and caption together. Desktop retains browser cards.
+- Verified the built GitHub export locally with a temporary server: normal loading → six models ready; artificially delayed GLB → fallback then 3D; GLB 404 → fallback; main hero module 404 → watchdog fallback; desktop/mobile viewport switching. The QA server and captures are ignored in `tmp/` and `output/`, not public code.
+- Source check: zero errors/warnings, two existing hints; GitHub build: twelve pages, private quote encryption retained, existing lazy Three.js chunk advisory. No new FPS/Lighthouse claim. Publishing still requires the repository's authorized owner.
+
+## Larger project-page phone preview — November 5, 2026
+
+Codex edited `src/pages/work/[slug].astro` and only the project detail device rules in `src/styles/global.css`. Do not edit these files concurrently. The homepage orbit and project-grid device sizes remain as implemented.
+
+- Mobile project pages choose Phone mode before the preview markup paints, including navigation from the hero. Desktop arrivals keep Desktop mode. The existing toggle stays available with synchronized pressed states.
+- Phone mode now uses normal grid layout and a content-sized canvas, rather than fitting a tiny phone into a wide laptop canvas. The phone fills available space up to 300px on mobile and 360px on desktop; preview image `sizes` now matches. Device switching animates opacity/transform rather than layout dimensions.
+- At 390px, phone width increased from ~98px to 295px. Also checked 320px (~225px), desktop (360px), keyboard toggling, and an actual homepage hero-phone click to `/work/tero/`, which opened Phone mode at 295px. No horizontal overflow in checked sizes.
+- Source check passed with zero errors/warnings and two existing hints. Regenerate GitHub files with `npm run build:github`; publishing remains separate from the local preview. QA screenshot: ignored `output/project-phone-large-mobile.jpg`.
+
+## Actual 3D iPhone on project pages — November 5, 2026
+
+The user's larger case-study Phone view must use the supplied GLB, not just an enlarged CSS mockup. Codex added `src/components/ProjectPhoneModel.astro` and `src/scripts/project-phone-scene.ts`, and updated `[slug].astro` plus the detail rules in `global.css`. Avoid concurrent edits to these files. The large CSS phone now supplies layout dimensions and a failure fallback.
+
+- All six project pages load one actual `iphone-17-pro-max-orbit.glb` instance in Phone mode, with their own 720px screenshot texture and an alternating Silver / Cosmic Orange / Deep Blue finish. Reuses `iphone-model.ts` and `screenTexture`; keeps linked creator/license attribution and discloses adaptation.
+- The canvas is aligned to the large fallback bounds. Drag horizontally, use rotate buttons or arrow keys; Home / Front view resets to the front. Touch vertical intent remains native scrolling. No ambient spin: frames are requested only for interaction, size/mode/visibility changes. Hidden/desktop/offscreen states stop rendering. Display density caps at 2× (1.5× on constrained devices), with mobile materials and a 128px lighting environment.
+- Inline skeleton/watchdog is independent of the lazy renderer. The image fallback appears after 3.5s or an error; successful first paint reveals 3D. Context loss restores the fallback. Controls space is reserved in Phone layout.
+- Verified local hero → `/work/tero/` → Phone mode → model ready with the correct Tero screenshot. Light My Bricks was inspected front/back; native drag and keyboard/button rotation worked. Counter stayed 1 while idle and 200 across ordinary scroll reads; Desktop mode hid the viewer and stopped rendering. Checked 320, 390 and 1280 widths without horizontal overflow. These are lifecycle checks, not physical-device FPS benchmarks.
+- Tested the actual GitHub export through the ignored local QA server: a forced GLB 404 showed the image fallback and cleared busy state; a normal load reached ready with one model and a repository-prefixed asset URL. All six generated project HTML files include the viewer.
+- `npm run check`: zero errors/warnings, two existing hints. `npm run build:github`: twelve pages, existing large lazy-chunk advisory, quote encryption retained. Dev server was restarted after checks/build because stale Vite dependency URLs had caused preview imports to fail. Local preview remains at port 4321. No remote push was made.
+- Proof image: ignored `output/project-actual-3d-proof.jpg` shows the actual exported front and rotated back views.
+
+## Visible orbital loading feedback — November 5, 2026
+
+Codex updated `ProjectOrbit.astro` and added a one-shot readiness event in `HomeHero.astro`. Preserve these files when continuing; do not edit concurrently.
+
+- The existing mobile skeleton now includes visible “Loading projects” text and three small opacity-pulsing dots. It follows the existing 3D/fallback state and disappears on ready/error/timeout.
+- Desktop shows the same subtle label below the ring while its opening animation and front image prepare. `orbit-preview-ready` fires once after the opening; the loader waits for front image decode, with an independent 3.5s safety timeout. Desktop keeps browser cards.
+- Loading status is outside the carousel's `aria-busy` region so its polite announcement is available. Reduced motion disables the dot/skeleton animation. No new assets, fetches, animation library or persistent JS loop.
+- Built-export checks at 390px and 1280px verified loading label → hidden on ready with busy=false. Blocking the main hero module verified mobile fallback also hides the label and clears busy. Screenshot: `output/orbit-subtle-loading-label.jpg`. Source check/build passed with the existing two hints and lazy chunk advisory.
