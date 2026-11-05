@@ -39,7 +39,7 @@ export async function mountOrbitPhones(root: HTMLElement, initial: OrbitState) {
   try {
     // One decoded model, six geometry-sharing instances, one real project per screen.
     phones = await loadIPhoneModels(root.dataset.orbitModel!, true, projects.length);
-    const screens = await Promise.allSettled(projects.map((project, i) => screenTexture(project, true, { width: 512, aspect: phones[i].screenAspect })));
+    const screens = await Promise.allSettled(projects.map((project, i) => screenTexture(project, true, { width: 720, aspect: phones[i].screenAspect })));
     screens.forEach(result => { if (result.status === 'fulfilled') textures.push(result.value); });
     if (screens.some(result => result.status === 'rejected')) throw new Error('A project screen could not load.');
     const colors: PhoneFinish[] = ['silver', 'cosmic-orange', 'deep-blue'];
@@ -193,7 +193,7 @@ export async function mountOrbitPhones(root: HTMLElement, initial: OrbitState) {
   }, options);
   addEventListener('pageshow', request, options);
   root.dataset.modelInstances = String(phones.length);
-  root.dataset.modelScreenWidth = '512';
+  root.dataset.modelScreenWidth = '720';
   root.dataset.modelPixelRatio = String(renderer.getPixelRatio());
   root.classList.add('ob-model-ready');
   root.querySelector<HTMLElement>('[data-model-credit]')!.hidden = false;

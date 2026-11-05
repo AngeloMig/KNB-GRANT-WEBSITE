@@ -11,7 +11,8 @@
     "build": "astro build",
     "build:github": "node scripts/build-github.mjs",
     "preview": "astro preview --host 127.0.0.1",
-    "check": "astro check"
+    "check": "astro check",
+    "prepare:images": "node scripts/prepare-project-images.mjs"
   },
   "dependencies": {
     "@astrojs/sitemap": "^3.7.4",
@@ -28,6 +29,7 @@
     "@gltf-transform/functions": "^4.5.1",
     "@types/three": "^0.187.0",
     "meshoptimizer": "^1.3.0",
+    "sharp": "^0.35.5",
     "typescript": "^5.9.0"
   }
 }

@@ -17,7 +17,7 @@ const hasFull = (slug: string) => fs.existsSync(`public/images/projects/${slug}-
 const step = 360 / projects.length;
 const angle = (i: number) => (i <= projects.length / 2 ? i : i - projects.length) * step;
 ---
-<div class="ob" style={`--card:${card};--r:calc(var(--card) * 1.05)`} data-orbit-model={withBase('/models/iphone-17-pro-max-orbit.glb')} data-orbit-projects={JSON.stringify(projects.map(p => ({ name: p.name, image: withBase(`/images/projects/${p.slug}-mobile-440.webp`), href: withBase(`/work/${p.slug}/`), bg: p.mobileBar.bg, fg: p.mobileBar.fg })))}>
+<div class="ob" style={`--card:${card};--r:calc(var(--card) * 1.05)`} data-orbit-model={withBase('/models/iphone-17-pro-max-orbit.glb')} data-orbit-projects={JSON.stringify(projects.map(p => ({ name: p.name, image: withBase(`/images/projects/${p.slug}-mobile-720.webp`), href: withBase(`/work/${p.slug}/`), bg: p.mobileBar.bg, fg: p.mobileBar.fg })))}>
   <canvas class="ob-model-canvas" aria-hidden="true"></canvas>
   <div class="ob-ring" aria-roledescription="carousel" aria-label="Projects">
     <div class="ob-spin">{projects.map((p, i) => (
@@ -31,9 +31,9 @@ const angle = (i: number) => (i <= projects.length / 2 ? i : i - projects.length
         <span class="ob-edge ob-edge-l" aria-hidden="true"></span><span class="ob-edge ob-edge-r" aria-hidden="true"></span>
         <span class="ob-back" aria-hidden="true"><span class="ob-cam"><i></i><i></i><i></i><i></i><b></b></span></span>
         {/* The light first-screen shot loads with the page; the tall full-page shot is swapped in later,
-            when the card comes to the front (HomeHero.astro), so it never slows the first load.
+            on desktop hover (HomeHero.astro), so it never slows the first load.
             On phones the card is a phone showing the site's mobile screenshot instead. */}
-        <span class="ob-shot"><picture><source media="(max-width: 640px)" srcset={`${withBase(`/images/projects/${p.slug}-mobile-220.webp`)} 220w, ${withBase(`/images/projects/${p.slug}-mobile-330.webp`)} 330w, ${withBase(`/images/projects/${p.slug}-mobile-440.webp`)} 440w`} sizes="50vw" width="440" height="956" /><img src={withBase(`/images/projects/${p.slug}-640.webp`)} data-full={hasFull(p.slug) ? withBase(`/images/projects/${p.slug}-full.webp`) : undefined} alt={`${p.name} homepage`} width="640" height="360" loading={i < 2 ? 'eager' : 'lazy'} fetchpriority={i === 0 ? 'high' : undefined} decoding="async" draggable="false" /></picture></span>
+        <span class="ob-shot"><picture><source media="(max-width: 640px)" srcset={`${withBase(`/images/projects/${p.slug}-mobile-220.webp`)} 220w, ${withBase(`/images/projects/${p.slug}-mobile-330.webp`)} 330w, ${withBase(`/images/projects/${p.slug}-mobile-440.webp`)} 440w, ${withBase(`/images/projects/${p.slug}-mobile-720.webp`)} 720w`} sizes="50vw" width="440" height="956" /><img src={withBase(`/images/projects/${p.slug}-640.webp`)} srcset={`${withBase(`/images/projects/${p.slug}-640.webp`)} 640w, ${withBase(`/images/projects/${p.slug}-960.webp`)} 960w, ${withBase(`/images/projects/${p.slug}-1440.webp`)} 1440w, ${withBase(`/images/projects/${p.slug}-1920.webp`)} 1920w`} sizes="(max-width: 640px) 50vw, 36vw" data-full={hasFull(p.slug) ? withBase(`/images/projects/${p.slug}-full.webp`) : undefined} alt={`${p.name} homepage`} width="640" height="360" loading={i < 2 ? 'eager' : 'lazy'} fetchpriority={i === 0 ? 'high' : undefined} decoding="async" draggable="false" /></picture></span>
       </a>
     ))}{projects.map((p, i) => (
       // Each card's reflection on the floor: it sits on the same spot of the ring, so it turns with it.

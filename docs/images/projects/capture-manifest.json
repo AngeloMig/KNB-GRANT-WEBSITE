@@ -1,0 +1,404 @@
+{
+  "captured": "2026-11-05",
+  "method": "Native browser captures, no enlargement",
+  "desktop": "1920 pixels wide; 1072–1080 pixels high",
+  "mobile": "720 × 1564",
+  "files": [
+    {
+      "file": "tero-320.webp",
+      "width": 320,
+      "height": 180,
+      "bytes": 4252
+    },
+    {
+      "file": "tero-480.webp",
+      "width": 480,
+      "height": 270,
+      "bytes": 7362
+    },
+    {
+      "file": "tero-640.webp",
+      "width": 640,
+      "height": 360,
+      "bytes": 10626
+    },
+    {
+      "file": "tero-960.webp",
+      "width": 960,
+      "height": 540,
+      "bytes": 23964
+    },
+    {
+      "file": "tero.webp",
+      "width": 1275,
+      "height": 717,
+      "bytes": 33826
+    },
+    {
+      "file": "tero-1440.webp",
+      "width": 1440,
+      "height": 810,
+      "bytes": 41562
+    },
+    {
+      "file": "tero-1920.webp",
+      "width": 1920,
+      "height": 1080,
+      "bytes": 61516
+    },
+    {
+      "file": "tero-mobile-220.webp",
+      "width": 220,
+      "height": 478,
+      "bytes": 5162
+    },
+    {
+      "file": "tero-mobile-330.webp",
+      "width": 330,
+      "height": 717,
+      "bytes": 9102
+    },
+    {
+      "file": "tero-mobile-440.webp",
+      "width": 440,
+      "height": 956,
+      "bytes": 12842
+    },
+    {
+      "file": "tero-mobile-720.webp",
+      "width": 720,
+      "height": 1564,
+      "bytes": 35116
+    },
+    {
+      "file": "road-armor-320.webp",
+      "width": 320,
+      "height": 180,
+      "bytes": 8450
+    },
+    {
+      "file": "road-armor-480.webp",
+      "width": 480,
+      "height": 270,
+      "bytes": 15572
+    },
+    {
+      "file": "road-armor-640.webp",
+      "width": 640,
+      "height": 360,
+      "bytes": 23694
+    },
+    {
+      "file": "road-armor-960.webp",
+      "width": 960,
+      "height": 540,
+      "bytes": 53236
+    },
+    {
+      "file": "road-armor.webp",
+      "width": 1275,
+      "height": 717,
+      "bytes": 75504
+    },
+    {
+      "file": "road-armor-1440.webp",
+      "width": 1440,
+      "height": 810,
+      "bytes": 89500
+    },
+    {
+      "file": "road-armor-1920.webp",
+      "width": 1920,
+      "height": 1080,
+      "bytes": 133250
+    },
+    {
+      "file": "road-armor-mobile-220.webp",
+      "width": 220,
+      "height": 478,
+      "bytes": 8262
+    },
+    {
+      "file": "road-armor-mobile-330.webp",
+      "width": 330,
+      "height": 717,
+      "bytes": 14970
+    },
+    {
+      "file": "road-armor-mobile-440.webp",
+      "width": 440,
+      "height": 956,
+      "bytes": 20914
+    },
+    {
+      "file": "road-armor-mobile-720.webp",
+      "width": 720,
+      "height": 1564,
+      "bytes": 53218
+    },
+    {
+      "file": "omenz-320.webp",
+      "width": 320,
+      "height": 180,
+      "bytes": 11636
+    },
+    {
+      "file": "omenz-480.webp",
+      "width": 480,
+      "height": 270,
+      "bytes": 23600
+    },
+    {
+      "file": "omenz-640.webp",
+      "width": 640,
+      "height": 360,
+      "bytes": 36862
+    },
+    {
+      "file": "omenz-960.webp",
+      "width": 960,
+      "height": 540,
+      "bytes": 86966
+    },
+    {
+      "file": "omenz.webp",
+      "width": 1275,
+      "height": 717,
+      "bytes": 126018
+    },
+    {
+      "file": "omenz-1440.webp",
+      "width": 1440,
+      "height": 810,
+      "bytes": 150020
+    },
+    {
+      "file": "omenz-1920.webp",
+      "width": 1920,
+      "height": 1080,
+      "bytes": 207384
+    },
+    {
+      "file": "omenz-mobile-220.webp",
+      "width": 220,
+      "height": 478,
+      "bytes": 21606
+    },
+    {
+      "file": "omenz-mobile-330.webp",
+      "width": 330,
+      "height": 717,
+      "bytes": 41238
+    },
+    {
+      "file": "omenz-mobile-440.webp",
+      "width": 440,
+      "height": 956,
+      "bytes": 63854
+    },
+    {
+      "file": "omenz-mobile-720.webp",
+      "width": 720,
+      "height": 1564,
+      "bytes": 157500
+    },
+    {
+      "file": "coptrz-320.webp",
+      "width": 320,
+      "height": 180,
+      "bytes": 10688
+    },
+    {
+      "file": "coptrz-480.webp",
+      "width": 480,
+      "height": 270,
+      "bytes": 19214
+    },
+    {
+      "file": "coptrz-640.webp",
+      "width": 640,
+      "height": 360,
+      "bytes": 28510
+    },
+    {
+      "file": "coptrz-960.webp",
+      "width": 960,
+      "height": 540,
+      "bytes": 59456
+    },
+    {
+      "file": "coptrz.webp",
+      "width": 1275,
+      "height": 717,
+      "bytes": 81460
+    },
+    {
+      "file": "coptrz-1440.webp",
+      "width": 1440,
+      "height": 810,
+      "bytes": 94352
+    },
+    {
+      "file": "coptrz-1920.webp",
+      "width": 1920,
+      "height": 1080,
+      "bytes": 136610
+    },
+    {
+      "file": "coptrz-mobile-220.webp",
+      "width": 220,
+      "height": 478,
+      "bytes": 13082
+    },
+    {
+      "file": "coptrz-mobile-330.webp",
+      "width": 330,
+      "height": 717,
+      "bytes": 21620
+    },
+    {
+      "file": "coptrz-mobile-440.webp",
+      "width": 440,
+      "height": 956,
+      "bytes": 30260
+    },
+    {
+      "file": "coptrz-mobile-720.webp",
+      "width": 720,
+      "height": 1564,
+      "bytes": 69280
+    },
+    {
+      "file": "skinistry-320.webp",
+      "width": 320,
+      "height": 180,
+      "bytes": 12248
+    },
+    {
+      "file": "skinistry-480.webp",
+      "width": 480,
+      "height": 270,
+      "bytes": 22132
+    },
+    {
+      "file": "skinistry-640.webp",
+      "width": 640,
+      "height": 360,
+      "bytes": 32944
+    },
+    {
+      "file": "skinistry-960.webp",
+      "width": 960,
+      "height": 540,
+      "bytes": 69490
+    },
+    {
+      "file": "skinistry.webp",
+      "width": 1275,
+      "height": 717,
+      "bytes": 95844
+    },
+    {
+      "file": "skinistry-1440.webp",
+      "width": 1440,
+      "height": 810,
+      "bytes": 114274
+    },
+    {
+      "file": "skinistry-1920.webp",
+      "width": 1920,
+      "height": 1080,
+      "bytes": 161882
+    },
+    {
+      "file": "skinistry-mobile-220.webp",
+      "width": 220,
+      "height": 478,
+      "bytes": 20156
+    },
+    {
+      "file": "skinistry-mobile-330.webp",
+      "width": 330,
+      "height": 717,
+      "bytes": 34612
+    },
+    {
+      "file": "skinistry-mobile-440.webp",
+      "width": 440,
+      "height": 956,
+      "bytes": 49794
+    },
+    {
+      "file": "skinistry-mobile-720.webp",
+      "width": 720,
+      "height": 1564,
+      "bytes": 114110
+    },
+    {
+      "file": "light-my-bricks-320.webp",
+      "width": 320,
+      "height": 179,
+      "bytes": 9612
+    },
+    {
+      "file": "light-my-bricks-480.webp",
+      "width": 480,
+      "height": 268,
+      "bytes": 17916
+    },
+    {
+      "file": "light-my-bricks-640.webp",
+      "width": 640,
+      "height": 357,
+      "bytes": 27180
+    },
+    {
+      "file": "light-my-bricks-960.webp",
+      "width": 960,
+      "height": 536,
+      "bytes": 61684
+    },
+    {
+      "file": "light-my-bricks.webp",
+      "width": 1275,
+      "height": 712,
+      "bytes": 89382
+    },
+    {
+      "file": "light-my-bricks-1440.webp",
+      "width": 1440,
+      "height": 804,
+      "bytes": 105262
+    },
+    {
+      "file": "light-my-bricks-1920.webp",
+      "width": 1920,
+      "height": 1072,
+      "bytes": 145024
+    },
+    {
+      "file": "light-my-bricks-mobile-220.webp",
+      "width": 220,
+      "height": 478,
+      "bytes": 18484
+    },
+    {
+      "file": "light-my-bricks-mobile-330.webp",
+      "width": 330,
+      "height": 717,
+      "bytes": 35802
+    },
+    {
+      "file": "light-my-bricks-mobile-440.webp",
+      "width": 440,
+      "height": 956,
+      "bytes": 53780
+    },
+    {
+      "file": "light-my-bricks-mobile-720.webp",
+      "width": 720,
+      "height": 1564,
+      "bytes": 127004
+    }
+  ]
+}

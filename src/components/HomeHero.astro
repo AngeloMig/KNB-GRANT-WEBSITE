@@ -441,7 +441,7 @@ import ProjectOrbit from './ProjectOrbit.astro';
       const base = Number(stageEl.style.opacity || 1);
       return [...obCards.map((c) => ({ r: c.getBoundingClientRect(), a: base * Number(c.style.opacity || 1) })), { r: obFoot.getBoundingClientRect(), a: base }];
     };
-    // Swap in a card's tall full-page screenshot once it's at the front (decoded first, so no flash).
+    // Decode the existing tall screenshot on desktop hover, avoiding an automatic low-resolution swap.
     const loadFull = (card: HTMLElement) => {
       const img = card.querySelector<HTMLImageElement>('img[data-full]');
       // Phones show the mobile screenshot, which doesn't scroll, so the tall desktop one isn't needed.
@@ -449,7 +449,7 @@ import ProjectOrbit from './ProjectOrbit.astro';
       img.dataset.loaded = 'true';
       const full = new Image();
       full.src = img.dataset.full!;
-      full.decode().then(() => { img.src = full.src; img.height = 1807; }).catch(() => {});
+      full.decode().then(() => { img.removeAttribute('srcset'); img.src = full.src; img.height = 1807; }).catch(() => {});
     };
     // ── Opening a project from the orbit: the front card grows into the project page, with the browser's
     // page transition (as the project grid's cards do). For the trip the card borrows the transition name
@@ -474,6 +474,8 @@ import ProjectOrbit from './ProjectOrbit.astro';
     } catch {}
     const giveBack = (c: HTMLElement) => setTimeout(() => { borrow(c, false); if (lent === c) lent = null; }, 1500);
     if (start >= 0) { lent = obCards[start]; borrow(lent, true); giveBack(lent); }
+    // Keep sharp first-screen images until the visitor asks to scroll a preview.
+    obCards.forEach(c => c.addEventListener('pointerenter', () => loadFull(c), { once: true }));
     obCards.forEach((c) => c.addEventListener('click', (e) => {
       if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || !c.classList.contains('is-front')) return;
       if (lent) borrow(lent, false);
@@ -486,7 +488,6 @@ import ProjectOrbit from './ProjectOrbit.astro';
 
     const orbit = new Orbit(ob, (card) => {
       hue = card.dataset.hue!;
-      loadFull(card);
       // Subtle: the name, the menu button and "Let's talk" take a deep shade of the project's colour,
       // and the header and hero a faint wash of it.
       name.tint(0.33, 0.07, Number(hue));

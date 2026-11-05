@@ -119,6 +119,11 @@ const person = { '@context': 'https://schema.org', '@type': 'Person', name: prof
   </body>
 </html>
 <script>
+  if (import.meta.env.DEV && new URLSearchParams(location.search).has('scroll-audit')) {
+    import('../scripts/scroll-audit').then(({ mountScrollAudit }) => mountScrollAudit());
+  }
+</script>
+<script>
   import { captureSource } from '../scripts/lead-source';
   const root = document.documentElement;
   root.dataset.motionReady = 'true';
