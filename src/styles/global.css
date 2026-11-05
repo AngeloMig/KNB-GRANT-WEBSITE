@@ -7060,18 +7060,27 @@ html:active-view-transition-type(grow)::view-transition-new(root) {
   .video-dots {
     display: flex;
     justify-content: center;
-    gap: 8px;
-    margin-top: 18px;
+    margin-top: 10px;
   }
+  /* Each button is a 24px tap area (big enough to hit), with the small dot drawn in its middle. */
   .video-dots button {
+    display: grid;
+    place-items: center;
+    min-width: 24px;
+    height: 24px;
+    padding: 0 4px;
+    border: 0;
+    background: none;
+  }
+  .video-dots button::before {
+    content: "";
     width: 8px;
     height: 8px;
-    padding: 0;
     border-radius: 999px;
     background: var(--line);
     transition: width 0.3s var(--ease), background 0.3s;
   }
-  .video-dots button[aria-current="true"] {
+  .video-dots button[aria-current="true"]::before {
     width: 24px;
     background: var(--ink);
   }

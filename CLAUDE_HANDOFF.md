@@ -2,6 +2,12 @@
 
 ## Current state
 
+### Accessibility and Best Practices at 100 (November 5, 2026, Claude)
+
+- **Image aspect ratio:** the Light My Bricks desktop screenshots were about 0.7% short of 16:9 (e.g. 480×268, declared 480×270). They were re-cut to exact 16:9 from the 1920 version, top-anchored (1920×1080, 1440×810, 1275×717, 960×540, 640×360, 480×270, 320×180). Any re-capture must keep exact 16:9 sizes, or Lighthouse fails "Displays images with incorrect aspect ratio".
+- **Touch targets:** the review carousel's dots (`.video-dots button`) are 24px tap areas with the 8px dot drawn by `::before`.
+- Local Lighthouse: Accessibility 100 and Best Practices 100, mobile and desktop, on the homepage, About, Contact, Estimate, Tero and Light My Bricks.
+
 ### Mobile performance pass — 3D phones load after interaction (November 5, 2026, Claude)
 
 PageSpeed mobile on the live homepage was 60 (TBT 5,760 ms, Speed Index 14.3 s; desktop 79 with CLS 0.185). Changes, keeping the approved scope (the GLB phones still replace the CSS phones up to 640px):
