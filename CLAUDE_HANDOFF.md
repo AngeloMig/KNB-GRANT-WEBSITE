@@ -164,3 +164,9 @@ Codex updated `ProjectOrbit.astro` and added a one-shot readiness event in `Home
 - Desktop shows the same subtle label below the ring while its opening animation and front image prepare. `orbit-preview-ready` fires once after the opening; the loader waits for front image decode, with an independent 3.5s safety timeout. Desktop keeps browser cards.
 - Loading status is outside the carousel's `aria-busy` region so its polite announcement is available. Reduced motion disables the dot/skeleton animation. No new assets, fetches, animation library or persistent JS loop.
 - Built-export checks at 390px and 1280px verified loading label → hidden on ready with busy=false. Blocking the main hero module verified mobile fallback also hides the label and clears busy. Screenshot: `output/orbit-subtle-loading-label.jpg`. Source check/build passed with the existing two hints and lazy chunk advisory.
+
+## PageSpeed findings — November 5, 2026
+
+User requested a desktop/mobile check. Official Google PageSpeed report: https://pagespeed.web.dev/analysis/https-angelomig-github-io-KNB-GRANT-WEBSITE/7e116rncjz. Published homepage scored desktop 91 / mobile 49 performance; SEO 100 both. Mobile TBT was 16.83s, LCP 3.8s; published desktop CLS was 0.18. No CrUX data. Public HTML still lacks the latest loading label.
+
+Current production export was separately audited via local static gzip hosting with Lighthouse 13.5 / Chrome 156: desktop 59, mobile 28, project mobile 62 performance; all SEO 100. These are different environments/versions and cannot establish a source regression percentage. See docs/VERIFICATION.md and ignored output/pagespeed-summary-2026-11-05.json plus HTML/JSON/trace reports. Startup CPU work is the next priority; preserve the approved orbital hero, native model geometry/screens and mobile quality. This audit did not change frontend code. Do not confuse the earlier warm RAF scrolling measurements with cold-load PageSpeed.

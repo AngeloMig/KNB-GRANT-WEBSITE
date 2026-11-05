@@ -167,3 +167,29 @@ Verified captures: `output/orbit-loading-placeholder-verified.jpg`, `output/orbi
 - At 390px in the built export, an intentionally delayed model showed the label/skeleton with carousel busy=true. Normal loading reached ready with label hidden and busy=false. A blocked hero module reached fallback and also hid the label and cleared busy.
 - At 1280px, observed desktop preview loading with label displayed and model canvas hidden, then preview ready with label hidden and busy=false after its opening/image readiness signal.
 - Source checks: zero errors/warnings, two existing hints. GitHub build: twelve pages, existing lazy-chunk advisory, private quote encryption retained. No new FPS or Lighthouse benchmark for this small feedback change. Screenshot: `output/orbit-subtle-loading-label.jpg`.
+
+## Desktop/mobile PageSpeed audit — November 5, 2026
+
+Official Google report: https://pagespeed.web.dev/analysis/https-angelomig-github-io-KNB-GRANT-WEBSITE/7e116rncjz
+
+| Published homepage (Google Lighthouse 13.6) | Performance | Accessibility | Best practices | SEO |
+| --- | ---: | ---: | ---: | ---: |
+| Desktop | 91 | 100 | 96 | 100 |
+| Mobile | 49 | 96 | 96 | 100 |
+
+- Mobile: FCP 1.1s, LCP 3.8s, TBT 16,830ms, CLS 0, Speed Index 23.8s. Emulated Moto G Power / slow 4G. Desktop: FCP/LCP 0.4s, TBT 0ms, CLS 0.18, Speed Index 1.2s. No real-user data available. These are single lab runs.
+- Direct PageSpeed API requests returned HTTP 429 shared quota errors; the official PageSpeed website completed both analyses. Saved rendered report text and screenshots in ignored output files.
+- Live HTML contains the 720px screens but not the new orbital loading label, so it is behind the current production export.
+
+| Latest production export (local Lighthouse 13.5 / Chrome 156) | Performance | Accessibility | Best practices | SEO |
+| --- | ---: | ---: | ---: | ---: |
+| Homepage desktop | 59 | 100 | 96 | 100 |
+| Homepage mobile | 28 | 96 | 96 | 100 |
+| Light My Bricks project mobile | 62 | 100 | 100 | 100 |
+
+- Latest homepage desktop: LCP 1.1s, TBT 1,990ms, CLS 0. Latest homepage mobile: LCP 16.1s, TBT 14,410ms, CLS 0. Project mobile: LCP 3.4s, TBT 1,860ms, CLS 0.
+- Local runs used the built static GitHub export, gzip for text assets, 10-minute caching, Lighthouse default simulated throttling (desktop and mobile presets), clean Chrome profiles and serial runs. They did not audit the Astro development server. Different browsers/hardware, versioned source and local/CDN/network behavior prevent a direct numerical comparison to Google. No performance regression percentage is inferred.
+- Primary finding: mobile startup main-thread blocking is substantial. Local diagnostics attribute work to page startup callbacks, orbital WebGL initialization and dotted-title animation. This is separate from the earlier warm scroll frame-pacing checks; those checks did not measure cold loading.
+- Other findings: published desktop CLS 0.18; mobile touch targets; a menu preview image declares 480×270 while the refreshed Light My Bricks image is 480×268. Both published form factors retain SEO 100.
+- Recommended optimization order: profile and reduce/chunk actual canvas/WebGL initialization while retaining the approved 3D orbit; prepare only visible decorative content; address desktop layout shift, touch targets and the incorrect image dimensions. Re-audit the exact deployed revision afterward.
+- Reports: ignored output/pagespeed-summary-2026-11-05.json, pagespeed-latest-desktop-2026-11-05.report.html, pagespeed-latest-mobile-2026-11-05.report.html and pagespeed-project-mobile-2026-11-05.report.html. Project trace/devtools data were saved for follow-up profiling. No frontend code changed during this measurement pass.

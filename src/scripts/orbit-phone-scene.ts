@@ -117,6 +117,10 @@ export async function mountOrbitPhones(root: HTMLElement, initial: OrbitState) {
       root.dispatchEvent(new Event('orbit-model-ready'));
     }
     if (import.meta.env.DEV && scrolling) root.dataset.modelScrollFrames = String(++scrollRenders);
+    if (import.meta.env.DEV) {
+      const center = phones[front].group.getWorldPosition(new THREE.Vector3()).project(camera);
+      root.dataset.modelFrontCenter = JSON.stringify({ x: +((center.x + 1) * width / 2).toFixed(2), expected: width / 2, turn: +state.turn.toFixed(3) });
+    }
     const renderState = moving ? 'moving' : 'idle';
     if (root.dataset.modelState !== renderState) {
       root.dataset.modelState = renderState;
