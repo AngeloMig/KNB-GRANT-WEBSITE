@@ -36,13 +36,12 @@ const angle = (i: number) => (i <= projects.length / 2 ? i : i - projects.length
           if (credit) credit.setAttribute('aria-hidden', 'true');
         }
       };
+      // The phone cards stay on screen while the 3D model loads in the background (HomeHero.astro
+      // starts it after the page has opened), and it fades in over them once it's ready.
       const begin = () => {
         if (!mobile.matches || attempted) return;
         attempted = true;
-        root.dataset.modelLoad = 'loading';
-        root.querySelector('.ob-ring')?.setAttribute('aria-busy', 'true');
-        // Keep the portfolio usable on slow connections; 3D can finish in the background.
-        timeout = setTimeout(() => settle('fallback'), 3500);
+        root.dataset.modelLoad = 'pending';
       };
       root.addEventListener('orbit-model-ready', () => settle('ready'));
       root.addEventListener('orbit-model-error', () => settle('fallback'));
@@ -166,8 +165,9 @@ const angle = (i: number) => (i <= projects.length / 2 ? i : i - projects.length
     .ob-skeleton-center{animation:ob-loading-pulse 1.8s ease-in-out infinite alternate}
     @keyframes ob-loading-pulse{to{opacity:.28}}
     .ob-model-canvas{position:absolute;left:0;right:0;top:calc(-1 * var(--model-padding,0px));width:100%;height:var(--model-height,0px);pointer-events:none;z-index:2;opacity:0}
-    .ob:global(.ob-model-ready) .ob-model-canvas{display:block;opacity:1}
-    .ob:global(.ob-model-ready) .ob-card{opacity:0!important}
+    .ob:global(.ob-model-ready) .ob-model-canvas{display:block;opacity:1;transition:opacity .6s}
+    @starting-style { .ob:global(.ob-model-ready) .ob-model-canvas{opacity:0} }
+    .ob:global(.ob-model-ready) .ob-card{opacity:0!important;transition:opacity .6s}
     .ob-model-credit{display:block;visibility:hidden;text-align:center;font-size:9px;line-height:1.5;color:var(--muted);margin:14px 24px 0}
     .ob:global(.ob-model-ready) .ob-model-credit{visibility:visible}
     .ob-ring { height: calc(var(--card) * 2.26); }

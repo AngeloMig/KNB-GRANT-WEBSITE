@@ -2,6 +2,17 @@
 
 ## Current state
 
+### Mobile performance pass — 3D phones load after interaction (November 5, 2026, Claude)
+
+PageSpeed mobile on the live homepage was 60 (TBT 5,760 ms, Speed Index 14.3 s; desktop 79 with CLS 0.185). Changes, keeping the approved scope (the GLB phones still replace the CSS phones up to 640px):
+
+- **When the 3D phones load:** `HomeHero.astro` no longer starts `orbit-phone-scene` when the orbit enters the viewport. It starts after the first `pointerdown` / `touchstart` / `keydown` / `scroll`, once scrolling has paused for 350 ms, and only while the orbit is near the screen. The WebGL set-up (shader compilation, PMREM lighting, six screen uploads) is one ~2.8 s native long task at 4× CPU, so it must not run during page load.
+- **No loading state:** `ProjectOrbit.astro`'s inline watchdog now sets `data-model-load="pending"` instead of `"loading"`, so the CSS phone cards stay visible (no skeletons) until `ob-model-ready`; the canvas then fades in over them (`@starting-style`) while the cards fade out.
+- **`dot-title.ts`:** the flying layer covers only the area the dots travel through, within the viewport. It was a full-window canvas, which became page-sized when Lighthouse enlarged the window for its full-page screenshot (≈10 s of "Other" main-thread time). Section titles (SERVICES) are prepared only when near the screen.
+- **LCP / CLS:** the orbit intro now fades the stage from 1% opacity (not 0), so the front card counts as painted on the first frame. The hero name fallback (`.home-hero-fallback`) is absolutely positioned over the canvas: on phones it wrapped to two lines and its removal shifted the orbit.
+- Local Lighthouse (compressed static server, simulated mobile) measured 82–94 before the Mac became thermally throttled; desktop 90 with CLS 0. A live PageSpeed run after the owner pushes is the real confirmation.
+
+
 ### Approved hero scope — mobile orbital models (November 5, 2026)
 
 Scroll clipping follow-up: preserve the orbital layout. The mobile WebGL canvas now has symmetric overscan padding (0.6× card width above/below) and an expanded camera frustum that keeps model positions aligned with the original CSS phones. Do not constrain the canvas to the ring's height: tilted phones extend above it. While the hero is visible, scrolling renders the updated orbit on demand, capped at 30 fps; the previous freeze-until-scroll-stops caused a visible jump. Offscreen/hidden rendering still stops. Hero orbit/name/track RAF loops also suspend offscreen, and project parallax measures only intersecting items before applying writes. `DEV`-only projected bounds and scroll-frame counters support checking this regression without shipping that measurement work.

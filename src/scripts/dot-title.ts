@@ -51,7 +51,7 @@ class DotTitle {
   // Built: the title has flown in at least once (until then, it waits to come into view).
   built = false; ready = false; pending = false;
   // While the dots fly in they're drawn on a full-screen layer, since they start outside the heading.
-  fly: HTMLCanvasElement | null = null; flyCtx: CanvasRenderingContext2D | null = null; flyAt = 0; ox = 0; oy = 0;
+  fly: HTMLCanvasElement | null = null; flyCtx: CanvasRenderingContext2D | null = null; flyAt = 0; ox = 0; oy = 0; fx = 0; fy = 0; fw = 0; fh = 0;
   accent: string;
   ink = getComputedStyle(document.documentElement).getPropertyValue('--ink').trim() || '#161616';
   constructor(public el: HTMLElement, public from: From | null) {
@@ -75,9 +75,15 @@ class DotTitle {
       if (!this.el.closest(`#${id}`)) return;
       this.from = takeFrom();
       this.built = false;
-      this.startFly();
+      if (this.ready) this.startFly(); else { this.pending = true; void this.build(); }
     });
-    this.build();
+    // A page title is prepared at once; a section title only once it's getting near the screen, so a
+    // page doesn't do that work at load for titles far below.
+    if (now) void this.build();
+    else {
+      const near = new IntersectionObserver(([e]) => { if (e.isIntersecting) { near.disconnect(); void this.build(); } }, { rootMargin: '600px 0px' });
+      near.observe(el);
+    }
     let width = innerWidth, timer = 0;
     addEventListener('resize', () => { clearTimeout(timer); timer = window.setTimeout(() => { if (Math.abs(innerWidth - width) > 40) { width = innerWidth; this.build(); } }, 250); });
     const loop = () => { if (this.flyAt) this.stepFly(); else if (this.on && this.awake) this.step(); requestAnimationFrame(loop); };
@@ -147,15 +153,25 @@ class DotTitle {
     }
     this.from = null;
     this.ctx.clearRect(0, 0, this.W, this.H);
+    // The flying layer covers only the area the dots travel through (the start points and the title),
+    // within the screen: never a page-sized canvas (a browser can make the window as tall as the whole
+    // page, e.g. for a full-page screenshot), which would be very slow to clear every frame.
+    const x0 = Math.max(0, Math.floor(Math.min(r.left, ...this.dots.map((d) => d.sx)) - 8));
+    const y0 = Math.max(0, Math.floor(Math.min(r.top, ...this.dots.map((d) => d.sy)) - 8));
+    const x1 = Math.min(vw, Math.ceil(Math.max(r.right, ...this.dots.map((d) => d.sx)) + 8));
+    const y1 = Math.min(vh, Math.ceil(Math.max(r.bottom, ...this.dots.map((d) => d.sy)) + 8));
+    if (x1 - x0 < 4 || y1 - y0 < 4 || vh > 3 * (screen.height || vh)) { this.built = true; this.draw(); return; }
     const fly = document.createElement('canvas');
     fly.className = 'dot-title-fly';
     fly.setAttribute('aria-hidden', 'true');
+    fly.style.cssText = `left:${x0}px;top:${y0}px;width:${x1 - x0}px;height:${y1 - y0}px`;
     // At the screen's own sharpness (capped at 2×), so the dots stay crisp on phones.
     const dpr = Math.min(2, devicePixelRatio || 1);
-    fly.width = vw * dpr; fly.height = vh * dpr;
+    fly.width = Math.ceil((x1 - x0) * dpr); fly.height = Math.ceil((y1 - y0) * dpr);
     document.body.append(fly);
     this.fly = fly; this.flyCtx = fly.getContext('2d')!;
-    this.flyCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    this.flyCtx.setTransform(dpr, 0, 0, dpr, -x0 * dpr, -y0 * dpr);
+    this.fx = x0; this.fy = y0; this.fw = x1 - x0; this.fh = y1 - y0;
     this.ox = r.left; this.oy = r.top + scrollY;
     this.flyAt = performance.now();
   }
@@ -163,7 +179,7 @@ class DotTitle {
   stepFly() {
     const T = performance.now() - this.flyAt, f = this.flyCtx!;
     const left = this.ox, top = this.oy - scrollY, full = this.gap * 0.66, rad = this.gap * 0.36;
-    f.clearRect(0, 0, innerWidth, innerHeight);
+    f.clearRect(this.fx, this.fy, this.fw, this.fh);
     const flying = new Path2D(), arrived = new Path2D();
     let done = true, any = false;
     for (const d of this.dots) {

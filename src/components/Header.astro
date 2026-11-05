@@ -84,7 +84,8 @@ const cta = path === withBase('/estimate/') || path === withBase('/contact/') ? 
       toggle.style.transform = closeButton.style.transform = `translate3d(${x.toFixed(1)}px, ${y.toFixed(1)}px, 0)`;
     };
     const queuePlace = () => { if (!queued) { queued = true; requestAnimationFrame(placeButton); } };
-    measure();
+    // Measured in the first frame, not while the page is still being set up (that would force a layout).
+    requestAnimationFrame(() => { measure(); placeButton(); });
     window.addEventListener('scroll', queuePlace, { passive: true });
     window.addEventListener('resize', () => { measure(); queuePlace(); });
     placeButton();

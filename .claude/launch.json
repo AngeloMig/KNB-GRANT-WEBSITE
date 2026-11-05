@@ -4,14 +4,56 @@
     {
       "name": "docs-preview",
       "runtimeExecutable": "python3",
-      "runtimeArgs": ["-m", "http.server", "4322", "--bind", "127.0.0.1", "--directory", "/private/tmp/claude-501/-Users-angelomiguel-GitHub-KNB-GRANT-WEBSITE/cc572a38-0a82-4433-bc9d-1b365033a276/scratchpad/site"],
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "4322",
+        "--bind",
+        "127.0.0.1",
+        "--directory",
+        "/private/tmp/claude-501/-Users-angelomiguel-GitHub-KNB-GRANT-WEBSITE/cc572a38-0a82-4433-bc9d-1b365033a276/scratchpad/site"
+      ],
       "port": 4322
     },
     {
       "name": "astro-dev",
       "runtimeExecutable": "/Users/angelomiguel/.nvm/versions/node/v22.23.3/bin/node",
-      "runtimeArgs": ["node_modules/astro/bin/astro.mjs", "dev", "--host", "127.0.0.1", "--port", "4321"],
+      "runtimeArgs": [
+        "node_modules/astro/bin/astro.mjs",
+        "dev",
+        "--host",
+        "127.0.0.1",
+        "--port",
+        "4321"
+      ],
       "port": 4321
+    },
+    {
+      "name": "docs-local",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "4330",
+        "--bind",
+        "127.0.0.1",
+        "--directory",
+        "/private/tmp/claude-501/-Users-angelomiguel-GitHub-KNB-GRANT-WEBSITE/7d39a6a6-ecbd-4821-836f-9eeb8bb29c70/scratchpad/site"
+      ],
+      "port": 4330
+    },
+    {
+      "name": "docs-gzip",
+      "runtimeExecutable": "/Users/angelomiguel/.nvm/versions/node/v22.23.3/bin/npx",
+      "runtimeArgs": [
+        "--yes",
+        "serve@14",
+        "--symlinks",
+        "-l",
+        "tcp://127.0.0.1:4331",
+        "/private/tmp/claude-501/-Users-angelomiguel-GitHub-KNB-GRANT-WEBSITE/7d39a6a6-ecbd-4821-836f-9eeb8bb29c70/scratchpad/site"
+      ],
+      "port": 4331
     }
   ]
 }

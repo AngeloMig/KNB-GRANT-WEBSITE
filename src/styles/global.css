@@ -495,12 +495,10 @@ html.menu-closing,
   display: none;
 }
 /* While the dots fly in they're drawn on a full-screen layer, above the page. */
+/* (Its position and size are set by the script: just the area the dots fly through.) */
 .dot-title-fly {
   position: fixed;
-  inset: 0;
   z-index: 30;
-  width: 100vw;
-  height: 100vh;
   pointer-events: none;
 }
 .section-detail {
