@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { loadIPhoneModels, type PhoneFinish } from './iphone-model';
+import { depthScale } from './orbit-depth';
 import { screenTexture } from './phone-scene';
 
 interface OrbitState { turn: number; spread: number; tilt: number }
@@ -54,7 +55,7 @@ export async function mountOrbitPhones(root: HTMLElement, initial: OrbitState) {
   }
 
   const scales = phones.map(phone => phone.group.scale.clone());
-  let state = initial, width = 0, height = 0, phoneHeight = 0, radius = 0;
+  let state = initial, width = 0, height = 0, phoneHeight = 0, radius = 0, unit = 1;
   let visible = false, disposed = false, scrolling = false, moving = false, revealed = false;
   let frame = 0, scrollTimer = 0, qualityTimer = 0, lastPaint = 0, renders = 0, reportedAt = 0, slowFrames = 0, scrollRenders = 0;
   const events = new AbortController(), options = { signal: events.signal };
@@ -97,6 +98,8 @@ export async function mountOrbitPhones(root: HTMLElement, initial: OrbitState) {
       const radians = THREE.MathUtils.degToRad(angle);
       phone.group.position.set(Math.sin(radians) * radius, -phoneHeight / 2, Math.cos(radians) * radius);
       phone.group.rotation.y = radians;
+      // The depth ladder, as on the CSS cards: biggest in front, smaller beside it, smaller still behind.
+      phone.group.scale.copy(scales[i]).multiplyScalar(unit * depthScale(facing, step));
     });
     try {
       renderer.render(scene, camera);
@@ -166,7 +169,8 @@ export async function mountOrbitPhones(root: HTMLElement, initial: OrbitState) {
     root.style.setProperty('--model-padding', `${padding}px`);
     root.style.setProperty('--model-height', `${renderHeight}px`);
     root.dataset.modelPadding = String(padding);
-    phones.forEach((phone, i) => phone.group.scale.copy(scales[i]).multiplyScalar(phoneHeight / 5.7));
+    unit = phoneHeight / 5.7;
+    phones.forEach((phone, i) => phone.group.scale.copy(scales[i]).multiplyScalar(unit));
     // Match the existing CSS orbit's 1800px perspective and top-aligned cards.
     camera.fov = THREE.MathUtils.radToDeg(2 * Math.atan(renderHeight / 3600));
     camera.aspect = width / renderHeight;

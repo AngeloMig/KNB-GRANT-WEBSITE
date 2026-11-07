@@ -84,11 +84,11 @@ const angle = (i: number) => (i <= projects.length / 2 ? i : i - projects.length
         {/* The light first-screen shot loads with the page; the tall full-page shot is swapped in later,
             on desktop hover (HomeHero.astro), so it never slows the first load.
             On phones the card is a phone showing the site's mobile screenshot instead. */}
-        <span class="ob-shot"><picture><source media="(max-width: 640px)" srcset={`${withBase(`/images/projects/${p.slug}-mobile-220.webp`)} 220w, ${withBase(`/images/projects/${p.slug}-mobile-330.webp`)} 330w, ${withBase(`/images/projects/${p.slug}-mobile-440.webp`)} 440w, ${withBase(`/images/projects/${p.slug}-mobile-720.webp`)} 720w`} sizes="50vw" width="440" height="956" /><img src={withBase(`/images/projects/${p.slug}-640.webp`)} srcset={`${withBase(`/images/projects/${p.slug}-640.webp`)} 640w, ${withBase(`/images/projects/${p.slug}-960.webp`)} 960w, ${withBase(`/images/projects/${p.slug}-1440.webp`)} 1440w, ${withBase(`/images/projects/${p.slug}-1920.webp`)} 1920w`} sizes="(max-width: 640px) 50vw, 36vw" data-full={hasFull(p.slug) ? withBase(`/images/projects/${p.slug}-full.webp`) : undefined} alt={`${p.name} homepage`} width="640" height="360" loading={i < 2 ? 'eager' : 'lazy'} fetchpriority={i === 0 ? 'high' : undefined} decoding="async" draggable="false" /></picture></span>
+        <span class="ob-shot"><picture><source media="(max-width: 640px)" srcset={`${withBase(`/images/projects/${p.slug}-mobile-220.webp`)} 220w, ${withBase(`/images/projects/${p.slug}-mobile-330.webp`)} 330w, ${withBase(`/images/projects/${p.slug}-mobile-440.webp`)} 440w, ${withBase(`/images/projects/${p.slug}-mobile-720.webp`)} 720w`} sizes="63vw" width="440" height="956" /><img src={withBase(`/images/projects/${p.slug}-640.webp`)} srcset={`${withBase(`/images/projects/${p.slug}-640.webp`)} 640w, ${withBase(`/images/projects/${p.slug}-960.webp`)} 960w, ${withBase(`/images/projects/${p.slug}-1440.webp`)} 1440w, ${withBase(`/images/projects/${p.slug}-1920.webp`)} 1920w`} sizes="(max-width: 640px) 63vw, min(45vw, 750px)" data-full={hasFull(p.slug) ? withBase(`/images/projects/${p.slug}-full.webp`) : undefined} alt={`${p.name} homepage`} width="640" height="360" loading={i === 0 ? 'eager' : 'lazy'} fetchpriority={i === 0 ? 'high' : undefined} decoding="async" draggable="false" /></picture></span>
       </a>
     ))}{projects.map((p, i) => (
       // Each card's reflection on the floor: it sits on the same spot of the ring, so it turns with it.
-      <span class="ob-mirror" style={`--a:${angle(i)}deg`} aria-hidden="true"><picture><source media="(max-width: 640px)" srcset={withBase(`/images/projects/${p.slug}-mobile-220.webp`)} width="440" height="956" /><img src={withBase(`/images/projects/${p.slug}-640.webp`)} alt="" width="640" height="360" loading={i < 2 ? 'eager' : 'lazy'} decoding="async" draggable="false" /></picture></span>
+      <span class="ob-mirror" style={`--a:${angle(i)}deg`} aria-hidden="true"><picture><source media="(max-width: 640px)" srcset={withBase(`/images/projects/${p.slug}-mobile-220.webp`)} width="440" height="956" /><img src={withBase(`/images/projects/${p.slug}-640.webp`)} alt="" width="640" height="360" loading="lazy" decoding="async" draggable="false" /></picture></span>
     ))}</div>
   </div>
   <div class="ob-foot">
@@ -106,7 +106,8 @@ const angle = (i: number) => (i <= projects.length / 2 ? i : i - projects.length
 </div>
 
 <style>
-  .ob { position: relative; }
+  /* --ds: each card's depth size (set by the hero); --front-grow: the extra room the bigger front card needs below it. */
+  .ob { position: relative; --front-grow: 0px; }
   .ob-model-canvas{display:none}
   .ob-model-credit{display:none}
   .ob-loading{display:none;position:absolute;inset:0 0 auto;height:calc(var(--card) * .66);pointer-events:none;z-index:3;color:var(--hero-ink,var(--ink))}
@@ -118,7 +119,7 @@ const angle = (i: number) => (i <= projects.length / 2 ? i : i - projects.length
   @keyframes ob-loading-dot{50%{opacity:1}}
   .ob-skeleton{display:none}
   @media(min-width:641px){.ob[data-preview-load="loading"] .ob-loading{display:block}}
-  .ob-ring { position: relative; height: calc(var(--card) * 0.66); perspective: 1800px; cursor: grab; touch-action: pan-y; -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; }
+  .ob-ring { position: relative; height: calc(var(--card) * 0.66 + var(--front-grow)); perspective: 1800px; cursor: grab; touch-action: pan-y; -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; }
   .ob-ring:active { cursor: grabbing; }
   .ob-spin { position: absolute; left: 50%; top: 0; width: var(--card); margin-left: calc(var(--card) / -2); transform-style: preserve-3d; will-change: transform; }
   /* No grey tap flash, long-press menu or image drag on the cards. */
@@ -127,13 +128,15 @@ const angle = (i: number) => (i <= projects.length / 2 ? i : i - projects.length
   /* The front card tilts towards the cursor (--tx, --ty), easing back when it leaves. */
   @property --tx { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
   @property --ty { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
-  .ob-card { position: absolute; inset: 0 0 auto; display: block; border-radius: 12px; overflow: hidden; background: var(--bg); box-shadow: 0 30px 60px oklch(0 0 0 / 0.22); transform: rotateY(calc(var(--a) * var(--spread, 1))) translateZ(var(--r)) rotateX(var(--tx)) rotateY(var(--ty)); transition: --tx 0.7s var(--ease), --ty 0.7s var(--ease); -webkit-user-drag: none; }
+  /* Each card's depth size: not inherited, so changing it every frame of a turn restyles only the card, not all of its contents. */
+  @property --ds { syntax: '<number>'; inherits: false; initial-value: 1; }
+  .ob-card { position: absolute; inset: 0 0 auto; display: block; border-radius: 12px; overflow: hidden; background: var(--bg); box-shadow: 0 30px 60px oklch(0 0 0 / 0.22); transform: rotateY(calc(var(--a) * var(--spread, 1))) translateZ(var(--r)) rotateX(var(--tx)) rotateY(var(--ty)) scale(var(--ds, 1)); transition: --tx 0.7s var(--ease), --ty 0.7s var(--ease); -webkit-user-drag: none; }
   .ob-card:global(.is-tilting) { transition: --tx 0.15s linear, --ty 0.15s linear; }
   /* A soft light that follows the cursor across the tilted card. */
   .ob-glare { position: absolute; z-index: 3; inset: 0; background: radial-gradient(circle at var(--gx, 50%) var(--gy, 0%), oklch(1 0 0 / 0.42), transparent 55%); mix-blend-mode: soft-light; opacity: 0; transition: opacity 0.5s; pointer-events: none; }
   .ob-card:global(.is-tilting) .ob-glare { opacity: 1; }
   /* The reflection: flipped under its card, fading out a short way down the floor. */
-  .ob-mirror { position: absolute; left: 0; top: 0; width: 100%; aspect-ratio: 16 / 9; border-radius: 12px; overflow: hidden; pointer-events: none; transform: rotateY(calc(var(--a) * var(--spread, 1))) translateZ(var(--r)) translateY(calc(24px + var(--card) * 0.5625 + 10px)) scaleY(-1); -webkit-mask-image: linear-gradient(to top, rgb(0 0 0 / 0.3), transparent 38%); mask-image: linear-gradient(to top, rgb(0 0 0 / 0.3), transparent 38%); }
+  .ob-mirror { position: absolute; left: 0; top: 0; width: 100%; aspect-ratio: 16 / 9; border-radius: 12px; overflow: hidden; pointer-events: none; transform: rotateY(calc(var(--a) * var(--spread, 1))) translateZ(var(--r)) translateY(calc((24px + var(--card) * 0.5625) * (1 + var(--ds, 1)) / 2 + 10px * var(--ds, 1) + var(--card) * 0.5625 * (var(--ds, 1) - 1) / 2)) scale(var(--ds, 1)) scaleY(-1); -webkit-mask-image: linear-gradient(to top, rgb(0 0 0 / 0.3), transparent 38%); mask-image: linear-gradient(to top, rgb(0 0 0 / 0.3), transparent 38%); }
   .ob-mirror img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: bottom; filter: blur(1.5px); }
   /* Dims cards that are turned away (an overlay's opacity is cheap to animate, unlike a filter). */
   .ob-shade { position: absolute; z-index: 2; inset: 0; background: #000; opacity: 0; pointer-events: none; }
@@ -170,7 +173,7 @@ const angle = (i: number) => (i <= projects.length / 2 ? i : i - projects.length
     .ob:global(.ob-model-ready) .ob-card{opacity:0!important;transition:opacity .6s}
     .ob-model-credit{display:block;visibility:hidden;text-align:center;font-size:9px;line-height:1.5;color:var(--muted);margin:14px 24px 0}
     .ob:global(.ob-model-ready) .ob-model-credit{visibility:visible}
-    .ob-ring { height: calc(var(--card) * 2.26); }
+    .ob-ring { height: calc(var(--card) * 2.26 + var(--front-grow)); }
     /* A 3D phone: the screen on the front, a back 9px behind it, and metal sides joining them. */
     /* (The card itself paints nothing and isn't faded, which would flatten it: each part fades with --o.) */
     /* Depth in proportion to a large phone: about a tenth of its width. */

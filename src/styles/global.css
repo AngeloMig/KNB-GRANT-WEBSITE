@@ -4678,10 +4678,6 @@ main {
   width: min(100%, 360px);
   transform: none;
 }
-.detail-canvas[data-mode="phone"][data-phone-model="loading"] .device-phone,
-.detail-canvas[data-mode="phone"][data-phone-model="ready"] .device-phone {
-  visibility: hidden;
-}
 .device-switch {
   position: absolute;
   z-index: 2;

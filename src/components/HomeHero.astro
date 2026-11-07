@@ -15,8 +15,22 @@ import ProjectOrbit from './ProjectOrbit.astro';
     </div>
   </div>
   <div class="home-hero-stage">
-    <canvas class="home-hero-track" aria-hidden="true"></canvas>
-    <ProjectOrbit card="var(--hero-card)" />
+    <script is:inline>
+      // Before the page's script runs, hold the orbit in the exact pose its entrance starts from (low, a
+      // little small, almost transparent) and show a placeholder card, so the full-size orbit never flashes
+      // first. Skipped when coming back from a project, where the card morphs straight back into place.
+      (function () {
+        var stage = document.currentScript.parentElement;
+        if (!document.documentElement.classList.contains('motion')) return;
+        try { var back = JSON.parse(sessionStorage.getItem('gp-orbit-vt') || 'null'); if (back && Date.now() - back.t < 18e5) return; } catch (e) {}
+        stage.dataset.intro = 'pending';
+      })();
+    </script>
+    <div class="home-hero-orbit">
+      <canvas class="home-hero-track" aria-hidden="true"></canvas>
+      <ProjectOrbit card="var(--hero-card)" />
+    </div>
+    <span class="hero-orbit-placeholder" aria-hidden="true"></span>
     <span class="hero-cursor" aria-hidden="true"><span class="hero-cursor-drag">← Drag →</span><span class="hero-cursor-view">View ↗</span></span>
   </div>
   <div class="wrap home-hero-row">
@@ -31,6 +45,7 @@ import ProjectOrbit from './ProjectOrbit.astro';
 </section>
 
 <script>
+  import { depthScale, FRONT_SCALE } from '../scripts/orbit-depth';
   const root = document.documentElement;
   const motion = root.classList.contains('motion');
   const fine = matchMedia('(hover: hover) and (pointer: fine)').matches;
@@ -73,11 +88,11 @@ import ProjectOrbit from './ProjectOrbit.astro';
       let phone3d = phoneViewport.matches;
       // Last values written, so a frame only touches the DOM when something actually changed.
       let lastKey = '';
-      const lastOpacity: string[] = [], lastShade: string[] = [], lastBlur: string[] = [];
+      const lastOpacity: string[] = [], lastShade: string[] = [], lastBlur: string[] = [], lastDepth: string[] = [];
       phoneViewport.addEventListener('change', (event) => {
         phone3d = event.matches;
         lastKey = '';
-        lastOpacity.length = lastShade.length = lastBlur.length = 0;
+        lastOpacity.length = lastShade.length = lastBlur.length = lastDepth.length = 0;
         cards.forEach(card => { card.style.removeProperty('opacity'); card.style.removeProperty('--o'); });
       });
       const captions = [...el.querySelectorAll<HTMLElement>('.ob-caption')];
@@ -154,7 +169,8 @@ import ProjectOrbit from './ProjectOrbit.astro';
             // Solid cards, dimmed with distance; the back half fades out. On load the other cards stay hidden
             // until they've fanned out clear of the front card (closer in, they'd cut across it).
             const fan = intro && i !== this.front ? Math.max(0, Math.min(1, (spread - 0.82) / 0.18)) : 1;
-            const opacity = (Math.max(0, Math.min(1, (170 - Math.abs(d)) / 70)) * fan).toFixed(3);
+            // The back cards stay in view (small, behind the front one) rather than fading right out.
+            const opacity = (Math.max(0.7, Math.min(1, (200 - Math.abs(d)) / 100)) * fan).toFixed(3);
             // On phones the card is a 3D phone: fading the card itself would flatten it, so its parts fade (--o).
             const shade = (0.38 * (1 - f ** 2) * (phone3d ? Number(opacity) : 1)).toFixed(3);
             if (opacity !== lastOpacity[i]) { if (phone3d) card.style.setProperty('--o', opacity); else card.style.opacity = opacity; mirrors[i].style.opacity = opacity; lastOpacity[i] = opacity; }
@@ -164,6 +180,9 @@ import ProjectOrbit from './ProjectOrbit.astro';
             const blur = phone3d || Math.abs(d) < 25 ? '' : Math.abs(d) < 80 ? 'blur(0.6px)' : 'blur(1.8px)';
             if (blur !== lastBlur[i]) { card.style.filter = blur; lastBlur[i] = blur; }
             if (shade !== lastShade[i]) { shades[i].style.opacity = shade; lastShade[i] = shade; }
+            // Depth ladder: the front card biggest, the ones beside it smaller, the ones behind smaller still.
+            const ds = depthScale(d, step).toFixed(2);
+            if (ds !== lastDepth[i]) { card.style.setProperty('--ds', ds); mirrors[i].style.setProperty('--ds', ds); lastDepth[i] = ds; }
             const reachable = Math.abs(d) < step / 2;
             if (card.tabIndex !== (reachable ? 0 : -1)) { card.tabIndex = reachable ? 0 : -1; card.style.pointerEvents = reachable ? 'auto' : 'none'; }
           });
@@ -447,7 +466,8 @@ import ProjectOrbit from './ProjectOrbit.astro';
     let hue = '60';
     const ob = hero.querySelector<HTMLElement>('.ob')!;
     const obCards = [...ob.querySelectorAll<HTMLElement>('.ob-card')];
-    const stageEl = hero.querySelector<HTMLElement>('.home-hero-stage')!;
+    // The part that rises in on load (the ring and the cards); the placeholder and the cursor sit beside it.
+    const stageEl = hero.querySelector<HTMLElement>('.home-hero-orbit')!;
     const obFoot = ob.querySelector<HTMLElement>('.ob-foot')!;
     // The name takes the first project's colour from the start, so the dots fly in already glowing in it.
     name.tint(0.33, 0.07, Number(obCards[0].dataset.hue));
@@ -510,6 +530,17 @@ import ProjectOrbit from './ProjectOrbit.astro';
       root.style.setProperty('--hero-ink', `oklch(0.33 0.07 ${hue})`);
       root.style.setProperty('--hero-hue', hue);
     }, stageEl, start);
+    // The script has taken over the entrance pose: the placeholder fades out as the orbit rises in.
+    // The side cards stay out of the page (so their screenshots don't download) until the front card's
+    // screenshot is in: on a slow connection the front one then gets the whole line. They are hidden for
+    // the first half of the entrance anyway, so this leaves them plenty of time.
+    if (stage.dataset.intro) {
+      stage.dataset.intro = 'started';
+      const showSides = () => requestAnimationFrame(() => { if (stage.dataset.intro === 'started') stage.dataset.intro = 'sides'; });
+      const frontShot = obCards[0].querySelector<HTMLImageElement>('img');
+      if (!frontShot || frontShot.complete) showSides();
+      else { frontShot.addEventListener('load', showSides, { once: true }); frontShot.addEventListener('error', showSides, { once: true }); setTimeout(showSides, 1500); }
+    }
 
     // Only the mobile project phones use WebGL. The desktop orbit remains CSS.
     const mobileModels = matchMedia('(max-width: 640px)');
@@ -616,7 +647,8 @@ import ProjectOrbit from './ProjectOrbit.astro';
       cx = ringBox.left - r.left + ringBox.width / 2;
       horizon = ringBox.top - r.top + ringBox.height / 2;
       // Just under the cards' foot (on phones the cards are tall phone frames).
-      floor = ringBox.top - r.top + card.offsetHeight + 16;
+      // Under the front card, which is drawn bigger than its box (it grows from its centre).
+      floor = ringBox.top - r.top + card.offsetHeight * (1 + FRONT_SCALE) / 2 + 16;
       const n = Math.max(120, Math.round((Math.PI * 2 * R) / 9));
       if (n !== N) { N = n; off = Array.from({ length: N }, () => ({ x: 0, y: 0, vx: 0, vy: 0 })); }
     };
@@ -724,7 +756,21 @@ import ProjectOrbit from './ProjectOrbit.astro';
      dots are ready and this is removed, nothing below moves (it can wrap to two lines on phones). */
   .home-hero-fallback { position: absolute; inset: 0; visibility: hidden; display: grid; place-items: center; margin: 0; font-size: clamp(90px, 19vw, 320px); line-height: 1; text-align: center; }
   /* The orbit rises over the bottom of the name. */
-  .home-hero-stage { position: relative; z-index: 1; margin-top: calc(var(--hero-card) * -0.16); padding-bottom: 50px; }
+  .home-hero-stage { position: relative; z-index: 1; margin-top: calc(var(--hero-card) * -0.16); }
+  /* Always the ring's positioning box, so nothing changes box when the entrance's transform comes off. */
+  .home-hero-orbit { position: relative; padding-bottom: 50px; }
+  /* Loading: the entrance's first pose (the script then animates on from exactly here). */
+  .home-hero-stage[data-intro="pending"] .home-hero-orbit { opacity: 0.01; translate: 0 110px; scale: 0.9; }
+  .home-hero-stage:is([data-intro="pending"], [data-intro="started"]) :global(.ob-card ~ .ob-card),
+  .home-hero-stage:is([data-intro="pending"], [data-intro="started"]) :global(.ob-mirror ~ .ob-mirror) { display: none; }
+  /* A soft card in the front card's place until the orbit arrives. */
+  /* The front card's place: its box is one card wide (16:9 plus its bar, a phone on phones), drawn 125% from its centre. */
+  .home-hero-stage { --ph-h: calc(var(--hero-card) * 0.5625 + 24px); }
+  .home-hero-stage :global(.ob) { --front-grow: calc(var(--ph-h) * 0.125); }
+  .hero-orbit-placeholder { position: absolute; z-index: 0; top: calc(var(--ph-h) * -0.125); left: 50%; width: calc(var(--hero-card) * 1.25); height: calc(var(--ph-h) * 1.25); translate: -50% 0; border-radius: 12px; pointer-events: none; opacity: 0; overflow: hidden; background: color-mix(in oklch, var(--ink) 5%, transparent); box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--ink) 8%, transparent); transition: opacity 0.6s var(--ease); }
+  .hero-orbit-placeholder::after { content: ""; position: absolute; inset: 0; background: linear-gradient(100deg, transparent 30%, color-mix(in oklch, var(--bg) 70%, transparent) 50%, transparent 70%); translate: -100% 0; animation: hero-placeholder-sweep 1.4s ease-in-out infinite; }
+  .home-hero-stage[data-intro="pending"] .hero-orbit-placeholder { opacity: 1; transition: none; }
+  @keyframes hero-placeholder-sweep { to { translate: 100% 0; } }
   .home-hero-track { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
   .home-hero-stage :global(.ob) { position: relative; z-index: 1; }
   .home-hero-row { position: relative; z-index: 3; display: grid; grid-template-columns: 1.1fr auto auto; gap: 24px 32px; align-items: center; margin-top: 34px; }
@@ -780,5 +826,7 @@ import ProjectOrbit from './ProjectOrbit.astro';
     .home-hero { --hero-card: 50vw; overflow: visible; }
     .home-hero-dots { height: 23vw; }
     .home-hero-stage { margin-top: -7vw; }
+    .home-hero-stage { --ph-h: calc(var(--hero-card) * 2.1466); }
+    .hero-orbit-placeholder { border-radius: 32px; }
   }
 </style>
