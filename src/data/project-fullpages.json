@@ -1,0 +1,387 @@
+{
+  "tero": {
+    "desktop": {
+      "720": 4500,
+      "1100": 6875
+    },
+    "mobile": {
+      "600": 10769
+    },
+    "palette": [
+      {
+        "hex": "#f3efe5",
+        "share": 0.631
+      },
+      {
+        "hex": "#949692",
+        "share": 0.121
+      },
+      {
+        "hex": "#413c39",
+        "share": 0.073
+      },
+      {
+        "hex": "#c5c5cb",
+        "share": 0.073
+      },
+      {
+        "hex": "#54747a",
+        "share": 0.049
+      },
+      {
+        "hex": "#04090b",
+        "share": 0.046
+      }
+    ]
+  },
+  "road-armor": {
+    "desktop": {
+      "720": 4500,
+      "1100": 6875
+    },
+    "mobile": {
+      "600": 10769
+    },
+    "palette": [
+      {
+        "hex": "#ffffff",
+        "share": 0.416
+      },
+      {
+        "hex": "#0c0c0c",
+        "share": 0.385
+      },
+      {
+        "hex": "#343333",
+        "share": 0.046
+      },
+      {
+        "hex": "#939393",
+        "share": 0.036
+      },
+      {
+        "hex": "#dcdbdc",
+        "share": 0.024
+      },
+      {
+        "hex": "#b2051d",
+        "share": 0.019
+      }
+    ]
+  },
+  "omenz": {
+    "desktop": {
+      "720": 4040,
+      "1100": 6171
+    },
+    "mobile": {
+      "600": 10769
+    },
+    "palette": [
+      {
+        "hex": "#161616",
+        "share": 0.546
+      },
+      {
+        "hex": "#6b4c34",
+        "share": 0.124
+      },
+      {
+        "hex": "#ffeb6e",
+        "share": 0.091
+      },
+      {
+        "hex": "#355a5e",
+        "share": 0.077
+      },
+      {
+        "hex": "#fffcf2",
+        "share": 0.049
+      },
+      {
+        "hex": "#6c6d69",
+        "share": 0.037
+      }
+    ]
+  },
+  "coptrz": {
+    "desktop": {
+      "720": 3828,
+      "1100": 5848
+    },
+    "mobile": {
+      "600": 10769
+    },
+    "palette": [
+      {
+        "hex": "#000000",
+        "share": 0.399
+      },
+      {
+        "hex": "#ffffff",
+        "share": 0.315
+      },
+      {
+        "hex": "#5b5b5b",
+        "share": 0.076
+      },
+      {
+        "hex": "#252525",
+        "share": 0.074
+      },
+      {
+        "hex": "#ababac",
+        "share": 0.056
+      },
+      {
+        "hex": "#848484",
+        "share": 0.029
+      }
+    ]
+  },
+  "skinistry": {
+    "desktop": {
+      "720": 4466,
+      "1100": 6823
+    },
+    "mobile": {
+      "600": 10769
+    },
+    "palette": [
+      {
+        "hex": "#0a0a0a",
+        "share": 0.368
+      },
+      {
+        "hex": "#eaeaea",
+        "share": 0.143
+      },
+      {
+        "hex": "#3b3544",
+        "share": 0.073
+      },
+      {
+        "hex": "#6c0303",
+        "share": 0.072
+      },
+      {
+        "hex": "#cb1402",
+        "share": 0.023
+      },
+      {
+        "hex": "#c28cfe",
+        "share": 0.022
+      }
+    ]
+  },
+  "light-my-bricks": {
+    "desktop": {
+      "720": 4500,
+      "1100": 6875
+    },
+    "mobile": {
+      "600": 10769
+    },
+    "palette": [
+      {
+        "hex": "#1a0e31",
+        "share": 0.417
+      },
+      {
+        "hex": "#ffffff",
+        "share": 0.343
+      },
+      {
+        "hex": "#5c01bb",
+        "share": 0.052
+      },
+      {
+        "hex": "#6b637a",
+        "share": 0.045
+      },
+      {
+        "hex": "#8f74da",
+        "share": 0.022
+      },
+      {
+        "hex": "#fcce00",
+        "share": 0.008
+      }
+    ]
+  },
+  "monsera": {
+    "desktop": {
+      "720": 4500,
+      "1100": 6875
+    },
+    "mobile": {
+      "600": 10769
+    },
+    "palette": [
+      {
+        "hex": "#fefefe",
+        "share": 0.391
+      },
+      {
+        "hex": "#110d0c",
+        "share": 0.165
+      },
+      {
+        "hex": "#5d5553",
+        "share": 0.14
+      },
+      {
+        "hex": "#e1ded5",
+        "share": 0.086
+      },
+      {
+        "hex": "#abb3bc",
+        "share": 0.051
+      },
+      {
+        "hex": "#4c2c1b",
+        "share": 0.039
+      }
+    ]
+  },
+  "narrative-hub": {
+    "desktop": {
+      "720": 3384,
+      "1100": 5170
+    },
+    "mobile": {
+      "600": 10769
+    },
+    "palette": [
+      {
+        "hex": "#ffffff",
+        "share": 0.644
+      },
+      {
+        "hex": "#bbbcbb",
+        "share": 0.096
+      },
+      {
+        "hex": "#0b0b0c",
+        "share": 0.084
+      },
+      {
+        "hex": "#5c5c5c",
+        "share": 0.068
+      },
+      {
+        "hex": "#838383",
+        "share": 0.026
+      },
+      {
+        "hex": "#dbdcdc",
+        "share": 0.012
+      }
+    ]
+  },
+  "teamtown": {
+    "desktop": {
+      "720": 4500,
+      "1100": 6875
+    },
+    "mobile": {
+      "600": 10769
+    },
+    "palette": [
+      {
+        "hex": "#faffb8",
+        "share": 0.591
+      },
+      {
+        "hex": "#f7f7f7",
+        "share": 0.238
+      },
+      {
+        "hex": "#232b1e",
+        "share": 0.059
+      },
+      {
+        "hex": "#bdfe31",
+        "share": 0.02
+      },
+      {
+        "hex": "#4c5345",
+        "share": 0.016
+      },
+      {
+        "hex": "#015a72",
+        "share": 0.004
+      }
+    ]
+  },
+  "financial-advisor-uk": {
+    "desktop": {
+      "720": 2207,
+      "1100": 3372
+    },
+    "mobile": {
+      "600": 9368
+    },
+    "palette": [
+      {
+        "hex": "#fefefe",
+        "share": 0.567
+      },
+      {
+        "hex": "#351d83",
+        "share": 0.156
+      },
+      {
+        "hex": "#9cadc4",
+        "share": 0.068
+      },
+      {
+        "hex": "#02132b",
+        "share": 0.036
+      },
+      {
+        "hex": "#e61361",
+        "share": 0.021
+      },
+      {
+        "hex": "#d3d4d4",
+        "share": 0.017
+      }
+    ]
+  },
+  "all-terrain-industries": {
+    "desktop": {
+      "720": 3565,
+      "1100": 5447
+    },
+    "mobile": {
+      "600": 10649
+    },
+    "palette": [
+      {
+        "hex": "#121314",
+        "share": 0.628
+      },
+      {
+        "hex": "#93938b",
+        "share": 0.099
+      },
+      {
+        "hex": "#434444",
+        "share": 0.094
+      },
+      {
+        "hex": "#fefefe",
+        "share": 0.092
+      },
+      {
+        "hex": "#d3d3d3",
+        "share": 0.027
+      },
+      {
+        "hex": "#e37d30",
+        "share": 0.011
+      }
+    ]
+  }
+}

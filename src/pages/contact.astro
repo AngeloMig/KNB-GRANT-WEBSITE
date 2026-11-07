@@ -6,9 +6,32 @@ import Arrow from '../components/Arrow.astro';
 import { profile } from '../data/profile';
 // Both forms go to Grant's inbox through FormSubmit, with a copy to the second address (as the estimator does).
 import { FORM_CC, FORM_INBOX } from '../data/forms';
-const needs = ['A new website or store', 'A redesign', 'Moving to a new platform', 'Speed, SEO & fixes', 'Ongoing support', 'Something else'];
-const budgets = ['Not sure yet', 'Under $2,000', '$2,000–$5,000', '$5,000–$10,000', '$10,000+'];
-const timings = ['As soon as possible', 'Within a month', 'In 1–3 months', 'Just exploring'];
+import { PACKAGES, DEFAULT_PACKAGE_SETTINGS } from '../data/quote-model';
+import { formatMoney } from '../data/pricing';
+// What the enquiry asks follows what they need: the budget ranges, timing choices, message prompt and
+// whether a website is required change with the choice (e.g. a monthly budget for ongoing support).
+// Ongoing support: the real plans and monthly prices (from the quote model's price list), so they stay in step.
+const { prices: planPrices, payg, freeMonths } = DEFAULT_PACKAGE_SETTINGS;
+const supportPlans = [
+  'Not sure yet',
+  ...PACKAGES.filter((p) => p.id !== 'custom').map((p) => `${p.name} · ${p.daily ? `${p.daily} hrs a day` : `${p.hours} hrs a month`} · ${formatMoney(planPrices[p.id as keyof typeof planPrices], 'USD')}/month${p.popular ? ' (most popular)' : ''}`),
+  `Pay as you go · ${formatMoney(payg, 'USD')} an hour`,
+];
+const supportHint = `Plans are billed monthly${freeMonths ? `; pay a year upfront and get ${freeMonths} months free` : ''}. Grant confirms the right plan with you first.`;
+const general = { budgets: ['Not sure yet', 'Under $2,000', '$2,000–$5,000', '$5,000–$10,000', '$10,000+'], timings: ['As soon as possible', 'Within a month', 'In 1–3 months', 'Just exploring'] };
+const needOptions: Record<string, { budgetLabel: string; budgets: string[]; timingLabel: string; timings: string[]; message: string; site: boolean; move?: boolean; hint?: string }> = {
+  'A new website or store': { budgetLabel: 'Budget', budgets: ['Not sure yet', 'Under $3,000', '$3,000–$6,000', '$6,000–$12,000', '$12,000+'], timingLabel: 'Launch', timings: ['As soon as possible', 'In 1–2 months', 'In 3 months or more', 'Just exploring'], message: 'What are you building, and what would make it a success? Links to sites you like help.', site: false },
+  'A redesign': { budgetLabel: 'Budget', ...general, timingLabel: 'Launch', message: 'What isn’t working on the current site, and what should the new one do better?', site: true },
+  'Moving to a new platform': { budgetLabel: 'Budget', budgets: ['Not sure yet', 'Under $3,000', '$3,000–$7,000', '$7,000–$15,000', '$15,000+'], timingLabel: 'Switch over', timings: ['As soon as possible', 'Within a month', 'In 1–3 months', 'Just exploring'], message: 'Roughly how many products, pages or posts are coming across, and what mustn’t break (search rankings, links, customer accounts)?', site: true, move: true },
+  'Speed, SEO & fixes': { budgetLabel: 'Budget', budgets: ['Not sure yet', 'Under $500', '$500–$1,500', '$1,500–$3,000', '$3,000+'], timingLabel: 'Needed by', timings: ['This week', 'Within 2 weeks', 'Within a month', 'Just exploring'], message: 'What’s slow, broken or not showing up on Google? Links to the pages help.', site: true, hint: 'Tip: the free audit is often the quickest way to start.' },
+  'Ongoing support': { budgetLabel: 'Support plan', budgets: supportPlans, timingLabel: 'Start', timings: ['Right away', 'Next month', 'In a few months', 'Just exploring'], message: 'What would you like help with each month: updates, new pages, fixes, speed?', site: true, hint: supportHint },
+  'Something else': { budgetLabel: 'Budget', ...general, timingLabel: 'Timing', message: 'Tell me what you have in mind. A rough idea is plenty.', site: false },
+};
+const needs = Object.keys(needOptions);
+const first = needOptions[needs[0]];
+const platforms = ['Shopify', 'WooCommerce', 'WordPress', 'Webflow', 'Squarespace', 'Wix', 'BigCommerce', 'Magento', 'Something else'];
+const scoreNames = ['Performance', 'Accessibility', 'Best Practices', 'SEO'];
+const whatsappText = encodeURIComponent('Hi Grant, I’d like to talk about a website project.');
 const faqs = [
   { q: 'What does the free audit include?', a: 'Grant checks your site by hand and with Google PageSpeed Insights: speed and Core Web Vitals, mobile layout, SEO basics and broken links, and the path to checkout. You get a short PDF with the scores, each finding ranked by impact, and roughly how long the fixes would take. It’s free, with no obligation to hire him.' },
   { q: 'Will you sign an NDA?', a: 'Yes. If your project is confidential, say so in your message and Grant will sign your NDA (or send a simple one) before you share the details.' },
@@ -21,7 +44,7 @@ const faqSchema = { '@context': 'https://schema.org', '@type': 'FAQPage', mainEn
 <BaseLayout title="Contact Grant Dev14 — Let’s Build Your Website" description="Contact Grant Dev14 about Shopify, Webflow, WordPress, website migrations, and development collaboration. Get in touch by email or connect on LinkedIn.">
   <div class="wrap">
     <SectionTitle title="LET’S TALK" detail="Every good website starts with a conversation" as="h1" />
-    <section class="intro-split contact-intro"><div class="intro-aside"><span class="tiny-heading">GET IN TOUCH</span><p>Based in the Philippines.<br />Working across time zones.</p><button type="button" class="text-link copy-email" data-email={profile.email} hidden>Copy email address</button><span class="sr-only" id="copy-status" aria-live="polite"></span></div><div><p class="lead">A new website?<br />A better online store?<br />Let’s make it happen.</p><p class="intro-support">Tell me a little about your project, the platform you’re using, and what you have in mind.</p></div></section>
+    <section class="intro-split contact-intro"><div class="intro-aside"><span class="tiny-heading">GET IN TOUCH</span><p>Based in the Philippines.<br />Working across time zones.</p><button type="button" class="copy-email" data-email={profile.email}><span class="copy-email-label">Tap to copy</span><span class="copy-email-text">{profile.email}</span><span class="copy-email-done" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12.5 10 17 19 7" /></svg>Copied</span></button><span class="sr-only" id="copy-status" aria-live="polite"></span></div><div><p class="lead">A new website?<br />A better online store?<br />Let’s make it happen.</p><p class="intro-support">Tell me a little about your project, the platform you’re using, and what you have in mind.</p></div></section>
     <section class="contact-forms" aria-label="Contact forms">
       <form class="contact-card contact-audit" id="audit" data-form="audit" data-reply={profile.email} data-email={FORM_INBOX} data-cc={FORM_CC} novalidate>
         <p class="contact-eyebrow">Free website audit</p>
@@ -33,6 +56,18 @@ const faqSchema = { '@context': 'https://schema.org', '@type': 'FAQPage', mainEn
           <label><span>Email <i aria-hidden="true">*</i></span><input type="email" name="email" autocomplete="email" required /></label>
           <label class="contact-span"><span>Current website <i aria-hidden="true">*</i></span><input name="website" autocomplete="url" inputmode="url" placeholder="yourstore.com" required /></label>
         </div>
+        <button type="button" class="speed-run" hidden>Check my scores now <small>Free · about 20 seconds</small></button>
+        <div class="speed-check" hidden>
+          <p class="speed-check-head"><span class="speed-check-site"></span><span class="speed-check-mode">Mobile</span></p>
+          <div class="speed-gauges">{scoreNames.map((n) => (
+            <div class="gauge" data-score-name={n}>
+              <span class="gauge-ring"><svg viewBox="0 0 120 120" aria-hidden="true"><circle class="gauge-track" cx="60" cy="60" r="54" /><circle class="gauge-bar" cx="60" cy="60" r="54" pathLength="100" /></svg><span class="gauge-num" aria-hidden="true">–</span></span>
+              <span class="gauge-label">{n}</span>
+            </div>
+          ))}</div>
+          <p class="speed-check-status" role="status" aria-live="polite"></p>
+          <p class="speed-check-note">Tested with Google PageSpeed Insights on a phone. These are the headline numbers: Grant’s full audit shows what’s behind them and what to fix first, by email within 1 business day.</p>
+        </div>
         <input type="text" name="_honey" class="contact-honey" tabindex="-1" autocomplete="off" aria-hidden="true" />
         <div class="form-human-check" data-human-check></div>
         <button type="submit" class="contact-submit">Get my free audit <Arrow diagonal /></button>
@@ -43,6 +78,7 @@ const faqSchema = { '@context': 'https://schema.org', '@type': 'FAQPage', mainEn
           <span class="contact-done-check" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12.5 10 17 19 7" /></svg></span>
           <h2 class="contact-done-title" tabindex="-1"></h2>
           <p class="contact-done-text"></p>
+          <div class="contact-done-summary" hidden></div>
           <p class="contact-done-label">What happens next</p>
           <ol class="contact-done-steps"><li><strong>Grant reviews your site</strong><span>By hand and with Google PageSpeed Insights.</span></li><li><strong>You get the audit by email</strong><span>A short PDF with the quick wins, biggest first.</span></li><li><strong>Fix it yourself, or ask for a quote</strong><span>The findings are yours to keep either way.</span></li></ol>
           <p class="contact-done-label">While you wait</p>
@@ -59,16 +95,21 @@ const faqSchema = { '@context': 'https://schema.org', '@type': 'FAQPage', mainEn
           <label><span>Your name <i aria-hidden="true">*</i></span><input name="name" autocomplete="name" required /></label>
           <label><span>Email <i aria-hidden="true">*</i></span><input type="email" name="email" autocomplete="email" required /></label>
           <label><span>Company</span><input name="company" autocomplete="organization" /></label>
-          <label><span>Current website</span><input name="website" autocomplete="url" inputmode="url" placeholder="Optional" /></label>
+          <label><span>Current website <i aria-hidden="true" data-site-required hidden>*</i></span><input name="website" autocomplete="url" inputmode="url" placeholder="Optional" /></label>
         </div>
-        <fieldset class="contact-choices">
+        <fieldset class="contact-choices" data-needs={JSON.stringify(needOptions)}>
           <legend>What do you need?</legend>
           <div>{needs.map((n, i) => <label class="contact-chip"><input type="radio" name="need" value={n} checked={i === 0} /><span>{n}</span></label>)}</div>
+          <p class="contact-need-hint" aria-live="polite"></p>
         </fieldset>
-        <div class="contact-fields">
-          <label><span>Budget</span><select name="budget">{budgets.map((b) => <option>{b}</option>)}</select></label>
-          <label><span>Timing</span><select name="timing">{timings.map((t) => <option>{t}</option>)}</select></label>
-          <label class="contact-span"><span>Message <i aria-hidden="true">*</i></span><textarea name="message" rows="5" placeholder="What are you building, and what would make it a success?" required></textarea></label>
+        <div class="contact-fields contact-move" hidden>
+          <label><span>Moving from</span><select name="from"><option>Not sure</option>{platforms.map((x) => <option>{x}</option>)}</select></label>
+          <label><span>Moving to</span><select name="to"><option>Not sure</option>{platforms.map((x) => <option>{x}</option>)}</select></label>
+        </div>
+        <div class="contact-fields contact-follow">
+          <label><span data-budget-label>{first.budgetLabel}</span><select name="budget">{first.budgets.map((b) => <option>{b}</option>)}</select></label>
+          <label><span data-timing-label>{first.timingLabel}</span><select name="timing">{first.timings.map((t) => <option>{t}</option>)}</select></label>
+          <label class="contact-span"><span>Message <i aria-hidden="true">*</i></span><textarea name="message" rows="5" placeholder={first.message} required></textarea></label>
         </div>
         <input type="text" name="_honey" class="contact-honey" tabindex="-1" autocomplete="off" aria-hidden="true" />
         <div class="form-human-check" data-human-check></div>
@@ -80,6 +121,7 @@ const faqSchema = { '@context': 'https://schema.org', '@type': 'FAQPage', mainEn
           <span class="contact-done-check" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12.5 10 17 19 7" /></svg></span>
           <h2 class="contact-done-title" tabindex="-1"></h2>
           <p class="contact-done-text"></p>
+          <div class="contact-done-summary" hidden></div>
           <p class="contact-done-label">What happens next</p>
           <ol class="contact-done-steps"><li><strong>Grant reads your enquiry</strong><span>And replies within 1 business day.</span></li><li><strong>A short call or a few questions</strong><span>To fill in anything the form didn’t cover.</span></li><li><strong>A fixed quote with real dates</strong><span>Agreed before any work starts.</span></li></ol>
           <p class="contact-done-label">While you wait</p>
@@ -95,8 +137,11 @@ const faqSchema = { '@context': 'https://schema.org', '@type': 'FAQPage', mainEn
     </section>
     <script type="application/ld+json" set:html={JSON.stringify(faqSchema).replace(/</g, '\\u003c')} />
 
+    <noscript><style>.copy-email, .speed-run { display: none; }</style></noscript>
     <h2 class="contact-more-title">Other ways to reach me</h2>
-    <div class="contact-options"><a href={`mailto:${profile.email}?subject=Website%20project%20inquiry`}><span>Email</span><strong>{profile.email}</strong><Arrow diagonal /></a><a href={profile.linkedin} target="_blank" rel="noopener noreferrer"><span>Connect</span><strong>Find me on LinkedIn</strong><Arrow diagonal /></a><a href={withBase('/estimate/')}><span>Planning</span><strong>Estimate your project</strong><Arrow diagonal /></a><a href={withBase('/resume/grant-payad-resume.pdf')} download><span>Background</span><strong>Download my résumé</strong><Arrow diagonal /></a></div>
+    <div class="contact-options"><a href={`mailto:${profile.email}?subject=Website%20project%20inquiry`}><span>Email</span><strong>{profile.email}</strong><Arrow diagonal /></a>{profile.whatsapp
+      ? <a href={`https://wa.me/${profile.whatsapp}?text=${whatsappText}`} target="_blank" rel="noopener noreferrer"><span>WhatsApp</span><strong>Message me on WhatsApp</strong><Arrow diagonal /></a>
+      : <div class="contact-option-soon"><span>WhatsApp</span><strong>Message me on WhatsApp</strong><em>Coming soon</em></div>}<a href={profile.linkedin} target="_blank" rel="noopener noreferrer"><span>Connect</span><strong>Find me on LinkedIn</strong><Arrow diagonal /></a><a href={withBase('/estimate/')}><span>Planning</span><strong>Estimate your project</strong><Arrow diagonal /></a><a href={withBase('/resume/grant-payad-resume.pdf')} download><span>Background</span><strong>Download my résumé</strong><Arrow diagonal /></a></div>
   </div>
 </BaseLayout>
 <script>
@@ -113,8 +158,105 @@ const faqSchema = { '@context': 'https://schema.org', '@type': 'FAQPage', mainEn
   const DRAFTS = 'contact-drafts-v1';
   const readDrafts = (): Record<string, Record<string, string>> => { try { return JSON.parse(localStorage.getItem(DRAFTS) || '{}'); } catch { return {}; } };
   const writeDrafts = (drafts: Record<string, Record<string, string>>) => { try { localStorage.setItem(DRAFTS, JSON.stringify(drafts)); } catch { /* storage unavailable */ } };
+  // The enquiry follows "What do you need?": budget ranges and label, timing choices, the message prompt,
+  // whether a website is required, and (for a platform move) "from" and "to".
+  type Need = { budgetLabel: string; budgets: string[]; timingLabel: string; timings: string[]; message: string; site: boolean; move?: boolean; hint?: string };
+  const applyNeed = (form: HTMLFormElement, keep?: Record<string, string>) => {
+    const box = form.querySelector<HTMLElement>('[data-needs]');
+    if (!box) return;
+    const all = JSON.parse(box.dataset.needs!) as Record<string, Need>;
+    const picked = form.querySelector<HTMLInputElement>('input[name="need"]:checked')?.value ?? '';
+    const need = all[picked];
+    if (!need) return;
+    const fill = (name: string, options: string[], wanted?: string) => {
+      const select = form.elements.namedItem(name) as HTMLSelectElement;
+      const before = wanted ?? select.value;
+      select.replaceChildren(...options.map((o) => new Option(o, o)));
+      // Keep the answer if it still fits; otherwise start from the first choice.
+      select.value = options.includes(before) ? before : options[0];
+    };
+    fill('budget', need.budgets, keep?.budget);
+    fill('timing', need.timings, keep?.timing);
+    form.querySelector('[data-budget-label]')!.textContent = need.budgetLabel;
+    form.querySelector('[data-timing-label]')!.textContent = need.timingLabel;
+    form.querySelector<HTMLTextAreaElement>('textarea[name="message"]')!.placeholder = need.message;
+    const site = form.querySelector<HTMLInputElement>('input[name="website"]')!;
+    site.placeholder = need.site ? 'yourstore.com' : 'Optional';
+    site.required = need.site;
+    form.querySelector<HTMLElement>('[data-site-required]')!.hidden = !need.site;
+    const move = form.querySelector<HTMLElement>('.contact-move')!;
+    move.hidden = !need.move;
+    if (keep?.from) (form.elements.namedItem('from') as HTMLSelectElement).value = keep.from;
+    if (keep?.to) (form.elements.namedItem('to') as HTMLSelectElement).value = keep.to;
+    form.querySelector('.contact-need-hint')!.textContent = need.hint ?? '';
+    // A quick flash on the fields that changed, so the change is noticed.
+    if (!keep) { const follow = form.querySelector<HTMLElement>('.contact-follow')!; follow.classList.remove('is-updated'); void follow.offsetWidth; follow.classList.add('is-updated'); if (need.move) { move.classList.remove('is-updated'); void move.offsetWidth; move.classList.add('is-updated'); } }
+  };
+  const needOf = (form: HTMLFormElement) => form.querySelector<HTMLInputElement>('input[name="need"]:checked')?.value ?? '';
   const emailOk = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
   const siteOk = (v: string) => /^(https?:\/\/)?[^\s.]+\.[^\s]{2,}$/i.test(v);
+  /* ---------- Speed check: the site's four headline scores from Google PageSpeed Insights ---------- */
+  const speed = { site: '', result: '' };
+  const auditForm = document.querySelector<HTMLFormElement>('form[data-form="audit"]');
+  if (auditForm) {
+    const run = auditForm.querySelector<HTMLButtonElement>('.speed-run')!;
+    const panel = auditForm.querySelector<HTMLElement>('.speed-check')!;
+    const statusLine = panel.querySelector<HTMLElement>('.speed-check-status')!;
+    const gauges = [...panel.querySelectorAll<HTMLElement>('.gauge')];
+    const siteInput = auditForm.querySelector<HTMLInputElement>('input[name="website"]')!;
+    const KEYS = ['performance', 'accessibility', 'best-practices', 'seo'];
+    const show = () => { run.hidden = !siteOk(siteInput.value.trim()); };
+    run.hidden = true;
+    siteInput.addEventListener('input', show);
+    show();
+    // A score drawn like PageSpeed's: a ring that fills, in red (0–49), orange (50–89) or green (90–100).
+    const paint = (gauge: HTMLElement, score: number) => {
+      gauge.dataset.band = score >= 90 ? 'good' : score >= 50 ? 'ok' : 'poor';
+      gauge.style.setProperty('--score', String(score));
+      const num = gauge.querySelector<HTMLElement>('.gauge-num')!;
+      const start = performance.now();
+      const step = (t: number) => { const k = Math.min(1, (t - start) / 900); num.textContent = String(Math.round(score * (1 - (1 - k) ** 3))); if (k < 1) requestAnimationFrame(step); };
+      requestAnimationFrame(step);
+    };
+    let running = false;
+    run.addEventListener('click', async () => {
+      const site = siteInput.value.trim();
+      if (running || !siteOk(site)) return;
+      running = true;
+      run.disabled = true;
+      panel.hidden = false;
+      panel.classList.add('is-loading');
+      panel.querySelector('.speed-check-site')!.textContent = site.replace(/^https?:\/\//, '').replace(/\/$/, '');
+      gauges.forEach((g) => { g.removeAttribute('data-band'); g.style.removeProperty('--score'); g.querySelector('.gauge-num')!.textContent = '–'; g.querySelector('.gauge-ring')!.removeAttribute('aria-label'); });
+      statusLine.textContent = 'Testing your site on a phone. This usually takes 15–30 seconds…';
+      const query = new URLSearchParams({ url: /^https?:\/\//i.test(site) ? site : `https://${site}`, strategy: 'mobile' });
+      KEYS.forEach((k) => query.append('category', k));
+      // A Google API key (free, limited to this site's address) gives the check its own quota; without one,
+      // Google shares a small quota between everyone and often answers "busy".
+      const key = import.meta.env.PUBLIC_PSI_KEY as string | undefined;
+      if (key) query.set('key', key);
+      try {
+        const response = await fetch(`https://www.googleapis.com/pagespeedonline/v5/runPagespeed?${query}`);
+        const data = await response.json();
+        if (!response.ok) throw new Error(response.status === 429 ? 'busy' : (data?.error?.message || 'failed'));
+        const cats = data.lighthouseResult.categories;
+        const scores = KEYS.map((k) => Math.round((cats[k]?.score ?? 0) * 100));
+        scores.forEach((score, i) => { paint(gauges[i], score); gauges[i].querySelector('.gauge-ring')!.setAttribute('aria-label', `${gauges[i].dataset.scoreName}: ${score} out of 100`); });
+        speed.site = site;
+        speed.result = scores.map((score, i) => `${gauges[i].dataset.scoreName} ${score}`).join(' · ');
+        statusLine.textContent = 'Tested just now.';
+      } catch (error) {
+        statusLine.textContent = String((error as Error).message) === 'busy'
+          ? 'Google’s test is busy right now. Send the form anyway: Grant runs it for your audit.'
+          : 'Google couldn’t test that address. Check it opens in your browser, or send the form and Grant will take a look.';
+      }
+      panel.classList.remove('is-loading');
+      running = false;
+      run.disabled = false;
+      run.firstChild!.textContent = 'Test again ';
+    });
+  }
+
   document.querySelectorAll<HTMLFormElement>('form[data-form]').forEach((form) => {
     const kind = form.dataset.form as 'audit' | 'enquiry';
     const status = form.querySelector<HTMLElement>('.contact-status')!;
@@ -137,7 +279,12 @@ const faqSchema = { '@context': 'https://schema.org', '@type': 'FAQPage', mainEn
       fieldsOf().forEach((x) => { const v = saved[x.name]; if (v === undefined) return; if (x instanceof HTMLInputElement && x.type === 'radio') x.checked = x.value === v; else x.value = v; });
       draftNote.hidden = false;
     }
-    draftNote.querySelector('button')!.addEventListener('click', () => { form.reset(); clearDraft(); say(''); });
+    // The choices that follow "What do you need?" are rebuilt for the restored choice, keeping the saved answers.
+    if (kind === 'enquiry') {
+      applyNeed(form, saved ?? {});
+      form.querySelectorAll<HTMLInputElement>('input[name="need"]').forEach((r) => r.addEventListener('change', () => { applyNeed(form); saveDraft(); }));
+    }
+    draftNote.querySelector('button')!.addEventListener('click', () => { form.reset(); if (kind === 'enquiry') applyNeed(form, {}); clearDraft(); say(''); });
     form.addEventListener('input', (e) => { (e.target as HTMLElement).removeAttribute('aria-invalid'); if (status.dataset.tone === 'error') say(''); saveDraft(); });
     form.addEventListener('change', saveDraft);
     // After sending: a thank-you panel with what happens next, in place of the form.
@@ -148,6 +295,14 @@ const faqSchema = { '@context': 'https://schema.org', '@type': 'FAQPage', mainEn
       done.querySelector('.contact-done-text')!.textContent = kind === 'audit'
         ? `Grant will review ${value('website')} and email the audit to ${value('email')}.`
         : `Your enquiry is with Grant. He’ll reply to ${value('email')} within 1 business day.`;
+      // What they sent, at a glance.
+      const summary = done.querySelector<HTMLElement>('.contact-done-summary')!;
+      const items = kind === 'audit'
+        ? [value('website')]
+        : [needOf(form), value('budget'), value('timing'), ...(form.querySelector<HTMLElement>('.contact-move')!.hidden ? [] : [`${value('from')} → ${value('to')}`])];
+      summary.replaceChildren(...items.filter(Boolean).map((t) => Object.assign(document.createElement('span'), { textContent: t })));
+      summary.hidden = !summary.childElementCount;
+      if (kind === 'audit' && speed.result) summary.after(form.querySelector('.speed-check')!);
       done.hidden = false;
       form.classList.add('is-done');
       clearDraft();
@@ -156,6 +311,8 @@ const faqSchema = { '@context': 'https://schema.org', '@type': 'FAQPage', mainEn
     };
     form.querySelector('.contact-again')!.addEventListener('click', () => {
       form.reset();
+      if (kind === 'enquiry') applyNeed(form, {});
+      if (kind === 'audit') { const check = done.querySelector('.speed-check'); if (check) { form.querySelector('.speed-run')!.after(check); (check as HTMLElement).hidden = true; } speed.result = ''; }
       form.classList.remove('is-done');
       done.hidden = true;
       submit.disabled = false;
@@ -168,7 +325,10 @@ const faqSchema = { '@context': 'https://schema.org', '@type': 'FAQPage', mainEn
       // First problem wins: say what's missing and put the cursor there.
       const checks: [string, boolean, string][] = kind === 'audit'
         ? [['company', Boolean(value('company')), 'Please add your company name.'], ['email', emailOk(value('email')), 'Please add a valid email, so Grant can send the audit.'], ['website', siteOk(value('website')), 'Please add your website address, like yourstore.com.']]
-        : [['name', Boolean(value('name')), 'Please add your name.'], ['email', emailOk(value('email')), 'Please add a valid email, so Grant can reply.'], ['message', Boolean(value('message')), 'Please add a short message about your project.']];
+        : [['name', Boolean(value('name')), 'Please add your name.'], ['email', emailOk(value('email')), 'Please add a valid email, so Grant can reply.'],
+          ['website', !(form.elements.namedItem('website') as HTMLInputElement).required || siteOk(value('website')), 'Please add your current website, like yourstore.com.'],
+          ['website', !value('website') || siteOk(value('website')), 'That website address doesn’t look right. Try something like yourstore.com.'],
+          ['message', Boolean(value('message')), 'Please add a short message about your project.']];
       const problem = checks.find(([, ok]) => !ok);
       if (problem) {
         const field = form.elements.namedItem(problem[0]) as HTMLElement;
@@ -177,14 +337,17 @@ const faqSchema = { '@context': 'https://schema.org', '@type': 'FAQPage', mainEn
         say(problem[2], 'error');
         return;
       }
-      // Too quick to be a person, or the hidden field was filled: look sent, send nothing.
-      if (performance.now() - opened < TOO_FAST_MS || value('_honey')) { showDone(); return; }
+      // Too quick to be a person, or the hidden field was filled: look sent, send nothing. (Not for someone
+      // sending a draft they typed on an earlier visit: they can be quick and still be a person.)
+      if ((!saved && performance.now() - opened < TOO_FAST_MS) || value('_honey')) { showDone(); return; }
       submit.disabled = true;
       submit.textContent = 'Sending…';
       say('');
       const fields = kind === 'audit'
-        ? { company: value('company'), email: value('email'), website: value('website') }
-        : { name: value('name'), email: value('email'), company: value('company') || '—', website: value('website') || '—', need: value('need') || (form.querySelector<HTMLInputElement>('input[name="need"]:checked')?.value ?? '—'), budget: value('budget'), timing: value('timing'), message: value('message') };
+        ? { company: value('company'), email: value('email'), website: value('website'), ...(speed.result && speed.site === value('website') ? { scores: speed.result } : {}) }
+        : { name: value('name'), email: value('email'), company: value('company') || '—', website: value('website') || '—', need: needOf(form) || '—',
+            ...(form.querySelector<HTMLElement>('.contact-move')!.hidden ? {} : { moving_from: value('from'), moving_to: value('to') }),
+            budget: value('budget'), timing: value('timing'), message: value('message') };
       const subject = kind === 'audit' ? `Free audit request: ${value('company')} (${value('website')})` : `New enquiry: ${value('name')}${value('company') ? `, ${value('company')}` : ''}`;
       // Also into the tracker's Inquiries inbox, in parallel; email below stays the backup either way.
       void human.token().then((turnstile_token) => { void sendLead({ kind, _honey: value('_honey'), turnstile_token, ...fields, ...sourceFields() }); human.reset(); });
@@ -206,20 +369,29 @@ const faqSchema = { '@context': 'https://schema.org', '@type': 'FAQPage', mainEn
     });
   });
 
+  // Copy the email: the address tips out letter by letter, as if poured into the clipboard, and a tick
+  // stamps in; then the address drops back into place.
   const copyButton = document.querySelector<HTMLButtonElement>('.copy-email');
   const copyStatus = document.querySelector('#copy-status');
+  if (copyButton && !navigator.clipboard) copyButton.hidden = true;
   if (copyButton && navigator.clipboard) {
-    copyButton.hidden = false;
+    const text = copyButton.querySelector<HTMLElement>('.copy-email-text')!;
+    const address = text.textContent || '';
+    text.setAttribute('aria-label', address);
+    text.replaceChildren(...[...address].map((ch, i) => Object.assign(document.createElement('span'), { textContent: ch, ariaHidden: 'true', style: `--i:${i};--n:${address.length}` })));
+    let timer = 0;
     copyButton.addEventListener('click', async () => {
       try {
         await navigator.clipboard.writeText(copyButton.dataset.email || '');
-        copyButton.textContent = 'Email copied';
+        copyButton.classList.remove('is-copied'); void copyButton.offsetWidth; copyButton.classList.add('is-copied');
         if (copyStatus) copyStatus.textContent = 'Email address copied to clipboard.';
-        setTimeout(() => { copyButton.textContent = 'Copy email address'; }, 2000);
+        clearTimeout(timer);
+        timer = window.setTimeout(() => copyButton.classList.remove('is-copied'), 2200);
       } catch {
-        copyButton.textContent = 'Couldn’t copy — use the address below';
+        copyButton.querySelector('.copy-email-label')!.textContent = 'Couldn’t copy: select the address instead';
         if (copyStatus) copyStatus.textContent = 'Copy failed. Please select the email address instead.';
       }
     });
   }
+
 </script>

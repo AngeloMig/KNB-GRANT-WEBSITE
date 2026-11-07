@@ -3,6 +3,9 @@ export const profile = {
   email: "grant.dev14@gmail.com",
   linkedin: "https://www.linkedin.com/in/grant-dev14/",
   title: "Shopify, Webflow & WordPress Developer",
+  /** WhatsApp number in international format, digits only (e.g. "639171234567"). Empty for now: the
+   * Contact page then shows WhatsApp as "coming soon" instead of a link. */
+  whatsapp: "",
 };
 
 export const experience = [

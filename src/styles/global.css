@@ -1524,16 +1524,6 @@ html.menu-closing,
 .wiz-phases {
   margin-top: 24px;
 }
-.wiz-bar {
-  display: flex;
-  gap: 3px;
-  height: 14px;
-}
-.wiz-bar span {
-  min-width: 6px;
-  border-radius: 4px;
-  transition: flex-grow 0.6s cubic-bezier(0.22, 1, 0.36, 1);
-}
 .wiz-legend {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -4559,11 +4549,6 @@ main {
 .contact-intro {
   padding-bottom: 80px;
 }
-.copy-email {
-  margin-top: 36px;
-  padding-inline: 0;
-  background: none;
-}
 .contact-options > a {
   display: grid;
   grid-template-columns: 1fr 1fr 24px;
@@ -4742,6 +4727,395 @@ main {
   line-height: 1.8;
   max-width: 600px;
 }
+/* "More of the site": the whole homepage in a browser and a phone, each scrolled from inside. */
+.project-more,
+.project-palette {
+  margin-bottom: 100px;
+}
+.project-more-head {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 40px;
+  align-items: end;
+  margin-bottom: 32px;
+}
+.project-more-head h2 {
+  font-size: 28px;
+  font-weight: 500;
+  letter-spacing: -0.03em;
+}
+.project-more-head p {
+  max-width: 520px;
+  font-size: 15px;
+  line-height: 1.7;
+  color: var(--muted);
+}
+.project-more-grid {
+  --more-h: clamp(460px, 46vw, 700px);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: clamp(20px, 3vw, 48px);
+  align-items: start;
+  padding: clamp(20px, 3.4vw, 56px);
+  border-radius: 28px;
+  background: var(--surface);
+}
+.project-more-grid figure {
+  margin: 0;
+  display: grid;
+  gap: 12px;
+}
+.project-more-grid figcaption {
+  font-size: 11px;
+  color: var(--muted);
+  text-align: center;
+}
+.more-browser,
+.more-handset {
+  position: relative;
+  overflow: hidden;
+  background: #fff;
+  box-shadow: 0 24px 60px oklch(0 0 0 / 0.14);
+}
+.more-browser {
+  height: var(--more-h);
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  border-radius: 14px;
+  border: 1px solid oklch(0 0 0 / 0.08);
+}
+.more-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  padding-inline: 14px;
+  background: #f4f4f5;
+  border-bottom: 1px solid #e4e4e7;
+}
+.more-toolbar i {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #d4d4d8;
+}
+.more-toolbar i:nth-child(1) { background: #ff5f57; }
+.more-toolbar i:nth-child(2) { background: #febc2e; }
+.more-toolbar i:nth-child(3) { background: #28c840; }
+.more-toolbar span {
+  margin-inline: auto;
+  padding: 3px 40px;
+  border-radius: 6px;
+  background: #fff;
+  font-size: 11px;
+  color: #71717a;
+}
+.more-handset {
+  width: calc(var(--more-h) * 390 / 844);
+  height: var(--more-h);
+  border: 9px solid #111;
+  border-radius: clamp(34px, 3.4vw, 48px);
+}
+.more-island {
+  position: absolute;
+  z-index: 2;
+  top: 9px;
+  left: 50%;
+  width: 30%;
+  height: 22px;
+  translate: -50% 0;
+  border-radius: 20px;
+  background: #111;
+}
+.more-scroll {
+  height: 100%;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+  outline-offset: -3px;
+}
+.more-scroll::-webkit-scrollbar {
+  display: none;
+}
+.more-scroll img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+/* How far down: a thin bar on the right edge, filling as the screen is scrolled. */
+.more-progress {
+  position: absolute;
+  z-index: 3;
+  top: 46px;
+  bottom: 12px;
+  right: 6px;
+  width: 3px;
+  border-radius: 3px;
+  background: oklch(0 0 0 / 0.1);
+}
+.more-handset .more-progress {
+  top: 40px;
+  right: 4px;
+}
+.more-progress i {
+  position: absolute;
+  inset: 0 0 auto;
+  height: calc(var(--p, 0) * 100%);
+  min-height: 10%;
+  border-radius: inherit;
+  background: var(--ink);
+}
+.more-hint {
+  position: absolute;
+  z-index: 3;
+  left: 50%;
+  bottom: 16px;
+  translate: -50% 0;
+  padding: 7px 14px;
+  border-radius: 999px;
+  background: var(--ink);
+  color: var(--bg);
+  font-size: 11px;
+  pointer-events: none;
+  transition: opacity 0.4s, translate 0.4s var(--ease);
+}
+.motion .more-hint {
+  animation: more-hint-bob 1.8s ease-in-out infinite;
+}
+.was-scrolled .more-hint {
+  opacity: 0;
+  translate: -50% 8px;
+  animation: none;
+}
+@keyframes more-hint-bob {
+  50% { translate: -50% -4px; }
+}
+
+/* Colours: one strip, each colour as wide as its share of the page (with a minimum so accents show).
+   Hovering a colour opens it up; tapping copies its code. */
+.palette-strip {
+  display: flex;
+  height: clamp(150px, 16vw, 230px);
+  gap: 6px;
+}
+.palette-chip {
+  position: relative;
+  flex: var(--grow) 1 0;
+  min-width: 44px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 14px;
+  border-radius: 18px;
+  background: var(--c);
+  color: #fff;
+  box-shadow: inset 0 0 0 1px oklch(0 0 0 / 0.08);
+  text-align: left;
+  overflow: hidden;
+  cursor: copy;
+  transition: flex-grow 0.6s var(--ease), border-radius 0.6s var(--ease);
+}
+.palette-chip.light {
+  color: #161616;
+}
+.palette-chip:hover,
+.palette-chip:focus-visible {
+  flex-grow: calc(var(--grow) + 0.3);
+  border-radius: 26px;
+}
+.palette-hex {
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+.palette-share {
+  font-size: 11px;
+  opacity: 0.7;
+}
+.palette-copied {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 13px;
+  font-weight: 500;
+  background: inherit;
+  opacity: 0;
+  pointer-events: none;
+}
+.palette-chip.is-copied .palette-copied {
+  animation: palette-copied 1.4s var(--ease) both;
+}
+@keyframes palette-copied {
+  0% { opacity: 0; scale: 0.9; }
+  15%, 75% { opacity: 1; scale: 1; }
+  100% { opacity: 0; }
+}
+.motion .palette-chip {
+  animation: palette-in 0.8s var(--ease) backwards;
+  animation-delay: calc(var(--i) * 70ms);
+  animation-play-state: paused;
+}
+.motion .project-palette.is-in .palette-chip,
+.motion .palette-strip:hover .palette-chip {
+  animation-play-state: running;
+}
+@keyframes palette-in {
+  from { transform: translateY(24px); opacity: 0; }
+}
+
+/* The project bar: a slim pill along the top on desktop (beside the floating menu button), along the
+   bottom on phones (beside the menu button there). */
+.project-bar {
+  position: fixed;
+  z-index: calc(var(--z-menu) - 2);
+  top: 20px;
+  left: var(--gutter);
+  right: calc(var(--gutter) + 72px);
+  max-width: 760px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  height: 58px;
+  padding: 0 6px 0 22px;
+  border-radius: 999px;
+  background: color-mix(in oklch, var(--bg) 88%, transparent);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  box-shadow: 0 6px 18px oklch(0.16 0 0 / 0.12), inset 0 0 0 1px oklch(0 0 0 / 0.06);
+  visibility: hidden;
+  opacity: 0;
+  translate: 0 -16px;
+  transition: opacity 0.35s, translate 0.45s var(--ease), visibility 0s 0.45s;
+}
+.project-bar.is-shown {
+  visibility: visible;
+  opacity: 1;
+  translate: 0 0;
+  transition: opacity 0.35s, translate 0.45s var(--ease), visibility 0s;
+}
+.menu-open .project-bar {
+  visibility: hidden;
+  opacity: 0;
+}
+.project-bar-name {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  min-width: 0;
+}
+.project-bar-name strong {
+  font-size: 15px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.project-bar-name span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.project-bar-name .arrow-icon {
+  width: 11px;
+  height: 11px;
+}
+.project-bar-name:hover span {
+  color: var(--ink);
+}
+.project-bar-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  height: 46px;
+  padding-inline: 20px;
+  border-radius: 999px;
+  background: var(--ink);
+  color: var(--bg);
+  font-size: 13px;
+  white-space: nowrap;
+}
+.project-bar-cta .arrow-icon {
+  width: 13px;
+  height: 13px;
+}
+@media (max-width: 900px) {
+  .project-more-head {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  .project-more-grid {
+    grid-template-columns: 1fr;
+    justify-items: center;
+  }
+  .more-desktop {
+    width: 100%;
+  }
+}
+@media (max-width: 640px) {
+  .project-more,
+  .project-palette {
+    margin-bottom: 72px;
+  }
+  .project-more-grid {
+    --more-h: 560px;
+    padding: 16px;
+    border-radius: 22px;
+  }
+  /* On a phone the phone screen is the natural one; the desktop one gets a shorter window. */
+  .more-desktop {
+    order: 2;
+  }
+  .more-desktop .more-browser {
+    height: 340px;
+  }
+  .palette-strip {
+    flex-direction: column;
+    height: auto;
+  }
+  .palette-chip {
+    flex: none;
+    height: calc(44px + var(--grow) * 200px);
+    flex-direction: row;
+    align-items: center;
+    border-radius: 14px;
+  }
+  .palette-chip:hover,
+  .palette-chip:focus-visible {
+    border-radius: 14px;
+  }
+  .project-bar {
+    top: auto;
+    bottom: calc(16px + env(safe-area-inset-bottom));
+    left: 16px;
+    right: 75px;
+    height: 49px;
+    padding: 0 4px 0 16px;
+    translate: 0 16px;
+  }
+  .project-bar-name {
+    flex-direction: column;
+    gap: 1px;
+  }
+  .project-bar-name strong {
+    font-size: 13px;
+  }
+  .project-bar-name span {
+    font-size: 10px;
+  }
+  .project-bar-cta {
+    height: 41px;
+    padding-inline: 14px;
+    font-size: 12px;
+  }
+}
+
 /* "Next project": a full-width panel in a deep shade of the next project's colour. Hovering raises its
    site into view and turns the arrow. */
 .next-project {
@@ -9466,4 +9840,1220 @@ html:active-view-transition-type(grow)::view-transition-new(root) {
 }
 .form-human-check {
   margin: 10px 0 4px;
+}
+
+/* ---------- Contact page: batch 2 ---------- */
+/* Copy the email: the address itself is the button; tapping it tips the letters out one by one and stamps a tick. */
+.copy-email {
+  position: relative;
+  display: grid;
+  justify-items: start;
+  gap: 6px;
+  margin-top: 36px;
+  padding: 14px 18px;
+  border: 1px dashed color-mix(in oklch, var(--ink) 30%, transparent);
+  border-radius: 16px;
+  background: none;
+  color: var(--ink);
+  text-align: left;
+  cursor: copy;
+  overflow: hidden;
+  transition: border-color 0.3s, background-color 0.3s;
+}
+.copy-email:hover {
+  border-color: var(--ink);
+  background: var(--surface);
+}
+.copy-email-label {
+  font-size: 11px;
+  color: var(--muted);
+}
+.copy-email-text {
+  display: flex;
+  font-size: 16px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+.copy-email-text > span {
+  display: inline-block;
+  white-space: pre;
+}
+.copy-email-done {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 500;
+  opacity: 0;
+  translate: 0 60%;
+  pointer-events: none;
+}
+.copy-email-done svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 24;
+  stroke-dashoffset: 24;
+}
+.copy-email.is-copied {
+  border-style: solid;
+  border-color: var(--ink);
+}
+.copy-email.is-copied .copy-email-text > span {
+  animation: copy-pour 0.55s cubic-bezier(0.5, 0, 0.75, 0) both;
+  animation-delay: calc(var(--i) * 14ms);
+}
+.copy-email.is-copied .copy-email-label {
+  animation: copy-fade 2.2s both;
+}
+.copy-email.is-copied .copy-email-done {
+  animation: copy-stamp 2.2s var(--ease) both;
+}
+.copy-email.is-copied .copy-email-done svg {
+  animation: contact-tick 0.4s 0.45s var(--ease) forwards;
+}
+@keyframes copy-pour {
+  to { transform: translateY(42px) rotate(calc((var(--i) - var(--n) / 2) * 3deg)); opacity: 0; }
+}
+@keyframes copy-fade {
+  10%, 85% { opacity: 0; }
+}
+@keyframes copy-stamp {
+  0%, 18% { opacity: 0; translate: 0 60%; }
+  32%, 82% { opacity: 1; translate: 0 0; }
+  100% { opacity: 0; translate: 0 -40%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .copy-email.is-copied .copy-email-text > span { animation: copy-fade 2.2s both; }
+}
+
+/* Speed check: four PageSpeed-style score rings. */
+.speed-run {
+  display: inline-flex;
+  align-items: baseline;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  width: 100%;
+  padding: 13px 18px;
+  border: 1px solid color-mix(in oklch, var(--bg) 40%, transparent);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--bg);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color 0.25s, background-color 0.25s;
+}
+.speed-run:hover {
+  border-color: var(--bg);
+  background: color-mix(in oklch, var(--bg) 8%, transparent);
+}
+.speed-run small {
+  font-size: 11px;
+  font-weight: 400;
+  opacity: 0.65;
+}
+.speed-run[disabled] {
+  opacity: 0.5;
+  cursor: progress;
+}
+.speed-check {
+  display: grid;
+  gap: 16px;
+  padding: 20px 18px 18px;
+  border-radius: 18px;
+  background: #fff;
+  color: #202124;
+  animation: contact-done-in 0.5s var(--ease) both;
+}
+.speed-check[hidden] {
+  display: none;
+}
+.speed-check-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 0;
+  font-size: 12px;
+  color: #5f6368;
+}
+.speed-check-site {
+  font-weight: 500;
+  color: #202124;
+  overflow-wrap: anywhere;
+}
+.speed-gauges {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+.gauge {
+  --score: 0;
+  --tone: #5f6368;
+  --fill: #f1f3f4;
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  text-align: center;
+}
+.gauge[data-band="good"] { --tone: #0c7c3a; --ring: #0cce6b; --fill: #e6f4ea; }
+.gauge[data-band="ok"] { --tone: #c33300; --ring: #ffa400; --fill: #fff3e0; }
+.gauge[data-band="poor"] { --tone: #c5221f; --ring: #ff4e42; --fill: #fce8e6; }
+.gauge-ring {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: min(100%, 76px);
+  aspect-ratio: 1;
+}
+.gauge-ring svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  rotate: -90deg;
+}
+.gauge-track {
+  fill: var(--fill);
+  stroke: color-mix(in oklch, var(--ring, #dadce0) 18%, transparent);
+  stroke-width: 9;
+  transition: fill 0.4s;
+}
+.gauge-bar {
+  fill: none;
+  stroke: var(--ring, #dadce0);
+  stroke-width: 9;
+  stroke-linecap: round;
+  stroke-dasharray: calc(var(--score) * 1) 100;
+  transition: stroke-dasharray 0.9s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.gauge-num {
+  position: relative;
+  font: 500 clamp(18px, 2vw, 24px) / 1 "Roboto Mono", ui-monospace, Menlo, monospace;
+  color: var(--tone);
+}
+.gauge-label {
+  font-size: 11px;
+  line-height: 1.25;
+  color: #3c4043;
+}
+/* While testing, each ring shows a short arc spinning round. */
+.speed-check.is-loading .gauge-bar {
+  stroke: #dadce0;
+  stroke-dasharray: 22 78;
+  transition: none;
+  transform-origin: 60px 60px;
+  animation: gauge-spin 1.1s linear infinite;
+}
+.speed-check.is-loading .gauge:nth-child(2) .gauge-bar { animation-delay: -0.25s; }
+.speed-check.is-loading .gauge:nth-child(3) .gauge-bar { animation-delay: -0.5s; }
+.speed-check.is-loading .gauge:nth-child(4) .gauge-bar { animation-delay: -0.75s; }
+@keyframes gauge-spin {
+  to { rotate: 360deg; }
+}
+.speed-check-status {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #3c4043;
+}
+.speed-check-note {
+  margin: 0;
+  padding-top: 12px;
+  border-top: 1px solid #e8eaed;
+  font-size: 12px;
+  line-height: 1.55;
+  color: #5f6368;
+}
+
+/* The enquiry follows "What do you need?": a hint line, the platform move fields, and a flash on what changed. */
+.contact-need-hint {
+  margin: 10px 0 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+.contact-need-hint:empty {
+  display: none;
+}
+.contact-move[hidden] {
+  display: none;
+}
+.contact-follow.is-updated select,
+.contact-follow.is-updated textarea,
+.contact-move.is-updated select {
+  animation: contact-updated 0.9s var(--ease);
+}
+@keyframes contact-updated {
+  0% { background-color: color-mix(in oklch, var(--ink) 10%, var(--bg)); border-color: var(--ink); }
+}
+
+/* After sending: what they sent, as small chips. */
+.contact-done-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.contact-done-summary[hidden] {
+  display: none;
+}
+.contact-done-summary span {
+  padding: 6px 12px;
+  border: 1px solid color-mix(in oklch, currentColor 25%, transparent);
+  border-radius: 999px;
+  font-size: 12px;
+}
+.contact-done .speed-check {
+  margin-top: 4px;
+}
+
+/* WhatsApp, until there's a number: shown, but not a link. */
+.contact-option-soon {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 30px;
+  align-items: center;
+  border-top: 1px solid var(--line);
+  padding-block: 29px;
+  color: var(--muted);
+}
+.contact-option-soon strong {
+  font-weight: 500;
+  font-size: clamp(17px, 2vw, 27px);
+  letter-spacing: -0.03em;
+}
+.contact-option-soon em {
+  padding: 5px 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  font-size: 11px;
+  font-style: normal;
+}
+
+@media (max-width: 640px) {
+  .speed-gauges {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    row-gap: 16px;
+  }
+  .contact-option-soon {
+    grid-template-columns: 1fr auto;
+    gap: 6px 16px;
+  }
+  .contact-option-soon span {
+    grid-column: 1 / -1;
+  }
+}
+
+/* ---------- Estimator: batch 3 ---------- */
+/* The timeline, week by week: a square per week, coloured by phase; hatched squares are the "might run
+   to" part of the range; the last one carries the launch flag. */
+.wiz-pick {
+  margin-top: 10px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: var(--bg);
+  font-size: 12px;
+  font-weight: 500;
+  width: fit-content;
+}
+.wiz-pick[hidden] {
+  display: none;
+}
+.wiz-weeks {
+  --cols: 10;
+  display: grid;
+  grid-template-columns: repeat(var(--cols), minmax(0, 26px));
+  gap: 5px;
+  padding-top: 16px;
+}
+.wk {
+  position: relative;
+  aspect-ratio: 1;
+  border-radius: 6px;
+  transition: opacity 0.3s, transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), background-color 0.5s;
+}
+.wk.is-maybe {
+  background: repeating-linear-gradient(135deg, color-mix(in oklch, var(--ink) 22%, transparent) 0 2px, transparent 2px 5px);
+  box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--ink) 18%, transparent);
+}
+/* The launch flag sits inside the last square: a pole and a small waving pennant. */
+.wk.is-launch::after {
+  content: "";
+  position: absolute;
+  left: 34%;
+  top: 18%;
+  bottom: 18%;
+  width: 2px;
+  border-radius: 1px;
+  background: var(--ink);
+}
+.wk.is-launch::before {
+  content: "";
+  position: absolute;
+  left: calc(34% + 2px);
+  top: 18%;
+  width: 40%;
+  height: 32%;
+  background: oklch(0.62 0.17 35);
+  clip-path: polygon(0 0, 100% 50%, 0 100%);
+  transform-origin: left center;
+  animation: wiz-flag 2.4s ease-in-out infinite;
+}
+@keyframes wiz-flag {
+  50% { transform: scaleX(0.75) skewY(4deg); }
+}
+.wk.is-new {
+  animation: wiz-week-in 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
+  animation-delay: calc(var(--d) * 28ms);
+}
+@keyframes wiz-week-in {
+  from { transform: scale(0); opacity: 0; }
+}
+.wiz-weeks[data-focus]:not([data-focus=""]) .wk {
+  opacity: 0.22;
+}
+.wiz-weeks[data-focus="discovery"] .wk[data-phase="discovery"],
+.wiz-weeks[data-focus="design"] .wk[data-phase="design"],
+.wiz-weeks[data-focus="build"] .wk[data-phase="build"],
+.wiz-weeks[data-focus="data"] .wk[data-phase="data"],
+.wiz-weeks[data-focus="content"] .wk[data-phase="content"],
+.wiz-weeks[data-focus="qa"] .wk[data-phase="qa"] {
+  opacity: 1;
+  transform: translateY(-3px);
+}
+.wiz-weeks-scale {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 8px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.wiz-legend button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 5px 8px;
+  margin: 0;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.wiz-legend button span {
+  margin-left: auto;
+  color: var(--muted);
+}
+.wiz-legend button:hover,
+.wiz-legend button[aria-pressed="true"] {
+  background: var(--bg);
+}
+.wiz-phase-why {
+  min-height: 3.1em;
+  margin-top: 12px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+/* What's driving the time: each driver with a line on why. */
+.wiz-drivers li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  justify-content: stretch;
+  gap: 2px;
+}
+.wiz-driver-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--ink) !important;
+}
+.wiz-driver-row span {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.wiz-drivers li small {
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--muted);
+}
+
+/* Examples: real projects on the platform picked. */
+.wiz-examples {
+  margin-top: 24px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+}
+.wiz-examples[hidden] {
+  display: none;
+}
+.wiz-examples-title {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.01em;
+}
+.wiz-examples-list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 12px;
+}
+.wiz-example {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  animation: contact-done-in 0.5s var(--ease) backwards;
+  animation-delay: calc(var(--i) * 70ms);
+}
+.wiz-example img {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  object-position: top;
+  border-radius: 8px;
+  box-shadow: 0 0 0 1px var(--line);
+  transition: transform 0.4s var(--ease);
+}
+@media (hover: hover) {
+  .wiz-example:hover img {
+    transform: translateY(-3px);
+  }
+}
+.wiz-example strong {
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.wiz-example small {
+  font-size: 11px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.wiz-examples-inline {
+  margin-top: 22px;
+  max-width: 560px;
+}
+
+/* Your answers: each one a tap away from changing. */
+.wiz-answers {
+  margin-top: 22px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+.wiz-answers[hidden] {
+  display: none;
+}
+.wiz-answers summary {
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.01em;
+}
+.wiz-answers summary span {
+  color: var(--muted);
+  font-weight: 400;
+}
+.wiz-answers ul {
+  display: grid;
+  gap: 4px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.wiz-answers button {
+  display: grid;
+  grid-template-columns: 92px minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: baseline;
+  width: 100%;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 10px;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  font-size: 12.5px;
+  text-align: left;
+  cursor: pointer;
+}
+.wiz-answers button:hover {
+  background: var(--bg);
+}
+.wiz-answers button span {
+  color: var(--muted);
+}
+.wiz-answers button strong {
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+.wiz-answers button em {
+  font-style: normal;
+  font-size: 11px;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.wiz-answers button:hover em,
+.wiz-answers button:focus-visible em {
+  opacity: 1;
+}
+.wiz-return {
+  padding: 10px 16px;
+  border: 1px solid var(--ink);
+  border-radius: 999px;
+  background: var(--bg);
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  animation: contact-done-in 0.4s var(--ease) both;
+}
+.wiz-return[hidden] {
+  display: none;
+}
+
+/* Ways to build it: each route as a card with its own timeline bar, all on one scale. */
+.wiz-routes {
+  margin-top: 32px;
+}
+.wiz-routes[hidden] {
+  display: none;
+}
+.wiz-routes-help {
+  margin: -6px 0 14px;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+.wiz-routes-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 10px;
+}
+.wiz-route {
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--bg);
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.25s, transform 0.4s var(--ease), box-shadow 0.4s var(--ease);
+}
+@media (hover: hover) {
+  .wiz-route:hover {
+    border-color: var(--ink);
+    transform: translateY(-2px);
+  }
+}
+.wiz-route[aria-pressed="true"] {
+  border-color: var(--ink);
+  box-shadow: inset 0 0 0 1px var(--ink), 0 10px 24px oklch(0 0 0 / 0.07);
+}
+.wiz-route strong {
+  font-size: 14px;
+  font-weight: 600;
+}
+.wiz-route-weeks {
+  font-family: "Big Shoulders Display", Impact, sans-serif;
+  font-weight: 800;
+  font-size: 30px;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.wiz-route-bar {
+  display: flex;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--surface);
+  overflow: hidden;
+}
+.wiz-route-bar i:first-child {
+  background: var(--ink);
+  transition: width 0.6s var(--ease);
+}
+.wiz-route-bar i:last-child {
+  background: repeating-linear-gradient(135deg, color-mix(in oklch, var(--ink) 35%, transparent) 0 2px, transparent 2px 4px);
+}
+.wiz-route small {
+  font-size: 12px;
+  color: var(--muted);
+}
+.wiz-route em {
+  justify-self: start;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-style: normal;
+  background: var(--surface);
+}
+.wiz-route em[data-fit="fits"] { background: oklch(0.93 0.06 150); color: oklch(0.38 0.09 150); }
+.wiz-route em[data-fit="close"] { background: oklch(0.94 0.06 80); color: oklch(0.45 0.1 70); }
+.wiz-route em[data-fit="far"] { background: oklch(0.93 0.05 30); color: oklch(0.45 0.14 30); }
+
+/* What's next: three choices, then the matching panel. */
+.wiz-choose {
+  margin-top: 28px;
+}
+.wiz-choose-list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+.wiz-later-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.wiz-send-note {
+  margin: 12px 0 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+.wiz-send-alt[hidden] {
+  display: none;
+}
+.wiz-choose button,
+.wiz-later-list > * {
+  display: grid;
+  align-content: start;
+  gap: 4px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--bg);
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.25s, background-color 0.25s, color 0.25s, transform 0.4s var(--ease);
+}
+@media (hover: hover) {
+  .wiz-choose button:hover,
+  .wiz-later-list > *:hover {
+    border-color: var(--ink);
+    transform: translateY(-2px);
+  }
+}
+.wiz-choose button[aria-pressed="true"] {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: var(--bg);
+}
+.wiz-choose-icon {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  margin-bottom: 6px;
+  border-radius: 50%;
+  background: color-mix(in oklch, currentColor 10%, transparent);
+  font-size: 14px;
+}
+.wiz-choose strong,
+.wiz-later-list strong {
+  font-size: 14px;
+  font-weight: 600;
+}
+.wiz-choose small,
+.wiz-later-list small {
+  font-size: 12px;
+  line-height: 1.4;
+  opacity: 0.7;
+}
+.wiz-later {
+  margin-top: 28px;
+  padding: 22px;
+  border: 1px solid var(--ink);
+  border-radius: 20px;
+  animation: contact-done-in 0.4s var(--ease) both;
+}
+.wiz-later[hidden],
+.wiz-contact[hidden] {
+  display: none;
+}
+.wiz-later-list > *[disabled] {
+  opacity: 0.5;
+  cursor: progress;
+}
+.wiz-call-time[hidden] {
+  display: none !important;
+}
+.wiz-contact-grid select {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--bg);
+  color: var(--ink);
+  font: 400 15px Archivo, sans-serif;
+}
+@media (max-width: 760px) {
+  .wiz-choose-list,
+  .wiz-later-list {
+    grid-template-columns: 1fr;
+  }
+  .wiz-choose button,
+  .wiz-later-list > * {
+    grid-template-columns: auto 1fr;
+    column-gap: 12px;
+    align-items: center;
+    padding: 14px;
+  }
+  .wiz-choose-icon {
+    grid-row: span 2;
+    margin: 0;
+  }
+  .wiz-later-list > * {
+    grid-template-columns: 1fr;
+  }
+  .wiz-routes-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .wiz-route-weeks {
+    font-size: 26px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .wk.is-launch::before { animation: none; }
+}
+
+.wiz-hint[hidden] {
+  display: none;
+}
+
+/* Estimator on phones: one swipeable row of step chips, the estimate bar beside the menu button
+   (same height, bottom edge and shadow as the homepage's estimate button), a one-column legend. */
+@media (max-width: 640px) {
+  .wiz-dots {
+    position: relative;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    margin-inline: calc(-1 * var(--gutter));
+    padding: 2px var(--gutter);
+    scrollbar-width: none;
+    -webkit-mask-image: linear-gradient(90deg, transparent, #000 var(--gutter), #000 calc(100% - 28px), transparent);
+    mask-image: linear-gradient(90deg, transparent, #000 var(--gutter), #000 calc(100% - 28px), transparent);
+  }
+  .wiz-dots::-webkit-scrollbar {
+    display: none;
+  }
+  .wiz-dots li {
+    flex: none;
+  }
+  .estimate-bar {
+    left: 16px;
+    right: 75px;
+    bottom: calc(14px + env(safe-area-inset-bottom));
+    height: 49px;
+    padding: 0 18px;
+    box-shadow: 0 6px 18px oklch(0.16 0 0 / 0.2);
+  }
+  .wiz-legend {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .wiz-routes {
+    margin-top: 26px;
+  }
+  .wiz-weeks {
+    grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
+    max-width: 330px;
+  }
+}
+.wiz-later-list > .wiz-copy {
+  justify-items: start;
+  text-align: left;
+  text-decoration: none;
+}
+.wiz-examples-side {
+  margin-bottom: 14px;
+}
+
+/* Send it to Grant: who it's from as a small card, optional fields marked, and "no website yet". */
+.wiz-contact .wiz-sending-as {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  margin: 0 0 18px;
+  padding: 10px 12px 10px 10px;
+  border-radius: 14px;
+  background: var(--surface);
+}
+.wiz-as-avatar {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: var(--ink);
+  color: var(--bg);
+  font-size: 15px;
+  font-weight: 600;
+}
+.wiz-as-text {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+}
+.wiz-as-text strong {
+  font-size: 14px;
+  font-weight: 600;
+}
+.wiz-as-text span {
+  font-size: 13px;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.wiz-as-edit {
+  padding: 6px 10px;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: var(--ink);
+  font-size: 13px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.wiz-as-edit:hover {
+  background: var(--bg);
+}
+.wiz-contact-grid label > span em {
+  margin-left: 6px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--surface);
+  font-size: 10.5px;
+  font-style: normal;
+  font-weight: 500;
+  color: var(--muted);
+}
+.wiz-contact-grid input::placeholder {
+  color: color-mix(in oklch, var(--muted) 70%, transparent);
+}
+.wiz-contact-grid input:disabled {
+  background: var(--surface);
+  border-style: dashed;
+  cursor: not-allowed;
+}
+.wiz-site-field {
+  display: grid;
+  gap: 8px;
+}
+.wiz-contact-grid label.wiz-no-site {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--ink);
+  cursor: pointer;
+}
+.wiz-no-site input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--ink);
+}
+@media (max-width: 640px) {
+  .wiz-contact-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.wiz-contact .wiz-contact-grid {
+  align-items: start;
+}
+.wiz-contact .wiz-contact-grid label {
+  align-content: start;
+}
+
+/* The estimator's finish (idea 3, "the timeline draws itself"): a line runs from kick-off to launch,
+   colouring each phase as it passes; the week squares light up under it in step, the flag goes up at the
+   end, and the number and its months follow it in. */
+.wiz-line {
+  position: relative;
+  margin-top: 18px;
+}
+.wiz-line-track {
+  display: flex;
+  gap: 3px;
+  height: 10px;
+}
+.wiz-line-track i {
+  min-width: 4px;
+  border-radius: 4px;
+  transition: flex-grow 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.wiz-runner {
+  position: absolute;
+  top: -4px;
+  left: 0;
+  width: 18px;
+  height: 18px;
+  margin-left: -9px;
+  border-radius: 50%;
+  background: var(--bg);
+  box-shadow: 0 0 0 2px var(--ink);
+  opacity: 0;
+  pointer-events: none;
+}
+.wiz-summary.is-finishing .wiz-line-track {
+  clip-path: inset(0 100% 0 0 round 4px);
+  animation: wiz-draw 1.4s cubic-bezier(0.65, 0, 0.35, 1) 0.15s forwards;
+}
+.wiz-summary.is-finishing .wiz-runner {
+  animation: wiz-run 1.4s cubic-bezier(0.65, 0, 0.35, 1) 0.15s forwards;
+}
+.wiz-summary.is-finishing .wk {
+  animation: wiz-fill 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  animation-delay: calc(0.15s + var(--n) / var(--cells, 10) * 1.3s);
+}
+.wiz-summary.is-finishing .wk.is-launch::before,
+.wiz-summary.is-finishing .wk.is-launch::after {
+  animation: wiz-flag-up 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) 1.5s both;
+  transform-origin: left bottom;
+}
+.wiz-summary.is-finishing .wiz-result,
+.wiz-summary.is-finishing .wiz-months {
+  animation: wiz-rise-in 0.7s cubic-bezier(0.22, 1, 0.36, 1) 1.2s both;
+}
+.wiz-summary.is-finishing .wiz-weeks-end {
+  animation: wiz-rise-in 0.5s 1.5s both;
+}
+@keyframes wiz-draw {
+  to { clip-path: inset(0 0 0 0 round 4px); }
+}
+@keyframes wiz-run {
+  0% { left: 0; opacity: 1; }
+  90% { opacity: 1; }
+  100% { left: 100%; opacity: 0; }
+}
+@keyframes wiz-fill {
+  from { opacity: 0.12; transform: scale(0.55); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes wiz-flag-up {
+  from { opacity: 0; transform: scaleY(0); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes wiz-rise-in {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* Ways to build it: plain names with the team detail under them, a tag on the main three, the rest
+   behind "Show more ways". Phones: a swipe row with the next card peeking in, dots, and the pick. */
+.wiz-route-tag {
+  justify-self: start;
+  margin-bottom: 2px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: var(--surface);
+  font-size: 11px;
+  font-weight: 600;
+}
+.wiz-route.is-best .wiz-route-tag {
+  background: var(--ink);
+  color: var(--bg);
+}
+.wiz-route-name {
+  font-size: 17px !important;
+  letter-spacing: -0.02em;
+}
+.wiz-route-sub {
+  margin-top: -4px;
+  font-size: 11.5px;
+  color: var(--muted);
+}
+.wiz-route.is-extra {
+  display: none;
+}
+.wiz-routes.is-all .wiz-route.is-extra {
+  display: grid;
+}
+.wiz-routes.is-revealing .wiz-route.is-extra {
+  animation: contact-done-in 0.4s var(--ease) both;
+}
+.wiz-routes-more {
+  margin-top: 12px;
+  padding: 9px 16px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: none;
+  color: var(--ink);
+  font-size: 13px;
+  cursor: pointer;
+}
+.wiz-routes-more[hidden] {
+  display: none;
+}
+.wiz-routes-dots,
+.wiz-routes-pick {
+  display: none;
+}
+@media (max-width: 640px) {
+  .wiz-routes-list {
+    display: grid;
+    grid-template-columns: none;
+    grid-auto-flow: column;
+    grid-auto-columns: 76%;
+    gap: 10px;
+    margin-inline: calc(-1 * var(--gutter));
+    padding: 4px var(--gutter) 10px;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scroll-padding-inline: var(--gutter);
+    scrollbar-width: none;
+  }
+  .wiz-routes-list::-webkit-scrollbar {
+    display: none;
+  }
+  .wiz-routes-list .wiz-route {
+    scroll-snap-align: start;
+  }
+  .wiz-routes-dots {
+    display: flex;
+    justify-content: center;
+    gap: 5px;
+    min-height: 6px;
+    margin: 6px 0 0;
+  }
+  .wiz-routes-dots i {
+    width: 6px;
+    height: 6px;
+    border-radius: 3px;
+    background: var(--line);
+    transition: width 0.3s, background-color 0.3s;
+  }
+  .wiz-routes-dots i.on {
+    width: 18px;
+    background: var(--ink);
+  }
+  .wiz-routes-pick {
+    display: block;
+    margin: 14px 0 0;
+    padding: 10px 14px;
+    border-radius: 12px;
+    background: var(--surface);
+    font-size: 13px;
+  }
+  .wiz-routes-pick:empty {
+    display: none;
+  }
+}
+
+/* The timeline block: the phase line, the week squares and the Kick-off / Launch labels share one width. */
+.wiz-timeline {
+  width: fit-content;
+  max-width: 100%;
+}
+.wiz-timeline .wiz-line {
+  margin-top: 18px;
+}
+.wiz-timeline .wiz-weeks {
+  padding-top: 10px;
+}
+.wiz-line-track i.is-maybe {
+  background: repeating-linear-gradient(135deg, color-mix(in oklch, var(--ink) 30%, transparent) 0 2px, transparent 2px 5px);
+  box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--ink) 15%, transparent);
+}
+.wiz-legend {
+  gap: 2px 12px;
+  margin-top: 14px;
+}
+@media (max-width: 640px) {
+  .wiz-timeline {
+    width: 100%;
+    max-width: 330px;
+  }
+}
+
+/* Timeline, full width (owner's preference): the phase line, the week squares (stretched to share the
+   width, so they sit under the line) and the Kick-off / Launch labels all span the panel. */
+.wiz-timeline,
+.wiz-summary .wiz-timeline {
+  width: auto;
+  max-width: none;
+}
+.wiz-summary .wiz-weeks {
+  grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
+  gap: 4px;
+}
+.wiz-summary .wiz-line-track {
+  gap: 4px;
+}
+.wiz-summary .wk {
+  aspect-ratio: auto;
+  height: 24px;
+  border-radius: 5px;
+}
+/* The launch flag keeps its shape in a wider square. */
+.wiz-summary .wk.is-launch::after {
+  left: calc(50% - 5px);
+  top: 4px;
+  bottom: 4px;
+}
+.wiz-summary .wk.is-launch::before {
+  left: calc(50% - 3px);
+  top: 4px;
+  width: 10px;
+  height: 8px;
+}
+/* The legend: one column, so every time lines up on the same right edge. */
+.wiz-summary .wiz-legend {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 2px;
+}
+.wiz-summary .wiz-legend button span {
+  font-variant-numeric: tabular-nums;
+}
+
+/* "Tighter than your date": the outline is drawn on a layer above the card's contents, so it runs
+   unbroken round the whole card, over the "Not a quotation" band and its rounded corners too. */
+.wiz-summary.is-tight {
+  box-shadow: none;
+}
+.wiz-summary::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 1.5px oklch(0.62 0.17 35);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.4s;
+}
+.wiz-summary.is-tight::after {
+  opacity: 1;
+}
+@media (max-width: 900px) {
+  .wiz-summary {
+    position: relative;
+  }
 }

@@ -6,7 +6,11 @@ import { profile } from '../data/profile';
 import { steps } from '../data/estimator';
 import { PACKAGES, packageOf } from '../data/quote-model';
 import { FORM_CC, FORM_INBOX } from '../data/forms';
+import { projects } from '../data/projects';
+import { withBase } from '../utils/paths';
 const plans = PACKAGES.filter((p) => p.id !== 'custom');
+// Real projects, shown as examples once a platform is picked.
+const examples = projects.map((p) => ({ name: p.name, platform: p.platform, category: p.category, href: withBase(`/work/${p.slug}/`), img: withBase(`/images/projects/${p.slug}-480.webp`) }));
 ---
 <BaseLayout title="Project Estimator — Plan Your Website | Grant Dev14" description="Plan a Shopify, Webflow or WordPress project in about a minute. Answer a few questions to get a realistic timeline, what drives it, and a ready-to-send brief.">
   <div class="wrap estimate-page">
@@ -59,6 +63,7 @@ const plans = PACKAGES.filter((p) => p.id !== 'custom');
                 </div>
               )}
               {step.noteFor && <div class="wiz-note" aria-live="polite" hidden><strong></strong><p></p></div>}
+              {step.id === 'platform' && <div class="wiz-examples wiz-examples-inline" hidden><p class="wiz-examples-title"></p><div class="wiz-examples-list"></div></div>}
               {step.id === 'hours' && (
                 <details class="wiz-plans">
                   <summary>Compare what each plan includes</summary>
@@ -89,16 +94,47 @@ const plans = PACKAGES.filter((p) => p.id !== 'custom');
             <h2 class="wiz-question" tabindex="-1">Here’s your project at a glance.</h2>
             <p class="wiz-help">Check it over, change anything, then send it to Grant.</p>
             <dl class="wiz-review-list"></dl>
+            <div class="wiz-routes" hidden>
+              <p class="wiz-contact-title">Ways to build it</p>
+              <p class="wiz-routes-help">Each one shown against the same scope. Pick the one that suits you; Grant prices it in the proposal.</p>
+              <div class="wiz-routes-list" role="group" aria-label="Ways to build it"></div>
+              <p class="wiz-routes-dots" aria-hidden="true"></p>
+              <button type="button" class="wiz-routes-more" hidden></button>
+              <p class="wiz-routes-pick" aria-live="polite"></p>
+            </div>
+            <div class="wiz-choose" role="radiogroup" aria-label="What would you like to do next?">
+              <p class="wiz-contact-title">What’s next?</p>
+              <div class="wiz-choose-list">
+                <button type="button" role="radio" aria-checked="true" data-next="send"><span class="wiz-choose-icon" aria-hidden="true">✉︎</span><strong>Send the brief</strong><small>Grant replies within 1 business day</small></button>
+                <button type="button" role="radio" aria-checked="false" data-next="call"><span class="wiz-choose-icon" aria-hidden="true">☏</span><strong>Talk it through</strong><small>Ask for a 15-minute call</small></button>
+                <button type="button" role="radio" aria-checked="false" data-next="later"><span class="wiz-choose-icon" aria-hidden="true">↓</span><strong>Keep it for later</strong><small>PDF, share link or email it to yourself</small></button>
+              </div>
+            </div>
+            <div class="wiz-later" hidden>
+              <p class="wiz-contact-title">Keep it for later</p>
+              <p class="wiz-routes-help">Your answers are also saved on this device, so you can come back to them.</p>
+              <div class="wiz-later-list">
+                <button type="button" class="wiz-later-pdf"><strong>Download the PDF</strong><small>Your estimate and brief, ready to share</small></button>
+                <button type="button" class="wiz-later-link wiz-share"><strong>Copy a share link</strong><small>Opens these answers on any device</small></button>
+                <a class="wiz-later-mail" href="#"><strong>Email it to yourself</strong><small>The brief, in your own inbox</small></a>
+                <button type="button" class="wiz-copy"><strong>Copy the brief</strong><small>As text, to paste anywhere</small></button>
+              </div>
+            </div>
             <div class="wiz-contact" data-email={FORM_INBOX} data-cc={FORM_CC}>
               <p class="wiz-contact-title">Send it to Grant</p>
-              <p class="wiz-sending-as"><span class="wiz-as-text"></span> <button type="button" class="wiz-edit wiz-as-edit">Change</button></p>
+              <p class="wiz-sending-as"><span class="wiz-as-avatar" aria-hidden="true"></span><span class="wiz-as-text"></span><button type="button" class="wiz-as-edit">Change</button></p>
               <div class="wiz-contact-grid">
-                <label>Company<input name="c-company" autocomplete="organization" /></label>
-                <label>Current website<input name="c-website" autocomplete="url" placeholder="example.com" /></label>
+                <label><span>Company <em>Optional</em></span><input name="c-company" autocomplete="organization" placeholder="Your business name" /></label>
+                <div class="wiz-site-field">
+                  <label><span>Current website <em>Optional</em></span><input name="c-website" autocomplete="url" inputmode="url" placeholder="yourstore.com" /></label>
+                  <label class="wiz-no-site"><input type="checkbox" name="c-nosite" /><span>I don’t have a website yet</span></label>
+                </div>
+                <label class="wiz-call-time" hidden>Best time for a call<select name="c-call"><option>Mornings</option><option>Afternoons</option><option>Evenings</option><option>Any time</option></select></label>
               </div>
               <button type="button" class="wiz-submit">Send to Grant <Arrow diagonal /></button>
               <p class="wiz-send-status" role="status" aria-live="polite"></p>
-              <p class="wiz-send-alt">Your details go only to Grant. Prefer something else? <a class="wiz-send" href={`mailto:${profile.email}`} data-email={profile.email}>Email it instead</a> · <button type="button" class="wiz-copy">Copy brief</button> · <button type="button" class="wiz-share">Copy share link</button></p>
+              <p class="wiz-send-note">Your details go only to Grant.</p>
+              <p class="wiz-send-alt" hidden>Couldn’t send it? <a class="wiz-send" href={`mailto:${profile.email}`} data-email={profile.email}>Email it to Grant instead</a></p>
             </div>
             <div class="wiz-after">
               <div class="wiz-next-steps">
@@ -120,6 +156,7 @@ const plans = PACKAGES.filter((p) => p.id !== 'custom');
         <div class="wiz-nav">
           <button class="wiz-back" type="button">← Back</button>
           <p class="wiz-hint" aria-hidden="true">Tip: press <kbd>1</kbd>–<kbd>9</kbd> to choose, <kbd>Enter</kbd> to continue</p>
+          <button class="wiz-return" type="button" hidden>Back to where you were ↩</button>
           <button class="wiz-next" type="button">Continue <Arrow /></button>
         </div>
       </div>
@@ -130,14 +167,22 @@ const plans = PACKAGES.filter((p) => p.id !== 'custom');
         <p class="wiz-result" aria-live="polite"><span class="wiz-num">—</span><span class="wiz-unit"></span></p>
         <p class="wiz-months" aria-live="polite"></p>
         <p class="wiz-caption">Answer a few questions to see a realistic timeline.</p>
+        <p class="wiz-pick" hidden></p>
         <div class="wiz-phases" hidden>
-          <div class="wiz-bar"></div>
+          <div class="wiz-timeline">
+            <div class="wiz-line" aria-hidden="true"><span class="wiz-line-track"></span><span class="wiz-runner"></span></div>
+            <div class="wiz-weeks" role="img"></div>
+            <div class="wiz-weeks-scale" aria-hidden="true"><span>Kick-off</span><span class="wiz-weeks-end">Launch</span></div>
+          </div>
           <ul class="wiz-legend"></ul>
+          <p class="wiz-phase-why" aria-live="polite">Tap a colour to see what happens in it.</p>
         </div>
         <div class="wiz-drivers" hidden>
           <h3>What’s driving the time</h3>
           <ul></ul>
         </div>
+        <div class="wiz-examples wiz-examples-side" hidden data-projects={JSON.stringify(examples)}><h3 class="wiz-examples-title"></h3><div class="wiz-examples-list"></div></div>
+        <details class="wiz-answers" hidden><summary>Your answers <span></span></summary><ul></ul></details>
         <ul class="wiz-notes"></ul>
         <div class="wiz-actions">
           <button class="wiz-to-send" type="button">Send this brief to Grant <Arrow diagonal /></button>
@@ -150,7 +195,7 @@ const plans = PACKAGES.filter((p) => p.id !== 'custom');
   <a class="estimate-bar" href="#estimate-summary" aria-hidden="true" tabindex="-1"><span>Estimate</span><strong class="bar-value">—</strong><span>View ↓︎</span></a>
 </BaseLayout>
 <script>
-  import { steps, estimate, type Answers, type Estimate } from '../data/estimator';
+  import { steps, estimate, planFor, type Answers, type Estimate, type Phase } from '../data/estimator';
   import { formEndpoint } from '../data/forms';
   import { sourceFields } from '../scripts/lead-source';
   import { sendLead } from '../scripts/leads';
@@ -173,7 +218,6 @@ const plans = PACKAGES.filter((p) => p.id !== 'custom');
     const caption = summary.querySelector('.wiz-caption')!;
     const disclaimer = summary.querySelector('.wiz-disclaimer')!;
     const phasesBox = summary.querySelector<HTMLElement>('.wiz-phases')!;
-    const bar = summary.querySelector<HTMLElement>('.wiz-bar')!;
     const legend = summary.querySelector('.wiz-legend')!;
     const driversBox = summary.querySelector<HTMLElement>('.wiz-drivers')!;
     const notesList = summary.querySelector('.wiz-notes')!;
@@ -194,11 +238,314 @@ const plans = PACKAGES.filter((p) => p.id !== 'custom');
     const monthsLine = summary.querySelector('.wiz-months')!;
     const barValue = document.querySelector('.bar-value');
     const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const weeksGrid = summary.querySelector<HTMLElement>('.wiz-weeks')!;
+    const weeksEnd = summary.querySelector<HTMLElement>('.wiz-weeks-end')!;
+    const phaseWhy = summary.querySelector<HTMLElement>('.wiz-phase-why')!;
+    const pickLine = summary.querySelector<HTMLElement>('.wiz-pick')!;
+    const answersBox = summary.querySelector<HTMLDetailsElement>('.wiz-answers')!;
+    const routesBox = wizard.querySelector<HTMLElement>('.wiz-routes')!;
+    const routesList = routesBox.querySelector<HTMLElement>('.wiz-routes-list')!;
+    const returnButton = wizard.querySelector<HTMLButtonElement>('.wiz-return')!;
+    const keyHint = wizard.querySelector<HTMLElement>('.wiz-hint')!;
+    const chooser = wizard.querySelector<HTMLElement>('.wiz-choose')!;
+    const later = wizard.querySelector<HTMLElement>('.wiz-later')!;
+    const laterMail = later.querySelector<HTMLAnchorElement>('.wiz-later-mail')!;
+    const callTime = wizard.querySelector<HTMLElement>('.wiz-call-time')!;
+    type Example = { name: string; platform: string; category: string; href: string; img: string };
+    const exampleData = JSON.parse(summary.querySelector<HTMLElement>('.wiz-examples-side')!.dataset.projects || '[]') as Example[];
+
+    /* ---------- Why each part takes the time it does ---------- */
+    const PHASE_WHY: Record<string, string> = {
+      discovery: 'Agreeing goals, pages and features before any code, so the build never changes direction halfway.',
+      Audit: 'Measuring what’s slow or broken first, so the fixes target what actually matters.',
+      design: 'Pages designed and signed off before the build starts.',
+      build: 'Building every layout and feature, tested as it goes on phones and desktops.',
+      Fixes: 'The fixes themselves, each one tested before it goes live.',
+      data: 'Moving products, customers and content across, then checking it all arrived.',
+      content: 'Writing and gathering copy and photos. It runs alongside the build.',
+      qa: 'Testing on real phones and browsers, fixing what turns up, then the launch itself.',
+    };
+    const DRIVER_WHY: Record<string, string> = {
+      'Subscriptions': 'Recurring orders need an app set up, plus testing renewals and the customer portal.',
+      'B2B / wholesale': 'Separate prices, customer groups and order rules, each tested on its own.',
+      'Product customiser': 'Build-your-own options are custom code: every combination has to price and show correctly.',
+      'Advanced filters & search': 'Filters rely on tidy product data, which usually needs setting up first.',
+      'Bundles & upsells': 'Offers on product pages and in the cart, tested so prices always add up.',
+      'Reviews & loyalty': 'Connecting and styling the review and rewards apps to match the store.',
+      'Multiple markets': 'Each currency or language needs its own prices, translations and checks.',
+      'Pre-orders': 'Stock rules and back-in-stock alerts, tested against real orders.',
+      'Checkout customisation': 'Built with Shopify’s upgrade-safe checkout tools and tested end to end.',
+      'CMS collections': 'Setting up the content structure so your team can add posts and pages themselves.',
+      'Advanced interactions': 'Scroll animations are built and tuned by hand, then checked for speed on phones.',
+      'Localisation': 'Every page in each language, plus the language switch and SEO for each.',
+      'Members-only areas': 'Sign-up, log-in and gated pages, usually through a membership tool.',
+      'Webflow Ecommerce': 'Products, cart and checkout set up and styled inside Webflow.',
+      'Email marketing': 'Connecting sign-up forms and store events to your email tool.',
+      'CRM integration': 'Sending leads or customers to your CRM, matched field by field.',
+      'Tracking setup': 'Analytics and ad tracking installed and checked, so the numbers can be trusted.',
+      'Search integration': 'A hosted search tool connected and styled.',
+      'Inventory / ERP link': 'Two systems kept in sync. It depends on the other system’s API, so it’s the least predictable part.',
+      'Custom API work': 'Custom code against another service, including what happens when it’s down or slow.',
+      'Customer migration': 'Accounts moved across, with a plan for passwords (most platforms can’t move them).',
+      'Order history': 'Past orders imported so customers and your team can still see them.',
+      'Blog & page migration': 'Posts and pages moved and checked, so nothing is lost or broken.',
+      'Redirects & SEO': 'Every old link pointed at its new page, so search rankings carry over.',
+      'Speed work': 'An audit first, then fixes aimed at what really slows the site down.',
+      'Technical SEO': 'Fixing what stops search engines reading the site properly.',
+      'Accessibility pass': 'Checking every template with a keyboard and screen reader, then fixing what fails.',
+      'App clean-up': 'Removing apps you don’t need, and the code they leave behind.',
+      'Fixes': 'Bugs and small changes, each tested before it goes live.',
+      'Product setup': 'Adding and organising products, variants and collections.',
+      'Product data migration': 'Products, variants and images moved across and checked.',
+      'Design phase': 'Pages designed and approved before the build starts.',
+      'Content preparation': 'Writing and gathering copy and photos in time for launch.',
+    };
+    const driverWhy = (label: string) => DRIVER_WHY[label]
+      ?? (label.startsWith('Migrating from') ? 'Getting the data out of the old platform in a usable shape, and mapping it to the new one.'
+        : / page layouts$/.test(label) ? 'Each layout beyond the first five is built into the theme and tested on every screen size.' : '');
+    const phaseWhyText = (p: Phase) => PHASE_WHY[p.label] ?? PHASE_WHY[p.id] ?? '';
+
+    /* ---------- The timeline, week by week ---------- */
+    // One square per week (two weeks once the range passes 30), coloured by phase. Squares up to the low
+    // end of the range are solid; the rest, up to the high end, are hatched ("might run to"). The last one
+    // carries a launch flag. New squares pop in; changed ones recolour.
+    const renderWeeks = (phases: Phase[], low: number, high: number) => {
+      const total = phases.reduce((s, p) => s + p.weeks, 0) || 1;
+      const per = high > 30 ? 2 : 1;
+      const cells = Math.max(1, Math.ceil(high / per));
+      const solid = Math.max(1, Math.round(low / per));
+      let acc = 0;
+      const bounds = phases.map((p) => { acc += (p.weeks / total) * low; return { end: acc, p }; });
+      while (weeksGrid.children.length > cells) weeksGrid.lastElementChild!.remove();
+      let fresh = 0;
+      for (let i = 0; i < cells; i++) {
+        let cell = weeksGrid.children[i] as HTMLElement | undefined;
+        const created = !cell;
+        if (!cell) { cell = document.createElement('span'); weeksGrid.append(cell); }
+        const mid = (i + 0.5) * per;
+        const inRange = i < solid;
+        const phase = (inRange ? bounds.find((b) => mid <= b.end + 1e-6)?.p : undefined) ?? phases[phases.length - 1];
+        const cls = `wk phase-${phase.id}${inRange ? '' : ' is-maybe'}${i === cells - 1 ? ' is-launch' : ''}`;
+        if (created && !reduce) { cell.className = `${cls} is-new`; cell.style.setProperty('--d', String(fresh++)); }
+        else if (cell.className.replace(' is-new', '') !== cls) cell.className = cls;
+        cell.dataset.phase = phase.id;
+        cell.style.setProperty('--n', String(i));
+        cell.title = `${per === 1 ? `Week ${i + 1}` : `Weeks ${i * per + 1}–${i * per + per}`} · ${inRange ? phase.label : 'Possible extra time'}`;
+      }
+      weeksGrid.style.setProperty('--cols', String(Math.min(cells, 13)));
+      summary.style.setProperty('--cells', String(cells));
+      // The phase line above the squares: each phase as wide as its share of the time.
+      const lineTrack = summary.querySelector<HTMLElement>('.wiz-line-track')!;
+      // Sized like the squares under it: the phases share the likely weeks, then a hatched end for the rest.
+      const key = `${phases.map((p) => `${p.id}:${p.weeks.toFixed(2)}`).join()}|${low}|${high}`;
+      if (lineTrack.dataset.key !== key) {
+        lineTrack.dataset.key = key;
+        lineTrack.innerHTML = phases.map((p) => `<i class="phase-${p.id}" style="flex-grow:${((p.weeks / total) * low).toFixed(3)}"></i>`).join('') + (high > low ? `<i class="is-maybe" style="flex-grow:${high - low}"></i>` : '');
+      }
+      weeksGrid.setAttribute('aria-label', `About ${low} to ${high} weeks: ${phases.map((p) => `${p.label} about ${p.display}`).join(', ')}.`);
+      weeksEnd.textContent = `Launch · week ${high}${per > 1 ? ' (1 square = 2 weeks)' : ''}`;
+    };
+    // Tap or hover a phase (in the legend or the squares) to see what happens in it.
+    let shownPhases: Phase[] = [];
+    const focusPhase = (id: string | null) => {
+      weeksGrid.dataset.focus = id ?? '';
+      legend.querySelectorAll<HTMLElement>('button[data-phase]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.phase === id)));
+      const p = shownPhases.find((x) => x.id === id);
+      phaseWhy.textContent = p ? `${p.label}, about ${p.display}: ${phaseWhyText(p)}` : 'Tap a colour to see what happens in it.';
+    };
+
+    /* ---------- The finish: the timeline draws itself ---------- */
+    // When someone reaches their brief, a line runs from kick-off to launch, colouring each phase as it
+    // passes; the week squares light up under it as it goes, the launch flag goes up, and the number follows
+    // in. Plays once per arrival, when the summary is on screen (on phones it sits below the questions).
+    let finishPending = false;
+    let summaryOnScreen = false;
+    const playFinish = () => {
+      if (!finishPending || !summaryOnScreen || !lastResult || lastResult.mode !== 'weeks') return;
+      finishPending = false;
+      summary.classList.remove('is-finishing'); void summary.offsetWidth; summary.classList.add('is-finishing');
+      window.setTimeout(() => summary.classList.remove('is-finishing'), 2600);
+    };
+    new IntersectionObserver(([entry]) => { summaryOnScreen = entry.isIntersecting; playFinish(); }, { threshold: 0.35 }).observe(summary);
+
+    /* ---------- Example projects for the platform picked ---------- */
+    const PLATFORM_OF: Record<string, string> = { shopify: 'Shopify', 'shopify-plus': 'Shopify', webflow: 'Webflow', wordpress: 'WordPress', woocommerce: 'WordPress' };
+    // The sidebar follows the answer; the list under the platform question also follows whichever
+    // platform is being hovered or focused, so the examples show before anything is clicked.
+    let hoverPlatform = '';
+    const renderExamples = () => {
+      fillExamples(wizard.querySelectorAll<HTMLElement>('.wiz-examples-side'), String(answers.platform || ''));
+      fillExamples(wizard.querySelectorAll<HTMLElement>('.wiz-examples-inline'), hoverPlatform || String(answers.platform || ''));
+    };
+    const fillExamples = (boxes: NodeListOf<HTMLElement>, picked: string) => {
+      const platform = PLATFORM_OF[picked];
+      const list = picked ? (platform ? exampleData.filter((e) => e.platform === platform) : exampleData) : [];
+      const chosen = list.slice(0, 3);
+      const title = platform ? `Built on ${platform}, like these` : 'Some recent work';
+      boxes.forEach((box) => {
+        box.hidden = !chosen.length;
+        box.querySelector('.wiz-examples-title')!.textContent = title;
+        const holder = box.querySelector<HTMLElement>('.wiz-examples-list')!;
+        const key = chosen.map((e) => e.href).join();
+        if (holder.dataset.key === key) return;
+        holder.dataset.key = key;
+        holder.replaceChildren(...chosen.map((e, i) => {
+          const a = document.createElement('a');
+          a.className = 'wiz-example';
+          a.href = e.href; a.target = '_blank'; a.rel = 'noopener';
+          a.style.setProperty('--i', String(i));
+          const img = Object.assign(document.createElement('img'), { src: e.img, alt: '', width: 480, height: 270, loading: 'lazy', decoding: 'async' });
+          a.append(img, Object.assign(document.createElement('strong'), { textContent: e.name }), Object.assign(document.createElement('small'), { textContent: e.category }));
+          a.setAttribute('aria-label', `${e.name}, ${e.category} (opens in a new tab)`);
+          return a;
+        }));
+      });
+    };
+
+    const platformStep = form.querySelector<HTMLElement>('.wiz-step[data-step="platform"]');
+    if (platformStep) {
+      const preview = (event: Event) => {
+        const option = (event.target as HTMLElement).closest<HTMLElement>('.wiz-option');
+        const id = option?.dataset.option ?? '';
+        if (id && id !== hoverPlatform) { hoverPlatform = id; renderExamples(); }
+      };
+      const options = platformStep.querySelector<HTMLElement>('.wiz-options')!;
+      options.addEventListener('pointerover', preview);
+      options.addEventListener('focusin', preview);
+      const clear = () => { if (hoverPlatform) { hoverPlatform = ''; renderExamples(); } };
+      options.addEventListener('pointerleave', clear);
+      options.addEventListener('focusout', (event) => { if (!options.contains((event as FocusEvent).relatedTarget as Node)) clear(); });
+    }
+
+    /* ---------- Your answers, each one a tap away from changing ---------- */
+    const renderAnswers = () => {
+      const items = visibleSteps().filter((s) => s.kind !== 'text' && answerText(s.id));
+      // On the review step the brief itself lists every answer with an Edit button, so this would repeat it.
+      answersBox.hidden = items.length < 2 || at === 'review';
+      answersBox.querySelector('summary span')!.textContent = `(${items.length})`;
+      answersBox.querySelector('ul')!.replaceChildren(...items.map((s) => {
+        const li = document.createElement('li');
+        const b = document.createElement('button');
+        b.type = 'button'; b.dataset.go = s.id;
+        b.setAttribute('aria-label', `Change ${s.label}: ${answerText(s.id)}`);
+        b.append(Object.assign(document.createElement('span'), { textContent: s.label }), Object.assign(document.createElement('strong'), { textContent: answerText(s.id) }), Object.assign(document.createElement('em'), { textContent: 'Change' }));
+        li.append(b);
+        return li;
+      }));
+    };
+
+    /* ---------- Ways to build it, and which one they prefer ---------- */
+    let preferred = '';
+    let previewRoute = '';
+    const ROUTE_PLAN: Record<string, [number, boolean]> = { standard: [1, false], team2: [2, false], team3: [3, false], phase: [1, true], priority: [1, true] };
+    /** The route to show in the summary: the one being hovered, else the one they picked (if it isn't already the result). */
+    const viewOf = (r: Estimate) => {
+      const id = previewRoute || preferred;
+      if (r.mode !== 'weeks' || !id || id === (r.choice ?? 'standard')) return null;
+      const route = r.routes.find((x) => x.id === id);
+      if (!route) return null;
+      const plan = ROUTE_PLAN[id] ? planFor(r, ...ROUTE_PLAN[id]) : id === 'both' ? planFor(r, Math.max(...r.teams.map((t) => t.n)), true) : null;
+      return { id, low: route.low, high: route.high, phases: plan?.phases ?? r.basePhases, label: routeName(route), cost: route.cost, preview: Boolean(previewRoute) };
+    };
+    const FIT: Record<string, string> = { fits: 'Fits your date', close: 'A little past your date', far: 'Well past your date' };
+    // Plain-English names for each route, with the team detail underneath.
+    const ROUTE_NAME: Record<string, [string, string]> = {
+      standard: ['Steady', '1 developer, full scope'], team2: ['Faster', '2 developers, full scope'], team3: ['Fastest full build', '3 developers, full scope'],
+      phase: ['Launch sooner, add later', '1 developer, essentials first'], priority: ['Biggest fixes first', '1 developer, highest impact first'],
+      theme: ['From a ready-made theme', '1 developer, premium theme'], both: ['Quickest launch', 'Essentials first, bigger team'],
+    };
+    const routeName = (x: { id: string; label: string }) => ROUTE_NAME[x.id]?.[0] ?? x.label;
+    const ROUTE_COST: Record<string, number> = { theme: 1, standard: 1, phase: 1, priority: 1, team2: 2, team3: 3, both: 3 };
+    // Fewer cards: the standard way, the best fit for their date, the fastest (and their pick), with the rest behind "Show more ways".
+    let showAllRoutes = false;
+    let routeOrder: string[] = [];
+    const renderRoutes = (r: Estimate) => {
+      const routes = r.mode === 'weeks' ? r.routes : [];
+      routesBox.hidden = routes.length < 2;
+      if (routesBox.hidden) return;
+      const wanted = preferred || r.choice || 'standard';
+      const current = routes.some((x) => x.id === wanted) ? wanted : 'standard';
+      const max = Math.max(...routes.map((x) => x.high)) || 1;
+      const fitting = routes.filter((x) => x.fit === 'fits').sort((a, b) => (ROUTE_COST[a.id] ?? 2) - (ROUTE_COST[b.id] ?? 2) || a.low - b.low);
+      const best = fitting[0]?.id;
+      const fastest = [...routes].sort((a, b) => a.low - b.low)[0]?.id;
+      // The order never changes with the pick (so nothing moves under the cursor); a picked extra just stays shown.
+      const main = new Set(['standard', best, fastest].filter(Boolean) as string[]);
+      const tagOf = (id: string) => (id === best ? 'Best fit for your date' : id === fastest ? 'Fastest' : id === 'standard' ? 'The standard way' : '');
+      const ordered = [...routes.filter((x) => main.has(x.id)), ...routes.filter((x) => !main.has(x.id))];
+      routeOrder = ordered.map((x) => x.id);
+      routesList.replaceChildren(...ordered.map((x) => {
+        const b = document.createElement('button');
+        b.type = 'button'; b.className = `wiz-route${main.has(x.id) || x.id === current ? '' : ' is-extra'}${x.id === best ? ' is-best' : ''}`; b.dataset.route = x.id;
+        b.setAttribute('aria-pressed', String(x.id === current));
+        const tag = tagOf(x.id);
+        b.innerHTML = `${tag ? `<span class="wiz-route-tag"></span>` : ''}<strong class="wiz-route-name"></strong><span class="wiz-route-sub"></span><span class="wiz-route-weeks">${x.low}–${x.high} weeks</span><span class="wiz-route-bar" aria-hidden="true"><i style="width:${((x.low / max) * 100).toFixed(1)}%"></i><i style="width:${(((x.high - x.low) / max) * 100).toFixed(1)}%"></i></span><small></small>${x.fit ? `<em data-fit="${x.fit}">${FIT[x.fit]}</em>` : ''}`;
+        if (tag) b.querySelector('.wiz-route-tag')!.textContent = `${x.id === best ? '★ ' : ''}${tag}`;
+        b.querySelector('.wiz-route-name')!.textContent = routeName(x);
+        b.querySelector('.wiz-route-sub')!.textContent = ROUTE_NAME[x.id]?.[1] ?? x.label;
+        b.querySelector('small')!.textContent = x.cost;
+        b.setAttribute('aria-label', `${routeName(x)}: ${ROUTE_NAME[x.id]?.[1] ?? x.label}, ${x.low} to ${x.high} weeks, ${x.cost}${x.fit ? `, ${FIT[x.fit]}` : ''}`);
+        return b;
+      }));
+      const extra = routes.filter((x) => !main.has(x.id) && x.id !== current).length;
+      const more = routesBox.querySelector<HTMLButtonElement>('.wiz-routes-more')!;
+      more.hidden = extra < 1;
+      more.textContent = showAllRoutes ? 'Show fewer' : `Show ${extra} more way${extra > 1 ? 's' : ''}`;
+      routesBox.classList.toggle('is-all', showAllRoutes);
+      const picked = routes.find((x) => x.id === current);
+      routesBox.querySelector('.wiz-routes-pick')!.innerHTML = picked ? `Your pick: <strong>${routeName(picked)} · ${picked.low}–${picked.high} weeks</strong>` : '';
+      syncRouteDots();
+    };
+    // Phones: the cards are a swipe row; dots show where you are in it.
+    const routesDots = routesBox.querySelector<HTMLElement>('.wiz-routes-dots')!;
+    const syncRouteDots = () => {
+      const cards = [...routesList.querySelectorAll<HTMLElement>('.wiz-route')].filter((c) => c.offsetParent !== null);
+      const step = cards[1] ? cards[1].offsetLeft - cards[0].offsetLeft : 1;
+      const at = Math.round(routesList.scrollLeft / (step || 1));
+      routesDots.innerHTML = cards.length > 1 ? cards.map((_, i) => `<i class="${i === at ? 'on' : ''}"></i>`).join('') : '';
+    };
+    routesList.addEventListener('scroll', () => requestAnimationFrame(syncRouteDots), { passive: true });
+    routesBox.querySelector('.wiz-routes-more')!.addEventListener('click', () => {
+      showAllRoutes = !showAllRoutes;
+      // The extra cards rise in only when they're first shown, not on every redraw.
+      routesBox.classList.toggle('is-revealing', showAllRoutes);
+      window.setTimeout(() => routesBox.classList.remove('is-revealing'), 600);
+      if (lastResult) renderRoutes(lastResult);
+    });
+    let pickedAt = 0;
+    routesList.addEventListener('click', (event) => {
+      const b = (event.target as HTMLElement).closest<HTMLButtonElement>('[data-route]');
+      if (!b) return;
+      pickedAt = performance.now();
+      preferred = b.dataset.route!;
+      previewRoute = '';
+      routesList.querySelectorAll('[data-route]').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+      renderSummary();
+      saveProgress();
+    });
+    // Hovering a route previews it in the summary (desktop); leaving goes back to the one picked.
+    routesList.addEventListener('pointerover', (event) => {
+      const b = (event.target as HTMLElement).closest<HTMLButtonElement>('[data-route]');
+      // (Cards are redrawn after a pick; the cursor "arriving" on the new ones isn't a hover.)
+      if (!b || (event as PointerEvent).pointerType !== 'mouse' || performance.now() - pickedAt < 400) return;
+      // Hovering the one already picked is no preview.
+      const id = b.dataset.route === (preferred || (lastResult?.choice ?? 'standard')) ? '' : b.dataset.route!;
+      if (id !== previewRoute) { previewRoute = id; renderSummary(); }
+    });
+    routesList.addEventListener('pointerleave', () => { if (previewRoute) { previewRoute = ''; renderSummary(); } });
+
+    /* ---------- What's next: send, ask for a call, or keep it for later ---------- */
+    let nextChoice: 'send' | 'call' | 'later' = 'send';
+    const timeZone = (() => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone; } catch { return ''; } })();
+    const callLine = () => `Next step: a 15-minute call, ${(wizard.querySelector<HTMLSelectElement>('[name="c-call"]')!.value || 'any time').toLowerCase()}${timeZone ? ` (${timeZone})` : ''}`;
 
     let answers: Answers = {};
     let at = 'contact';
+    // The furthest step reached, so someone who goes back to change one answer can jump straight back.
+    let furthest = 'contact';
     // Contact details (name and email on the first step, the rest on the review), and one reference per brief.
     let contact = { name: '', email: '', company: '', website: '' };
+    const NO_SITE = 'No website yet';
     // The email Grant was already told about when this person started, so it's sent once.
     let captured = '';
     const newRef = () => `EST-${new Date().toLocaleDateString('en-CA').replace(/-/g, '')}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
@@ -299,7 +646,13 @@ const plans = PACKAGES.filter((p) => p.id !== 'custom');
       const live = effective();
       const result: Estimate = estimate(live);
       lastResult = result;
-      monthsLine.textContent = result.mode === 'weeks' ? monthsText(result.low, result.high) : '';
+      // A route picked (or hovered) on the review step shows its own timeline.
+      const view = viewOf(result);
+      const low = view?.low ?? result.low, high = view?.high ?? result.high;
+      const phases = view?.phases ?? result.phases;
+      pickLine.hidden = !view;
+      pickLine.textContent = view ? `${view.preview ? 'Previewing' : 'Your pick'}: ${view.label} · ${view.cost}` : '';
+      monthsLine.textContent = result.mode === 'weeks' ? monthsText(low, high) : '';
       pdfButton.disabled = result.mode === 'none';
       if (result.mode === 'none') {
         num.textContent = '—'; unit.textContent = ''; shown = { low: 0, high: 0 };
@@ -309,7 +662,7 @@ const plans = PACKAGES.filter((p) => p.id !== 'custom');
         num.textContent = `${plan.daily || result.hours}`; unit.textContent = plan.daily ? 'hrs / day' : 'hrs / month'; shown = { low: 0, high: 0 };
         caption.textContent = `${plan.name} plan${plan.recommended ? ', a good place to start' : ''}${plan.daily ? ', Monday to Friday' : ''}. ${plan.reply}. Move up or down with a month’s notice.`;
       } else {
-        animateNumbers(result.low, result.high);
+        animateNumbers(low, high);
         unit.textContent = 'weeks';
         const scenario = result.scenario ? `${result.scenario}.${result.baseline && (result.baseline.low !== result.low || result.baseline.high !== result.high) ? ` One developer, full scope: ${result.baseline.low}–${result.baseline.high} weeks.` : ''}` : '';
         const fit = result.fit === 'close' ? 'A little past your date: see the tip below.' : result.fit === 'far' ? 'Well past your date: see the tip below.' : result.tight ? 'Tighter than your deadline: see the tip below.' : '';
@@ -319,16 +672,20 @@ const plans = PACKAGES.filter((p) => p.id !== 'custom');
       disclaimer.textContent = result.mode === 'monthly'
         ? 'A set number of hours each month. Grant confirms the plan and price with you before anything starts.'
         : `Calendar time for ${result.team > 1 ? `a team of ${result.team} developers` : 'one developer'}, assuming feedback within a couple of days.`;
-      if (barValue) barValue.textContent = result.mode === 'weeks' ? `${result.low}–${result.high} weeks` : result.mode === 'monthly' ? `${result.support?.name} · ${result.support?.daily ? `${result.support.daily} hrs / day` : `${result.hours} hrs / month`}` : '—';
+      if (barValue) barValue.textContent = result.mode === 'weeks' ? `${low}–${high} weeks` : result.mode === 'monthly' ? `${result.support?.name} · ${result.support?.daily ? `${result.support.daily} hrs / day` : `${result.hours} hrs / month`}` : '—';
 
-      phasesBox.hidden = result.phases.length === 0;
-      const sum = result.phases.reduce((s, p) => s + p.weeks, 0) || 1;
-      bar.innerHTML = result.phases.map((p) => `<span class="phase-${p.id}" style="flex-grow:${p.weeks}" title="${p.label}: ~${p.display}"></span>`).join('');
-      legend.innerHTML = result.phases.map((p) => `<li><i class="phase-${p.id}"></i>${p.label}<span>~${p.display}</span></li>`).join('');
-      bar.style.setProperty('--sum', String(sum));
+      phasesBox.hidden = phases.length === 0 || result.mode !== 'weeks';
+      shownPhases = phases;
+      if (!phasesBox.hidden) renderWeeks(phases, low, high);
+      const focused = weeksGrid.dataset.focus;
+      legend.innerHTML = phases.map((p) => `<li><button type="button" data-phase="${p.id}" aria-pressed="false"><i class="phase-${p.id}"></i>${p.label}<span>~${p.display}</span></button></li>`).join('');
+      focusPhase(focused && phases.some((p) => p.id === focused) ? focused : null);
 
       driversBox.hidden = result.drivers.length === 0;
-      driversBox.querySelector('ul')!.innerHTML = result.drivers.map((d) => `<li>${d.label}<span>+${Math.round(d.weeks * 10) / 10} wk</span></li>`).join('');
+      driversBox.querySelector('ul')!.innerHTML = result.drivers.map((d) => { const why = driverWhy(d.label); return `<li><span class="wiz-driver-row">${d.label}<span>+${Math.round(d.weeks * 10) / 10} wk</span></span>${why ? `<small>${why}</small>` : ''}</li>`; }).join('');
+      renderExamples();
+      renderAnswers();
+      renderRoutes(result);
       notesList.innerHTML = result.notes.map((n) => `<li>${n}</li>`).join('');
 
       // Brief text for email / copy.
@@ -336,11 +693,21 @@ const plans = PACKAGES.filter((p) => p.id !== 'custom');
       const estimateLine = result.mode === 'weeks' ? `Rough estimate: ${result.low}–${result.high} weeks${result.scenario ? `, ${result.scenario.toLowerCase()}` : ''} (${result.phases.map((p) => `${p.label} ~${p.display}`).join(', ')})${result.baseline ? `\nOne developer, full scope: ${result.baseline.low}–${result.baseline.high} weeks` : ''}` : result.mode === 'monthly' ? `Support plan: ${result.support?.name}${result.support?.daily ? `, ${result.support.daily} hours a day, Monday to Friday` : `, about ${result.hours} hours a month`}` : '';
       const notes = String(live.notes || '');
       const who = [contact.name, contact.company, contact.email, contact.website].filter(Boolean);
-      brief = ['Hi Grant,', '', 'I used the estimator on your site. Here’s my project:', '', ...lines, estimateLine, ...(notes ? ['', `Notes: ${notes}`] : []), '', `Reference: ${ref}`, ...(who.length ? ['', `From: ${who.join(' · ')}`] : []), '', 'Thanks,'].filter((l, i, all) => !(l === '' && all[i - 1] === '')).join('\n');
+      const chosenRoute = result.mode === 'weeks' && preferred ? result.routes.find((x) => x.id === preferred) : undefined;
+      const extra = [
+        ...(chosenRoute && preferred !== (result.choice ?? 'standard') ? [`Preferred approach: ${routeName(chosenRoute)} (${chosenRoute.label}), about ${chosenRoute.low}–${chosenRoute.high} weeks (${chosenRoute.cost.toLowerCase()})`] : []),
+        ...(nextChoice === 'call' ? [callLine()] : []),
+      ];
+      brief = ['Hi Grant,', '', 'I used the estimator on your site. Here’s my project:', '', ...lines, estimateLine, ...extra, ...(notes ? ['', `Notes: ${notes}`] : []), '', `Reference: ${ref}`, ...(who.length ? ['', `From: ${who.join(' · ')}`] : []), '', 'Thanks,'].filter((l, i, all) => !(l === '' && all[i - 1] === '')).join('\n');
       estimateSummary = estimateLine;
       const subject = `Project brief${answers.platform ? `: ${answerText('platform')}` : ''}${answers.type ? ` – ${answerText('type')}` : ''}`;
       send.href = `mailto:${send.dataset.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(brief)}`;
+      laterMail.href = `mailto:${contact.email}?subject=${encodeURIComponent('My project estimate')}&body=${encodeURIComponent(brief)}`;
     };
+    legend.addEventListener('click', (event) => { const b = (event.target as HTMLElement).closest<HTMLButtonElement>('[data-phase]'); if (b) focusPhase(b.getAttribute('aria-pressed') === 'true' ? null : b.dataset.phase!); });
+    weeksGrid.addEventListener('pointerover', (event) => { const cell = (event.target as HTMLElement).closest<HTMLElement>('.wk'); if (cell) focusPhase(cell.dataset.phase!); });
+    weeksGrid.addEventListener('pointerleave', () => focusPhase(null));
+    answersBox.addEventListener('click', (event) => { const b = (event.target as HTMLElement).closest<HTMLButtonElement>('[data-go]'); if (b) go(b.dataset.go!, -1); });
 
     const renderReview = () => {
       reviewList.innerHTML = '';
@@ -361,6 +728,13 @@ const plans = PACKAGES.filter((p) => p.id !== 'custom');
       }
     };
 
+    /** Where "Back to where you were" goes: the first unanswered question before the furthest step, else that step. */
+    const returnTarget = () => {
+      const ids = order();
+      const i = ids.indexOf(at), f = ids.indexOf(furthest);
+      if (f <= i || f < 0) return '';
+      return ids.slice(i + 1, f).find((id) => !answered(id)) ?? furthest;
+    };
     const render = (direction = 1) => {
       syncOptions();
       const ids = order();
@@ -380,6 +754,14 @@ const plans = PACKAGES.filter((p) => p.id !== 'custom');
       fill.style.transform = `scaleX(${progress / 100})`;
       track.setAttribute('aria-valuenow', String(progress));
       dots.innerHTML = ids.slice(0, -1).map((id, i) => `<li class="${i < index ? 'is-done' : i === index ? 'is-current' : ''}"><button type="button" data-go="${id}" ${i <= index || answered(id) ? '' : 'disabled'} aria-label="${labelOf(id)}">${labelOf(id)}</button></li>`).join('');
+      if (!ids.includes(furthest) || index > ids.indexOf(furthest)) furthest = at;
+      const target = returnTarget();
+      returnButton.hidden = !target || isReview;
+      keyHint.hidden = !returnButton.hidden;
+      if (target) returnButton.textContent = target === 'review' ? 'Back to your brief ↩' : `Back to ${labelOf(target)} ↩`;
+      // Phones: the step chips are one swipeable row; keep the current one in view.
+      const currentChip = dots.querySelector<HTMLElement>('.is-current');
+      if (currentChip && dots.scrollWidth > dots.clientWidth) dots.scrollTo({ left: currentChip.offsetLeft - dots.clientWidth / 2 + currentChip.offsetWidth / 2, behavior: reduce ? 'auto' : 'smooth' });
       back.disabled = index === 0;
       next.hidden = isReview;
       const step = stepById(at);
@@ -396,10 +778,13 @@ const plans = PACKAGES.filter((p) => p.id !== 'custom');
       next.firstChild!.textContent = at === 'contact' ? 'Start the estimate ' : index === ids.length - 2 ? 'See my brief ' : step?.optional && !answered(at) ? 'Skip ' : 'Continue ';
       if (step?.optional && step.kind === 'multi') next.firstChild!.textContent = (answers[at] as string[] | undefined)?.length ? 'Continue ' : 'Skip ';
       wizard.classList.toggle('is-review', isReview);
+      // Arriving at the brief: the timeline draws itself once the summary is on screen.
+      if (isReview && lastShownStep !== 'review' && !reduce) finishPending = true;
       renderSendingAs();
       lastShownStep = at;
       renderSummary();
       saveProgress();
+      playFinish();
     };
 
     const go = (id: string, direction: number) => {
@@ -436,10 +821,21 @@ const plans = PACKAGES.filter((p) => p.id !== 'custom');
       if (!id) return;
       read(id);
       render(0);
+      // Phones: the platform's examples appear under all the options, so bring them (and Continue) into view.
+      if (id === 'platform' && !matchMedia('(hover: hover)').matches) {
+        const examples = section(id).querySelector<HTMLElement>('.wiz-examples-inline');
+        if (examples && !examples.hidden) window.setTimeout(() => examples.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' }), 120);
+      }
       // Single choices move on by themselves after a short beat, unless the step shows a note to read.
-      if (input.type === 'radio' && !stepById(id)?.noteFor) {
+      // (Not on the platform question: its examples are worth a look before moving on.)
+      if (input.type === 'radio' && !stepById(id)?.noteFor && id !== 'platform') {
         clearTimeout(autoTimer);
-        autoTimer = window.setTimeout(() => { if (at === id) step(1); }, reduce ? 0 : 280);
+        autoTimer = window.setTimeout(() => {
+          if (at !== id) return;
+          // Changing an earlier answer goes straight back to where they were (or to anything the change made new).
+          const target = returnTarget();
+          if (target && target !== order()[order().indexOf(at) + 1]) go(target, 1); else step(1);
+        }, reduce ? 0 : 650);
       }
     });
     form.addEventListener('input', (event) => {
@@ -456,6 +852,7 @@ const plans = PACKAGES.filter((p) => p.id !== 'custom');
     });
     form.addEventListener('submit', (event) => event.preventDefault());
     next.addEventListener('click', () => step(1));
+    returnButton.addEventListener('click', () => { const target = returnTarget(); if (target) go(target, 1); });
     back.addEventListener('click', () => step(-1));
     dots.addEventListener('click', (event) => {
       const target = (event.target as HTMLElement).closest<HTMLButtonElement>('[data-go]');
@@ -477,43 +874,68 @@ const plans = PACKAGES.filter((p) => p.id !== 'custom');
       }
     });
 
-    pdfButton.addEventListener('click', async () => {
+    /** The estimate as the PDF should show it: the route they picked, if they picked one. */
+    const pdfResult = (r: Estimate): Estimate => {
+      const saved = previewRoute; previewRoute = '';
+      const v = viewOf(r);
+      previewRoute = saved;
+      return v ? { ...r, low: v.low, high: v.high, phases: v.phases, scenario: `${v.label} · ${v.cost}` } : r;
+    };
+    const makePdf = async (button: HTMLElement) => {
       if (!lastResult || lastResult.mode === 'none') return;
-      const label = pdfButton.textContent;
-      pdfButton.textContent = 'Preparing PDF…';
-      pdfButton.disabled = true;
+      const labelNode = button.querySelector('strong') ?? button;
+      const label = labelNode.textContent;
+      labelNode.textContent = 'Preparing PDF…';
+      button.toggleAttribute('disabled', true);
       try {
         const { downloadEstimatePdf } = await import('../scripts/estimate-pdf');
         const rows = visibleSteps().filter((s) => s.kind !== 'text' && answerText(s.id)).map((s) => [s.label, answerText(s.id)] as [string, string]);
+        const shownResult = pdfResult(lastResult);
         await downloadEstimatePdf({
           rows,
-          result: lastResult,
-          months: lastResult.mode === 'weeks' ? monthsText(lastResult.low, lastResult.high) : '',
+          result: shownResult,
+          months: shownResult.mode === 'weeks' ? monthsText(shownResult.low, shownResult.high) : '',
           notes: String(effective().notes || ''),
           email: send.dataset.email || '',
           answers: effective(),
           ref,
           contact,
         });
-        pdfButton.textContent = 'Downloaded';
-      } catch {
-        pdfButton.textContent = 'Couldn’t create the PDF';
+        labelNode.textContent = 'Downloaded';
+      } catch (error) {
+        console.warn('The estimate PDF could not be created:', error);
+        labelNode.textContent = 'Couldn’t create the PDF';
       }
-      window.setTimeout(() => { pdfButton.textContent = label; pdfButton.disabled = false; }, 2200);
-    });
+      window.setTimeout(() => { labelNode.textContent = label; button.toggleAttribute('disabled', false); }, 2200);
+    };
+    pdfButton.addEventListener('click', () => void makePdf(pdfButton));
+    later.querySelector<HTMLButtonElement>('.wiz-later-pdf')!.addEventListener('click', (event) => void makePdf(event.currentTarget as HTMLElement));
 
     copy.addEventListener('click', async () => {
-      try { await navigator.clipboard.writeText(brief); copy.textContent = 'Brief copied'; }
-      catch { copy.textContent = 'Couldn’t copy, use the email link'; }
-      window.setTimeout(() => { copy.textContent = 'Copy brief'; }, 2200);
+      const labelNode = copy.querySelector('strong')!;
+      try { await navigator.clipboard.writeText(brief); labelNode.textContent = 'Brief copied'; }
+      catch { labelNode.textContent = 'Couldn’t copy it'; }
+      window.setTimeout(() => { labelNode.textContent = 'Copy the brief'; }, 2200);
     });
 
     /* ---------- Contact details, the early lead, and sending ---------- */
     const readContact = () => {
-      contact = { name: field('c-name').value.trim(), email: field('c-email').value.trim(), company: field('c-company').value.trim(), website: field('c-website').value.trim() };
+      const noSite = field('c-nosite').checked;
+      contact = { name: field('c-name').value.trim(), email: field('c-email').value.trim(), company: field('c-company').value.trim(), website: noSite ? NO_SITE : field('c-website').value.trim() };
     };
+    // "I don't have a website yet": the website field steps aside and Grant is told so.
+    const syncNoSite = () => {
+      const site = field('c-website'), none = field('c-nosite').checked;
+      site.disabled = none;
+      if (none) site.value = '';
+    };
+    field('c-nosite').addEventListener('change', () => { syncNoSite(); readContact(); renderSummary(); saveProgress(); });
     function renderSendingAs() {
-      sendingAs.textContent = answered('contact') ? `From ${contact.name} · ${contact.email}` : 'Add your name and email first.';
+      const ready = answered('contact');
+      sendingAs.replaceChildren(...(ready
+        ? [Object.assign(document.createElement('strong'), { textContent: contact.name }), Object.assign(document.createElement('span'), { textContent: contact.email })]
+        : [Object.assign(document.createElement('span'), { textContent: 'Add your name and email first.' })]));
+      contactBox.querySelector('.wiz-as-avatar')!.textContent = ready ? contact.name.trim().charAt(0).toUpperCase() : '?';
     }
     const focusContact = () => { field(contact.name ? 'c-email' : 'c-name').focus({ preventScroll: true }); };
     wizard.addEventListener('input', (event) => {
@@ -548,7 +970,8 @@ const plans = PACKAGES.filter((p) => p.id !== 'custom');
         if (lastResult && lastResult.mode !== 'none') {
           const { estimatePdfBase64 } = await import('../scripts/estimate-pdf');
           const rows = visibleSteps().filter((s) => s.kind !== 'text' && answerText(s.id)).map((s) => [s.label, answerText(s.id)] as [string, string]);
-          pdf_base64 = await estimatePdfBase64({ rows, result: lastResult, months: lastResult.mode === 'weeks' ? monthsText(lastResult.low, lastResult.high) : '', notes: String(live.notes || ''), email: send.dataset.email || '', answers: live, ref, contact });
+          const shownResult = pdfResult(lastResult);
+          pdf_base64 = await estimatePdfBase64({ rows, result: shownResult, months: shownResult.mode === 'weeks' ? monthsText(shownResult.low, shownResult.high) : '', notes: String(live.notes || ''), email: send.dataset.email || '', answers: live, ref, contact });
         }
       } catch { pdf_base64 = undefined; }
       const turnstile_token = await human.token();
@@ -595,6 +1018,20 @@ const plans = PACKAGES.filter((p) => p.id !== 'custom');
       if (at !== 'review') { const ids = order(); const missing = ids.slice(0, -1).find((id) => !answered(id)); go(missing ?? 'review', 1); if (missing) { if (missing === 'contact') focusContact(); return; } }
       window.setTimeout(() => { contactBox.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' }); submit.focus({ preventScroll: true }); }, 60);
     });
+    const sendLabel = () => (nextChoice === 'call' ? 'Ask for a call ' : 'Send to Grant ');
+    const setNext = (choice: typeof nextChoice) => {
+      nextChoice = choice;
+      chooser.querySelectorAll<HTMLButtonElement>('[data-next]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.next === choice)));
+      later.hidden = choice !== 'later';
+      contactBox.hidden = choice === 'later';
+      callTime.hidden = choice !== 'call';
+      contactBox.querySelector('.wiz-contact-title')!.textContent = choice === 'call' ? 'Ask for a call' : 'Send it to Grant';
+      if (!sent && !submit.disabled) submit.firstChild!.textContent = sendLabel();
+      renderSummary();
+      saveProgress();
+    };
+    chooser.querySelectorAll<HTMLButtonElement>('[data-next]').forEach((b) => b.addEventListener('click', () => setNext(b.dataset.next as typeof nextChoice)));
+    wizard.querySelector('[name="c-call"]')!.addEventListener('change', () => { renderSummary(); saveProgress(); });
     submit.addEventListener('click', async () => {
       readContact();
       if (!answered('contact')) {
@@ -615,7 +1052,7 @@ const plans = PACKAGES.filter((p) => p.id !== 'custom');
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
           body: JSON.stringify({
-            _subject: `New project brief ${ref}: ${contact.name}${contact.company ? `, ${contact.company}` : ''}`,
+            _subject: `${nextChoice === 'call' ? 'Call request' : 'New project brief'} ${ref}: ${contact.name}${contact.company ? `, ${contact.company}` : ''}`,
             _cc: contactBox.dataset.cc || undefined,
             _template: 'box',
             _captcha: 'false',
@@ -626,6 +1063,7 @@ const plans = PACKAGES.filter((p) => p.id !== 'custom');
             website: contact.website || '—',
             reference: ref,
             estimate: estimateSummary || '—',
+            ...(nextChoice === 'call' ? { next_step: callLine() } : {}),
             brief,
             ...sourceFields(),
           }),
@@ -634,12 +1072,15 @@ const plans = PACKAGES.filter((p) => p.id !== 'custom');
         if (!response.ok || String(data.success) !== 'true') throw new Error(data.message || 'Not sent');
         sent = true;
         sendStatus.dataset.tone = 'ok';
-        sendStatus.textContent = `Sent. Thanks, ${contact.name.split(' ')[0]}! Grant will reply within 1 business day. Your reference is ${ref}.`;
+        sendStatus.textContent = nextChoice === 'call'
+          ? `Sent. Thanks, ${contact.name.split(' ')[0]}! Grant will email you a few times for a 15-minute call within 1 business day. Your reference is ${ref}.`
+          : `Sent. Thanks, ${contact.name.split(' ')[0]}! Grant will reply within 1 business day. Your reference is ${ref}.`;
         submit.textContent = 'Sent ✓';
         return;
       } catch {
         sendStatus.dataset.tone = 'error';
-        sendStatus.textContent = 'That didn’t go through. Please use “Email it instead” below, or copy the brief.';
+        sendStatus.textContent = 'That didn’t go through. Try again in a moment, or email it instead.';
+        contactBox.querySelector<HTMLElement>('.wiz-send-alt')!.hidden = false;
       }
       submit.disabled = false;
       submit.innerHTML = label;
@@ -648,7 +1089,7 @@ const plans = PACKAGES.filter((p) => p.id !== 'custom');
     /* ---------- Saved progress and share links ---------- */
     const STORE = 'estimate-progress-v1';
     const saveProgress = () => {
-      try { localStorage.setItem(STORE, JSON.stringify({ answers: effective(), at, contact, captured, ref, savedAt: Date.now() })); } catch { /* storage unavailable */ }
+      try { localStorage.setItem(STORE, JSON.stringify({ answers: effective(), at, furthest, preferred, nextChoice, contact, captured, ref, savedAt: Date.now() })); } catch { /* storage unavailable */ }
     };
     /** Puts saved answers back into the form. */
     const applyAnswers = (saved: Answers) => {
@@ -667,19 +1108,24 @@ const plans = PACKAGES.filter((p) => p.id !== 'custom');
     const decodeShare = (text: string): Answers | null => {
       try { return JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(text.replace(/-/g, '+').replace(/_/g, '/')), (c) => c.charCodeAt(0)))); } catch { return null; }
     };
-    share.addEventListener('click', async () => {
+    async function copyShareLink(button: HTMLElement) {
       // Answers only: contact details never go into the link.
       const url = `${location.origin}${location.pathname}?brief=${encodeShare(effective())}`;
-      try { await navigator.clipboard.writeText(url); share.textContent = 'Link copied'; }
+      const labelNode = button.querySelector('strong') ?? button;
+      const label = labelNode.textContent;
+      try { await navigator.clipboard.writeText(url); labelNode.textContent = 'Link copied'; }
       catch { window.prompt('Copy this link:', url); }
-      window.setTimeout(() => { share.textContent = 'Copy share link'; }, 2200);
-    });
+      window.setTimeout(() => { labelNode.textContent = label; }, 2200);
+    }
+    share.addEventListener('click', () => void copyShareLink(share));
     wizard.ownerDocument.querySelector('.wiz-reset')?.addEventListener('click', () => {
       try { localStorage.removeItem(STORE); } catch { /* storage unavailable */ }
       form.querySelectorAll<HTMLInputElement>('input[type="radio"], input[type="checkbox"]').forEach((input) => { input.checked = false; });
       form.querySelectorAll('textarea').forEach((t) => { t.value = ''; });
       ['c-name', 'c-email', 'c-company', 'c-website'].forEach((n) => { field(n).value = ''; });
+      field('c-nosite').checked = false; syncNoSite();
       answers = {};
+      furthest = 'contact'; preferred = ''; previewRoute = '';
       contact = { name: '', email: '', company: '', website: '' };
       captured = '';
       ref = newRef();
@@ -693,14 +1139,17 @@ const plans = PACKAGES.filter((p) => p.id !== 'custom');
     const restore = () => {
       const shared = new URLSearchParams(location.search).get('brief');
       const fromLink = shared ? decodeShare(shared) : null;
-      let saved: { answers?: Answers; at?: string; contact?: typeof contact; captured?: string; ref?: string } | null = null;
+      let saved: { answers?: Answers; at?: string; furthest?: string; preferred?: string; nextChoice?: typeof nextChoice; contact?: typeof contact; captured?: string; ref?: string } | null = null;
       try { saved = JSON.parse(localStorage.getItem(STORE) || 'null'); } catch { saved = null; }
       // Name and email come back even before any answer, so the first step is already filled in.
       if (saved?.contact) {
         contact = { ...contact, ...saved.contact };
         captured = saved.captured ?? '';
         if (saved.ref && /^EST-\d{8}-[A-Z0-9]{4}$/.test(saved.ref)) ref = saved.ref;
-        field('c-name').value = contact.name; field('c-email').value = contact.email; field('c-company').value = contact.company; field('c-website').value = contact.website;
+        field('c-name').value = contact.name; field('c-email').value = contact.email; field('c-company').value = contact.company;
+        field('c-nosite').checked = contact.website === NO_SITE;
+        field('c-website').value = contact.website === NO_SITE ? '' : contact.website;
+        syncNoSite();
       }
       const data = fromLink ? { answers: fromLink, at: answered('contact') ? 'review' : 'contact' } : saved;
       if (!data?.answers || !Object.keys(data.answers).length) {
@@ -708,6 +1157,7 @@ const plans = PACKAGES.filter((p) => p.id !== 'custom');
         return;
       }
       applyAnswers(data.answers);
+      if (!fromLink && saved) { furthest = saved.furthest ?? furthest; preferred = saved.preferred ?? ''; if (saved.nextChoice) nextChoice = saved.nextChoice; }
       syncOptions();
       const ids = order();
       at = data.at && ids.includes(data.at) ? data.at : ids.find((id) => !answered(id)) ?? 'review';
@@ -723,6 +1173,7 @@ const plans = PACKAGES.filter((p) => p.id !== 'custom');
     steps.forEach((s) => { if (s.kind === 'range') read(s.id); });
     restore();
     render(0);
+    if (nextChoice !== 'send') setNext(nextChoice);
 
     // Phones: a slim bar keeps the estimate in view until the summary is on screen.
     const mobileBar = document.querySelector<HTMLElement>('.estimate-bar');

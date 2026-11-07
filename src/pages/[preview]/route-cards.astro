@@ -1,0 +1,243 @@
+---
+// Design preview: 10 creative designs for the cards in "Ways to build it". Local preview only: in a build
+// this route has no pages. Open http://localhost:4321/ideas/route-cards/. All use the real estimate model
+// on one example project; tap a card to pick it.
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import IdeaLegend from '../../components/IdeaLegend.astro';
+
+export function getStaticPaths() {
+  return import.meta.env.DEV ? [{ params: { preview: 'ideas' } }] : [];
+}
+
+const IDEAS = [
+  [1, 'Tickets'], [2, 'Columns that grow'], [3, 'Race lanes'], [4, 'Tear-off calendar'], [5, 'Spotlight on dark'],
+  [6, 'Tower of phases'], [7, 'Price tags'], [8, 'Speed gradient'], [9, 'Sticky notes'], [10, 'One switch, one detail'],
+] as const;
+const NOTES: Record<number, string> = {
+  1: 'Each route is a ticket: the name and weeks on the left, the launch date on a tear-off stub. The one picked gets punched.',
+  2: 'Literal columns, like a bar chart: the taller the column, the longer it takes. The weeks sit on top; the fastest is the shortest.',
+  3: 'Each route runs in its own lane towards a finish line; how far each runner has got shows how fast it is. The fastest gets a medal.',
+  4: 'The top of each card is a calendar page showing the launch day. Picking one tears a page off.',
+  5: 'Dark glass cards; the picked one lights up with a slowly turning glow round its edge.',
+  6: 'Each route as a tower of its phases (discovery, design, build, QA), as tall as it takes. A quick look shows where the time goes.',
+  7: 'Swing tags on a string: cost as $ to $$$ on the tag, weeks underneath. The picked tag swings.',
+  8: 'Each card coloured by speed, from warm (slower) to cool (faster), with the weeks as a big outlined number.',
+  9: 'Pastel sticky notes, slightly crooked and pinned. The one picked straightens up and lifts off the board.',
+  10: 'All routes in one big switch. The picked one opens a detail panel underneath with its timeline and trade-off.',
+};
+---
+<BaseLayout title="Route card ideas | Grant Dev14" description="Local design preview." noindex>
+  <IdeaLegend ideas={IDEAS} links={[{ label: 'Ways to build it ideas', href: '/ideas/ways-to-build/' }, { label: 'Open the estimator', href: '/estimate/' }]} />
+  <div class="wrap rc-page">
+    <header class="rc-head">
+      <span class="tiny-heading">Preview · the route cards</span>
+      <h1 class="display">Ten creative<br />route cards</h1>
+      <p>New looks for each way to build it. Same real numbers in all ten (a Shopify store with subscriptions and bundles, wanted within a month). Tap a card to pick it.</p>
+    </header>
+    {IDEAS.map(([n, name]) => (
+      <section class="rc" id={`idea-${n}`}>
+        <div class="rc-top"><span class="idea-tag"><b>{n}</b>{name}</span><p class="rc-why">{NOTES[n]}</p></div>
+        <div class="rc-demo" data-v={n}></div>
+      </section>
+    ))}
+  </div>
+</BaseLayout>
+
+<script>
+  import { estimate, planFor, type Answers, type Route, type Phase } from '../../data/estimator';
+  const r = estimate({ type: 'new', platform: 'shopify', catalog: 's', layouts: 6, storeFeatures: ['subscriptions', 'bundles'], integrations: ['email'], design: 'partial', content: 'partial', deadline: '4', speedup: 'advise' } as unknown as Answers);
+  const routes: Route[] = r.routes;
+  const NAME: Record<string, [string, string]> = {
+    standard: ['Steady', '1 developer, full scope'], team2: ['Faster', '2 developers, full scope'], team3: ['Fastest full build', '3 developers, full scope'],
+    phase: ['Launch sooner, add later', '1 developer, essentials first'], theme: ['From a ready-made theme', '1 developer, premium theme'], both: ['Quickest launch', 'Essentials first, bigger team'],
+  };
+  const COST: Record<string, number> = { theme: 1, standard: 1, phase: 1, team2: 2, team3: 3, both: 3 };
+  const FIT: Record<string, string> = { fits: 'Fits your date', close: 'A little past', far: 'Well past your date' };
+  const PLAN: Record<string, [number, boolean]> = { standard: [1, false], team2: [2, false], team3: [3, false], phase: [1, true], both: [3, true] };
+  const phasesOf = (id: string): Phase[] => (PLAN[id] ? planFor(r, ...PLAN[id]).phases : r.basePhases);
+  const maxHigh = Math.max(...routes.map((x) => x.high));
+  const fastest = [...routes].sort((a, b) => a.low - b.low)[0].id;
+  const today = new Date();
+  const dateIn = (w: number) => new Date(today.getTime() + w * 7 * 864e5);
+  const name = (x: Route) => NAME[x.id]?.[0] ?? x.label;
+  const sub = (x: Route) => NAME[x.id]?.[1] ?? '';
+  const fit = (x: Route) => (x.fit ? `<em class="rc-fit" data-fit="${x.fit}">${FIT[x.fit]}</em>` : '');
+  const btn = (x: Route, inner: string, cls = '', style = '') => `<button type="button" class="rc-card ${cls}" data-route="${x.id}" aria-pressed="${x.id === 'standard'}" style="${style}">${inner}</button>`;
+  const speed = (x: Route) => 1 - (x.low - 2) / (maxHigh - 1); // 0 slow … 1 fast
+
+  const build: Record<number, (box: HTMLElement) => void> = {
+    1: (box) => { box.innerHTML = `<div class="rc-row">${routes.map((x) => { const d = dateIn(x.low); return btn(x, `<span class="t-main"><strong>${name(x)}</strong><small>${sub(x)}</small><b>${x.low}–${x.high} wks</b>${fit(x)}</span><span class="t-stub"><small>Launch</small><b>${d.getDate()}</b><small>${d.toLocaleDateString('en', { month: 'short' })}</small><i class="t-punch"></i></span>`, 'v1'); }).join('')}</div>`; },
+    2: (box) => { box.innerHTML = `<div class="rc-cols">${routes.map((x) => btn(x, `<span class="c-top"><b>${x.low}–${x.high}</b><small>weeks</small></span><span class="c-bar" style="--h:${x.high / maxHigh}"><i style="--l:${x.low / x.high}"></i></span><strong>${name(x)}</strong>${fit(x)}`, 'v2')).join('')}</div>`; },
+    3: (box) => { box.innerHTML = `<div class="rc-lanes"><span class="l-finish">Finish</span>${routes.map((x, i) => btn(x, `<span class="l-name"><strong>${name(x)}</strong><small>${x.low}–${x.high} weeks</small></span><span class="l-lane"><i class="l-runner" style="--p:${0.35 + speed(x) * 0.6}">${x.id === fastest ? '🥇' : i + 1}</i></span>`, 'v3')).join('')}</div>`; },
+    4: (box) => { box.innerHTML = `<div class="rc-row">${routes.map((x) => { const d = dateIn(x.low); return btn(x, `<span class="cal"><span class="cal-ring"></span><span class="cal-page"><small>${d.toLocaleDateString('en', { month: 'long' })}</small><b>${d.getDate()}</b><small>${d.toLocaleDateString('en', { weekday: 'long' })}</small></span><span class="cal-page cal-under"></span></span><strong>${name(x)}</strong><small>${x.low}–${x.high} weeks · ${x.cost}</small>${fit(x)}`, 'v4'); }).join('')}</div>`; },
+    5: (box) => { box.classList.add('rc-dark'); box.innerHTML = `<div class="rc-row">${routes.map((x) => btn(x, `<small class="g-sub">${sub(x)}</small><strong>${name(x)}</strong><b>${x.low}–${x.high}<span>wks</span></b><small>${x.cost}</small>${fit(x)}`, 'v5')).join('')}</div>`; },
+    6: (box) => { box.innerHTML = `<div class="rc-cols rc-towers">${routes.map((x) => { const ph = phasesOf(x.id); const tot = ph.reduce((s, p) => s + p.weeks, 0) || 1; return btn(x, `<span class="tw" style="--h:${x.low / maxHigh}">${[...ph].reverse().map((p) => `<i class="phase-${p.id}" style="flex-grow:${p.weeks / tot}" title="${p.label}"></i>`).join('')}</span><b>${x.low}–${x.high} wks</b><strong>${name(x)}</strong>`, 'v6'); }).join('')}</div><p class="tw-key"><i class="phase-discovery"></i>Discovery <i class="phase-design"></i>Design <i class="phase-build"></i>Build <i class="phase-content"></i>Content <i class="phase-qa"></i>QA &amp; launch</p>`; },
+    7: (box) => { box.innerHTML = `<div class="rc-row rc-tags">${routes.map((x, i) => btn(x, `<span class="tag-string"></span><span class="tag"><i class="tag-hole"></i><b class="tag-cost">${'$'.repeat(COST[x.id] ?? 2)}<span>${'$'.repeat(3 - (COST[x.id] ?? 2))}</span></b><strong>${name(x)}</strong><small>${x.low}–${x.high} weeks</small>${fit(x)}</span>`, 'v7', `--r:${(i % 2 ? 1 : -1) * (2 + i)}deg`)).join('')}</div>`; },
+    8: (box) => { box.innerHTML = `<div class="rc-row">${routes.map((x) => btn(x, `<b class="o-num">${x.low}–${x.high}</b><small class="o-unit">weeks</small><strong>${name(x)}</strong><small>${sub(x)}</small>${fit(x)}`, 'v8', `--s:${speed(x).toFixed(2)}`)).join('')}</div>`; },
+    9: (box) => { const tones = [95, 20, 245, 300, 160, 60]; box.innerHTML = `<div class="rc-board">${routes.map((x, i) => btn(x, `<i class="pin"></i><strong>${name(x)}</strong><b>${x.low}–${x.high} weeks</b><small>${x.cost}</small>${fit(x)}`, 'v9', `--hue:${tones[i % tones.length]};--r:${[-3, 2, -1.5, 3, -2.5, 1.5][i % 6]}deg`)).join('')}</div>`; },
+    10: (box) => {
+      box.innerHTML = `<div class="sw" role="group">${routes.map((x) => `<button type="button" class="sw-seg" data-route="${x.id}" aria-pressed="${x.id === 'standard'}"><strong>${name(x)}</strong><small>${x.low}–${x.high} wk</small></button>`).join('')}</div><div class="sw-detail"></div>`;
+      const detail = box.querySelector<HTMLElement>('.sw-detail')!;
+      const show = (id: string) => {
+        const x = routes.find((y) => y.id === id)!; const ph = phasesOf(id); const tot = ph.reduce((s, p) => s + p.weeks, 0) || 1;
+        detail.innerHTML = `<div class="sw-d-head"><div><strong>${name(x)}</strong><small>${sub(x)}</small></div><b>${x.low}–${x.high} weeks</b></div><span class="sw-line">${ph.map((p) => `<i class="phase-${p.id}" style="flex-grow:${p.weeks / tot}"></i>`).join('')}</span><p>${x.cost}. Launch around ${dateIn(x.low).toLocaleDateString('en', { day: 'numeric', month: 'short' })}–${dateIn(x.high).toLocaleDateString('en', { day: 'numeric', month: 'short' })}.</p>${fit(x)}`;
+        detail.classList.remove('is-in'); void detail.offsetWidth; detail.classList.add('is-in');
+      };
+      box.addEventListener('click', (e) => { const b = (e.target as HTMLElement).closest<HTMLButtonElement>('.sw-seg'); if (!b) return; box.querySelectorAll('.sw-seg').forEach((s) => s.setAttribute('aria-pressed', String(s === b))); show(b.dataset.route!); });
+      show('standard');
+    },
+  };
+  document.querySelectorAll<HTMLElement>('.rc-demo').forEach((box) => {
+    build[Number(box.dataset.v)]?.(box);
+    box.addEventListener('click', (e) => {
+      const b = (e.target as HTMLElement).closest<HTMLButtonElement>('.rc-card');
+      if (!b) return;
+      box.querySelectorAll('.rc-card').forEach((c) => c.setAttribute('aria-pressed', String(c === b)));
+      b.classList.remove('just-picked'); void b.offsetWidth; b.classList.add('just-picked');
+    });
+  });
+</script>
+
+<style is:global>
+  .rc-page { padding-bottom: 160px; }
+  .rc-head { display: grid; gap: 18px; max-width: 820px; padding-block: 24px 40px; }
+  .rc-head h1 { margin: 0; font-size: clamp(56px, 8vw, 130px); }
+  .rc-head p { margin: 0; color: var(--muted); font-size: 17px; line-height: 1.5; }
+  .rc { padding-block: 44px; border-top: 1px solid var(--line); }
+  .rc-top { display: grid; gap: 4px; margin-bottom: 22px; }
+  .rc-why { max-width: 700px; margin: 0; color: var(--muted); font-size: 15px; line-height: 1.5; }
+  .rc-demo { max-width: 1000px; }
+  .rc-card { position: relative; border: 0; background: none; color: var(--ink); font: inherit; text-align: left; cursor: pointer; padding: 0; }
+  .rc-card strong { font-size: 15px; font-weight: 600; letter-spacing: -0.01em; }
+  .rc-card small { font-size: 11.5px; color: var(--muted); }
+  .rc-fit { justify-self: start; width: fit-content; padding: 3px 8px; border-radius: 999px; font-size: 10.5px; font-style: normal; background: var(--surface); }
+  .rc-fit[data-fit="fits"] { background: oklch(0.93 0.06 150); color: oklch(0.38 0.09 150); }
+  .rc-fit[data-fit="close"] { background: oklch(0.94 0.06 80); color: oklch(0.45 0.1 70); }
+  .rc-fit[data-fit="far"] { background: oklch(0.93 0.05 30); color: oklch(0.45 0.14 30); }
+  .rc-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; }
+  .big { font-family: "Big Shoulders Display", Impact, sans-serif; }
+
+  /* 1 · tickets */
+  .v1 { display: grid; grid-template-columns: 1fr 74px; border-radius: 14px; background: var(--bg); box-shadow: 0 0 0 1px var(--line); overflow: hidden; transition: transform 0.4s var(--ease), box-shadow 0.3s; }
+  .v1 .t-main { display: grid; gap: 4px; padding: 16px; }
+  .v1 .t-main b { font-family: "Big Shoulders Display", Impact, sans-serif; font-size: 28px; line-height: 1; margin-top: 4px; }
+  .v1 .t-stub { position: relative; display: grid; place-content: center; justify-items: center; gap: 2px; border-left: 2px dashed var(--line); background: var(--surface); }
+  .v1 .t-stub b { font-family: "Big Shoulders Display", Impact, sans-serif; font-size: 30px; line-height: 1; }
+  .v1 .t-stub::before, .v1 .t-stub::after { content: ""; position: absolute; left: -9px; width: 16px; height: 16px; border-radius: 50%; background: var(--bg); box-shadow: inset 0 0 0 1px var(--line); }
+  .v1 .t-stub::before { top: -8px; } .v1 .t-stub::after { bottom: -8px; }
+  .v1 .t-punch { position: absolute; top: 10px; right: 10px; width: 12px; height: 12px; border-radius: 50%; background: var(--bg); opacity: 0; box-shadow: inset 0 1px 2px oklch(0 0 0 / 0.3); }
+  .v1[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--ink), 0 12px 26px oklch(0 0 0 / 0.1); transform: translateY(-3px); }
+  .v1[aria-pressed="true"] .t-punch { opacity: 1; }
+  .v1.just-picked .t-punch { animation: rc-punch 0.35s var(--ease); }
+  @keyframes rc-punch { from { transform: scale(2.4); opacity: 0; } }
+
+  /* 2 · columns */
+  .rc-cols { display: flex; align-items: flex-end; gap: 14px; min-height: 340px; padding: 20px; border-radius: 22px; background: var(--surface); overflow-x: auto; }
+  .v2 { flex: 1 0 120px; display: grid; justify-items: center; gap: 8px; text-align: center; }
+  .v2 .c-top b { display: block; font-family: "Big Shoulders Display", Impact, sans-serif; font-size: 30px; line-height: 1; }
+  .v2 .c-bar { position: relative; width: 70%; height: calc(var(--h) * 200px); border-radius: 12px 12px 4px 4px; background: repeating-linear-gradient(135deg, color-mix(in oklch, var(--ink) 25%, transparent) 0 2px, transparent 2px 6px); overflow: hidden; transition: transform 0.4s var(--ease); transform-origin: bottom; }
+  .v2 .c-bar i { position: absolute; left: 0; right: 0; bottom: 0; height: calc(var(--l) * 100%); background: color-mix(in oklch, var(--ink) 18%, var(--bg)); border-radius: 4px; transition: background 0.3s; }
+  .v2[aria-pressed="true"] .c-bar i { background: var(--ink); }
+  .v2.just-picked .c-bar { animation: rc-grow 0.6s cubic-bezier(0.34, 1.56, 0.64, 1); }
+  .v2 strong { font-size: 13px; }
+  @keyframes rc-grow { from { transform: scaleY(0.4); } }
+
+  /* 3 · race lanes */
+  .rc-lanes { position: relative; display: grid; gap: 8px; padding: 20px 20px 20px; border-radius: 22px; background: oklch(0.96 0.02 140); }
+  .l-finish { position: absolute; top: 8px; bottom: 8px; right: 36px; width: 12px; background: repeating-conic-gradient(var(--ink) 0 25%, var(--bg) 0 50%) 0 0 / 12px 12px; border-radius: 2px; font-size: 0; }
+  .v3 { display: grid; grid-template-columns: 170px 1fr; align-items: center; gap: 12px; padding: 8px 60px 8px 10px; border-radius: 12px; }
+  .v3 .l-name { display: grid; }
+  .v3 .l-lane { position: relative; height: 34px; border-radius: 999px; background: var(--bg); box-shadow: inset 0 0 0 1px var(--line); }
+  .v3 .l-lane::before { content: ""; position: absolute; left: 0; top: 50%; height: 2px; width: calc(var(--p, 0.5) * 100%); background: linear-gradient(90deg, transparent, color-mix(in oklch, var(--ink) 30%, transparent)); }
+  .v3 .l-runner { position: absolute; top: 50%; left: calc(var(--p) * 100%); display: grid; place-items: center; width: 30px; height: 30px; margin: -15px 0 0 -15px; border-radius: 50%; background: var(--ink); color: var(--bg); font-style: normal; font-size: 13px; font-weight: 600; transition: left 0.8s cubic-bezier(0.34, 1.56, 0.64, 1); }
+  .v3 .l-runner { --p: var(--p); }
+  .v3[aria-pressed="true"] { background: var(--bg); box-shadow: 0 0 0 2px var(--ink); }
+  .v3.just-picked .l-runner { animation: rc-dash 0.7s cubic-bezier(0.34, 1.56, 0.64, 1); }
+  @keyframes rc-dash { from { left: 0; } }
+
+  /* 4 · tear-off calendar */
+  .v4 { display: grid; gap: 6px; padding: 14px; border-radius: 18px; background: var(--bg); box-shadow: 0 0 0 1px var(--line); }
+  .v4 .cal { position: relative; display: block; height: 128px; margin-bottom: 6px; }
+  .v4 .cal-ring { position: absolute; z-index: 3; top: -4px; left: 20%; right: 20%; height: 12px; background: radial-gradient(circle, var(--ink) 3px, transparent 4px) 0 0 / 20px 12px repeat-x; }
+  .v4 .cal-page { position: absolute; inset: 0; z-index: 2; display: grid; place-content: center; justify-items: center; border-radius: 12px; background: var(--bg); box-shadow: 0 0 0 1px var(--line), 0 3px 0 -1px var(--surface), 0 3px 0 0 var(--line); border-top: 22px solid oklch(0.62 0.17 35); transform-origin: top; }
+  .v4 .cal-page small { color: var(--muted); }
+  .v4 .cal-page b { font-family: "Big Shoulders Display", Impact, sans-serif; font-size: 54px; line-height: 0.9; }
+  .v4 .cal-under { z-index: 1; border-top-color: color-mix(in oklch, oklch(0.62 0.17 35) 70%, white); }
+  .v4[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--ink), 0 12px 26px oklch(0 0 0 / 0.08); }
+  .v4.just-picked .cal-under { animation: none; }
+  .v4.just-picked .cal-page:not(.cal-under) { animation: rc-tear 0.7s ease-in-out; }
+  @keyframes rc-tear { 0% { transform: none; } 40% { transform: rotateX(70deg) rotateZ(-6deg) translateY(10px); opacity: 0.6; } 41% { transform: translateY(-20px); opacity: 0; } 100% { transform: none; opacity: 1; } }
+
+  /* 5 · spotlight on dark */
+  .rc-dark { padding: 22px; border-radius: 24px; background: #0e0f12; }
+  .v5 { display: grid; gap: 6px; padding: 18px; border-radius: 18px; background: linear-gradient(160deg, oklch(0.28 0.01 260 / 0.9), oklch(0.18 0.01 260 / 0.9)); color: #f4f4f5; box-shadow: inset 0 0 0 1px oklch(1 0 0 / 0.08); isolation: isolate; overflow: hidden; }
+  .v5 small { color: oklch(0.75 0 0); }
+  .v5 b { font-family: "Big Shoulders Display", Impact, sans-serif; font-size: 40px; line-height: 1; } .v5 b span { font-size: 14px; margin-left: 4px; font-family: Archivo, sans-serif; font-weight: 500; }
+  .v5 .rc-fit { background: oklch(1 0 0 / 0.1); color: #f4f4f5; }
+  .v5::before { content: ""; position: absolute; z-index: -1; inset: -40%; background: conic-gradient(from 0deg, transparent 0 60%, oklch(0.7 0.16 250) 75%, oklch(0.75 0.15 320) 85%, transparent 100%); opacity: 0; transition: opacity 0.4s; animation: rc-spin 4s linear infinite; }
+  .v5::after { content: ""; position: absolute; z-index: -1; inset: 2px; border-radius: 16px; background: linear-gradient(160deg, oklch(0.28 0.01 260), oklch(0.16 0.01 260)); }
+  .v5[aria-pressed="true"]::before { opacity: 1; }
+  .v5[aria-pressed="true"] { box-shadow: 0 0 40px oklch(0.6 0.16 270 / 0.35); }
+  @keyframes rc-spin { to { rotate: 360deg; } }
+
+  /* 6 · towers */
+  .rc-towers { min-height: 360px; }
+  .v6 { flex: 1 0 120px; display: grid; justify-items: center; gap: 6px; text-align: center; }
+  .v6 .tw { display: flex; flex-direction: column; gap: 3px; width: 64px; height: calc(var(--h) * 240px); transition: transform 0.4s var(--ease); }
+  .v6 .tw i { border-radius: 5px; min-height: 6px; }
+  .v6 b { font-family: "Big Shoulders Display", Impact, sans-serif; font-size: 22px; line-height: 1; }
+  .v6 strong { font-size: 12.5px; }
+  .v6[aria-pressed="true"] .tw { transform: translateY(-6px); filter: drop-shadow(0 10px 12px oklch(0 0 0 / 0.18)); }
+  .v6.just-picked .tw i { animation: rc-stack 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) backwards; }
+  .v6.just-picked .tw i:nth-last-child(2) { animation-delay: 0.06s; } .v6.just-picked .tw i:nth-last-child(3) { animation-delay: 0.12s; } .v6.just-picked .tw i:nth-last-child(4) { animation-delay: 0.18s; } .v6.just-picked .tw i:nth-last-child(5) { animation-delay: 0.24s; }
+  @keyframes rc-stack { from { transform: translateY(-30px); opacity: 0; } }
+  .tw-key { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 12px 0 0; font-size: 12px; color: var(--muted); }
+  .tw-key i { display: inline-block; width: 10px; height: 10px; margin-right: -8px; border-radius: 3px; vertical-align: -1px; }
+
+  /* 7 · swing tags */
+  .rc-tags { padding-top: 8px; }
+  .v7 { display: grid; justify-items: center; padding-top: 0; }
+  .v7 .tag-string { width: 2px; height: 26px; background: oklch(0.6 0.04 60); }
+  .v7 .tag { position: relative; display: grid; justify-items: center; gap: 6px; width: 100%; padding: 26px 16px 18px; border-radius: 14px 14px 18px 18px; background: oklch(0.95 0.03 80); box-shadow: 0 8px 18px oklch(0 0 0 / 0.08); clip-path: polygon(20% 0, 80% 0, 100% 14%, 100% 100%, 0 100%, 0 14%); transform-origin: top center; rotate: var(--r); transition: rotate 0.5s cubic-bezier(0.34, 1.56, 0.64, 1); text-align: center; }
+  .v7 .tag-hole { position: absolute; top: 9px; width: 10px; height: 10px; border-radius: 50%; background: var(--bg); box-shadow: inset 0 0 0 2px oklch(0.6 0.04 60); }
+  .v7 .tag-cost { font-family: "Big Shoulders Display", Impact, sans-serif; font-size: 34px; line-height: 1; } .v7 .tag-cost span { opacity: 0.2; }
+  .v7[aria-pressed="true"] .tag { rotate: 0deg; background: var(--ink); color: var(--bg); }
+  .v7[aria-pressed="true"] .tag small { color: oklch(0.8 0 0); }
+  .v7.just-picked .tag { animation: rc-swing 0.9s ease-out; }
+  @keyframes rc-swing { 0% { rotate: 0deg; } 25% { rotate: 8deg; } 50% { rotate: -5deg; } 75% { rotate: 2deg; } 100% { rotate: 0deg; } }
+
+  /* 8 · speed gradient */
+  .v8 { display: grid; gap: 4px; padding: 18px; min-height: 190px; align-content: end; border-radius: 20px; color: #fff; background: linear-gradient(150deg, oklch(0.62 0.16 calc(40 + var(--s) * 200)), oklch(0.42 0.14 calc(20 + var(--s) * 230))); overflow: hidden; transition: transform 0.4s var(--ease), box-shadow 0.3s; }
+  .v8 small { color: oklch(1 0 0 / 0.8); }
+  .v8 .o-num { font-family: "Big Shoulders Display", Impact, sans-serif; font-size: 64px; line-height: 0.9; color: transparent; -webkit-text-stroke: 2px #fff; }
+  .v8 .o-unit { margin-top: -2px; margin-bottom: 8px; }
+  .v8 .rc-fit { background: oklch(1 0 0 / 0.2); color: #fff; margin-top: 6px; }
+  .v8[aria-pressed="true"] { box-shadow: 0 0 0 3px var(--bg), 0 0 0 5px var(--ink); transform: translateY(-3px); }
+  .v8[aria-pressed="true"] .o-num { color: #fff; }
+
+  /* 9 · sticky notes */
+  .rc-board { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 22px; padding: 26px; border-radius: 22px; background: oklch(0.86 0.04 70) radial-gradient(oklch(0 0 0 / 0.05) 1px, transparent 1px) 0 0 / 8px 8px; }
+  .v9 { display: grid; gap: 6px; min-height: 170px; align-content: start; padding: 26px 18px 18px; background: oklch(0.95 0.07 var(--hue)); box-shadow: 0 10px 16px -8px oklch(0 0 0 / 0.35); rotate: var(--r); transition: rotate 0.4s var(--ease), transform 0.4s var(--ease), box-shadow 0.4s; }
+  .v9 b { font-family: "Big Shoulders Display", Impact, sans-serif; font-size: 30px; line-height: 1; }
+  .v9 .pin { position: absolute; top: 8px; left: 50%; width: 14px; height: 14px; margin-left: -7px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, oklch(0.75 0.17 25), oklch(0.5 0.18 25)); box-shadow: 0 2px 3px oklch(0 0 0 / 0.3); }
+  .v9[aria-pressed="true"] { rotate: 0deg; transform: translateY(-8px) scale(1.03); box-shadow: 0 22px 28px -10px oklch(0 0 0 / 0.4); }
+
+  /* 10 · switch + detail */
+  .sw { display: flex; padding: 5px; border-radius: 18px; background: var(--surface); overflow-x: auto; }
+  .sw-seg { flex: 1 0 auto; display: grid; gap: 2px; padding: 12px 14px; border: 0; border-radius: 14px; background: none; color: var(--ink); font: inherit; text-align: left; cursor: pointer; transition: background-color 0.3s, color 0.3s; }
+  .sw-seg strong { font-size: 13px; white-space: nowrap; } .sw-seg small { font-size: 11px; color: var(--muted); }
+  .sw-seg[aria-pressed="true"] { background: var(--ink); color: var(--bg); } .sw-seg[aria-pressed="true"] small { color: oklch(0.8 0 0); }
+  .sw-detail { display: grid; gap: 12px; margin-top: 12px; padding: 22px; border-radius: 18px; box-shadow: 0 0 0 1px var(--line); }
+  .sw-detail.is-in { animation: contact-done-in 0.45s var(--ease) both; }
+  .sw-d-head { display: flex; justify-content: space-between; align-items: end; gap: 16px; }
+  .sw-d-head div { display: grid; } .sw-d-head strong { font-size: 20px; } .sw-d-head small { color: var(--muted); font-size: 12px; }
+  .sw-d-head b { font-family: "Big Shoulders Display", Impact, sans-serif; font-size: 44px; line-height: 0.9; }
+  .sw-line { display: flex; gap: 3px; height: 12px; } .sw-line i { border-radius: 4px; }
+  .sw-detail p { margin: 0; font-size: 14px; color: var(--muted); }
+
+  @media (max-width: 640px) {
+    .v3 { grid-template-columns: 110px 1fr; padding-right: 50px; }
+    .rc-cols { gap: 8px; padding: 14px; }
+    .v2, .v6 { flex-basis: 92px; }
+  }
+</style>
