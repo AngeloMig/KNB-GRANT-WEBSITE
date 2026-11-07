@@ -10,6 +10,8 @@ import VideoReviews from './VideoReviews.astro';
 import ExperienceSection from './ExperienceSection.astro';
 import ClosingCta from './ClosingCta.astro';
 import { projects } from '../data/projects';
+// Selected work opens on the first six projects; "Load more" brings in the rest.
+const firstShown = 6;
 const marqueeItems = ['Shopify', 'Webflow', 'WordPress', 'Migrations', 'Technical SEO', 'Integrations'];
 const services = [
   { name: 'Shopify development', text: 'Custom themes, Liquid development, ecommerce builds, and integrations that connect your store to the tools you use.', tags: 'Shopify · Shopify Plus · Liquid' },
@@ -23,8 +25,10 @@ const services = [
   <section aria-label="Selected projects" id="work" class="work-section">
     <div class="work-toolbar" data-reveal><p>Selected work <span>({String(projects.length).padStart(2, '0')})</span></p><div class="project-filters" aria-label="Filter projects" hidden><button class="active" data-filter="All" aria-pressed="true">All</button><button data-filter="Shopify" aria-pressed="false">Shopify</button><button data-filter="Webflow" aria-pressed="false">Webflow</button><button data-filter="WordPress" aria-pressed="false">WordPress</button></div></div>
     <p class="sr-only" id="filter-status" aria-live="polite"></p>
-    <div class="project-grid">{projects.map((project, index) => <ProjectCard project={project} index={index} />)}</div>
+    <div class="project-grid">{projects.map((project, index) => <ProjectCard project={project} index={index} more={index >= firstShown} />)}</div>
+    {projects.length > firstShown && <div class="work-more"><button type="button" class="work-more-button" aria-controls="work" hidden>Load more work <span></span></button></div>}
   </section>
+  <noscript><style>.project-card[data-more] { display: block !important; }</style></noscript>
   <VideoReviews />
   <section id="services" class="services-section">
     <SectionTitle title="SERVICES" detail="From the first build to what comes next" dots />
@@ -37,20 +41,40 @@ const services = [
 <a class="mobile-cta" href={withBase('/estimate/')} aria-hidden="true" tabindex="-1">Get a free estimate <Arrow diagonal /></a>
 <script>
   const filters = document.querySelector<HTMLElement>('.project-filters');
-  const cards = document.querySelectorAll<HTMLElement>('.project-card');
+  const cards = [...document.querySelectorAll<HTMLElement>('.project-card')];
   const status = document.querySelector('#filter-status');
+  const moreButton = document.querySelector<HTMLButtonElement>('.work-more-button');
+  // Filters and "Load more" share one rule: show the first `limit` projects that match the filter.
+  const STEP = 6;
+  let selected = 'All';
+  let limit = STEP;
+  const render = (announce = false) => {
+    const matching = cards.filter((card) => selected === 'All' || card.dataset.platform === selected);
+    cards.forEach((card) => { card.hidden = true; });
+    matching.forEach((card, i) => { card.hidden = i >= limit; });
+    const left = matching.length - limit;
+    if (moreButton) { moreButton.hidden = left <= 0; moreButton.querySelector('span')!.textContent = `(+${left})`; }
+    if (announce && status) status.textContent = `Showing ${Math.min(limit, matching.length)} of ${matching.length} ${selected === 'All' ? '' : selected + ' '}projects.`;
+  };
+  moreButton?.addEventListener('click', () => {
+    const before = cards.filter((card) => !card.hidden).length;
+    limit += STEP;
+    render(true);
+    // Keep keyboard focus moving forward: into the first newly shown project.
+    cards.filter((card) => !card.hidden)[before]?.querySelector<HTMLElement>('a')?.focus({ preventScroll: true });
+  });
   if (filters) {
     filters.hidden = false;
     filters.querySelectorAll<HTMLButtonElement>('button').forEach((button) => {
       button.addEventListener('click', () => {
-        const selected = button.dataset.filter;
+        selected = button.dataset.filter ?? 'All';
+        limit = STEP;
         filters.querySelectorAll('button').forEach((other) => { other.classList.toggle('active', other === button); other.setAttribute('aria-pressed', String(other === button)); });
-        let count = 0;
-        cards.forEach((card) => { card.hidden = selected !== 'All' && card.dataset.platform !== selected; if (!card.hidden) count++; });
-        if (status) status.textContent = `Showing ${count} ${selected === 'All' ? '' : selected + ' '}projects.`;
+        render(true);
       });
     });
   }
+  render();
 
   const motionOn = document.documentElement.classList.contains('motion');
 

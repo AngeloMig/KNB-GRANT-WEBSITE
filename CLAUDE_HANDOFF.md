@@ -187,3 +187,11 @@ Codex updated `ProjectOrbit.astro` and added a one-shot readiness event in `Home
 User requested a desktop/mobile check. Official Google PageSpeed report: https://pagespeed.web.dev/analysis/https-angelomig-github-io-KNB-GRANT-WEBSITE/7e116rncjz. Published homepage scored desktop 91 / mobile 49 performance; SEO 100 both. Mobile TBT was 16.83s, LCP 3.8s; published desktop CLS was 0.18. No CrUX data. Public HTML still lacks the latest loading label.
 
 Current production export was separately audited via local static gzip hosting with Lighthouse 13.5 / Chrome 156: desktop 59, mobile 28, project mobile 62 performance; all SEO 100. These are different environments/versions and cannot establish a source regression percentage. See docs/VERIFICATION.md and ignored output/pagespeed-summary-2026-11-05.json plus HTML/JSON/trace reports. Startup CPU work is the next priority; preserve the approved orbital hero, native model geometry/screens and mobile quality. This audit did not change frontend code. Do not confuse the earlier warm RAF scrolling measurements with cold-load PageSpeed.
+
+## 2026-11-07 — Five extra projects behind "Load more"
+
+- Added Monsera, Narrative Hub, Teamtown, All Terrain Industries (Webflow) and Financial Advisor UK (WordPress) to `src/data/projects.ts` with `more: true`.
+- `more` projects get their own `/work/<slug>/` page and appear in Selected work, but **not** in the hero orbit: `ProjectOrbit.astro` and `PhoneHero.astro` now import `heroProjects` (the original six). Keep the orbit at six.
+- Selected work shows the first six; "Load more work (+N)" reveals the rest. Filters and Load more share one rule in `HomeSections.astro` (first 6 matching the filter). `.work-more { overflow-anchor: none }` stops the page jumping past the new cards.
+- Captures: 1920×1080 desktop and 720×1564 mobile, cookie banners, chat bubbles and pop-ups hidden. Sources are in `tmp/hd-captures/`. `scripts/prepare-project-images.mjs` now takes slugs (`node scripts/prepare-project-images.mjs teamtown`) and keeps the other entries in the manifest.
+- Monsera's link is the Webflow staging address (monsera-dev.webflow.io); swap it for the live domain when there is one.

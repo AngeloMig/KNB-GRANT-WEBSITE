@@ -3,10 +3,10 @@ import Arrow from './Arrow.astro';
 import DeviceFrames from './DeviceFrames.astro';
 import type { Project } from '../data/projects';
 import { withBase } from '../utils/paths';
-interface Props { project: Project; index: number; featured?: boolean; }
-const { project, index, featured = false } = Astro.props;
+interface Props { project: Project; index: number; featured?: boolean; more?: boolean; }
+const { project, index, featured = false, more = false } = Astro.props;
 ---
-<article class:list={['project-card', { featured }]} data-platform={project.platform} data-reveal style={`--reveal-index:${index % 2}`}>
+<article class:list={['project-card', { featured }]} data-platform={project.platform} data-more={more || undefined} hidden={more || undefined} data-reveal style={`--reveal-index:${index % 2}`}>
   <a href={withBase(`/work/${project.slug}/`)} class="project-link">
     <div class="project-heading"><h2>{project.name}</h2><Arrow diagonal /></div>
     <div class:list={['project-canvas', 'project-devices', project.canvas]} style={`view-transition-name: project-${project.slug}`}>

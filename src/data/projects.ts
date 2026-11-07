@@ -13,6 +13,8 @@ export interface Project {
   agency?: string;
   /** Kept in the data but left off the site for now. */
   hidden?: boolean;
+  /** Extra work: listed under Selected work (behind "Load more") with its own page, but kept out of the hero orbit. */
+  more?: boolean;
 }
 
 const allProjects: Project[] = [
@@ -122,9 +124,86 @@ const allProjects: Project[] = [
     overview:
       "Light My Bricks designs lighting kits engineered for specific LEGO® sets. The store helps fans find kits for their builds, browse new releases, and explore its learning centre and instructions.",
   },
+  {
+    slug: "monsera",
+    name: "Monsera",
+    more: true,
+    platform: "Webflow",
+    category: "Fashion & lingerie",
+    engagement: "Company project",
+    url: "https://monsera-dev.webflow.io/",
+    canvas: "rose",
+    mobileBar: { bg: "#1c1b1d", fg: "#fff" },
+    description:
+      "Step into your goddess. A Webflow storefront for a lingerie brand with personalised bra fittings.",
+    overview:
+      "Monsera is a lingerie and fashion brand built around empowering women and nurturing self-worth. The site presents its collections, a fit guide and personalised bra fittings, with shopping, wishlist and account features.",
+  },
+  {
+    slug: "narrative-hub",
+    name: "Narrative Hub",
+    more: true,
+    platform: "Webflow",
+    category: "Creative agency",
+    engagement: "Company project",
+    url: "https://www.narrativehub.com.au/",
+    canvas: "blue",
+    mobileBar: { bg: "#fff", fg: "#000" },
+    description:
+      "Fuelling brands. A website for a branding, marketing and video production agency.",
+    overview:
+      "Narrative Hub is an Australian creative agency offering branding, marketing, social media and video production from one team. The site showcases its video work and services, links to its socials and lists open roles.",
+  },
+  {
+    slug: "teamtown",
+    name: "Teamtown",
+    more: true,
+    platform: "Webflow",
+    category: "Design services",
+    engagement: "Company project",
+    url: "https://www.teamtown.co/",
+    canvas: "olive",
+    mobileBar: { bg: "#fff", fg: "#000" },
+    description:
+      "On-demand design for marketing teams. A Webflow site for a graphic design subscription agency.",
+    overview:
+      "Teamtown is a design subscription agency that works as an in-house design team for marketing teams. The site explains how the subscription works, shows its work and client reviews, and leads visitors to pricing or an intro call.",
+  },
+  {
+    slug: "financial-advisor-uk",
+    name: "Financial Advisor UK",
+    more: true,
+    platform: "WordPress",
+    category: "Financial services",
+    engagement: "Company project",
+    url: "https://financialadvisoruk.com/",
+    canvas: "violet",
+    mobileBar: { bg: "#341d83", fg: "#fff" },
+    description:
+      "Find your perfect financial advisor. A WordPress directory matching UK visitors with advisors.",
+    overview:
+      "Financial Advisor UK is a directory of advisors offering mortgage, life insurance, pension and wealth management advice. Visitors can get quotes, read guides and be matched with an advisor, while advisors can join and upgrade their listing.",
+  },
+  {
+    slug: "all-terrain-industries",
+    name: "All Terrain Industries",
+    more: true,
+    platform: "Webflow",
+    category: "4WD & automotive",
+    engagement: "Company project",
+    url: "https://www.allterrainindustries.com.au/",
+    canvas: "clay",
+    mobileBar: { bg: "#e37d30", fg: "#000" },
+    description:
+      "Gear up. Get out. A Webflow storefront for 4WD suspension, wheels and recovery gear.",
+    overview:
+      "All Terrain Industries is an Australian 4WD brand making suspension, airbag kits, wheels, lighting and recovery gear. The site lets drivers shop by category, find a dealer near them and read about the brand.",
+  },
 ];
 
 export const projects = allProjects.filter((project) => !project.hidden);
+/** The six projects that spin in the hero orbit; extra work stays in the Selected work list. */
+export const heroProjects = projects.filter((project) => !project.more);
 
 /** The hue of each card tint, for the deeper shades of a project's colour (the hero, "Next project"). */
 export const canvasHues: Record<string, number> = { olive: 105, lilac: 295, violet: 285, rose: 20, blue: 245, clay: 60 };

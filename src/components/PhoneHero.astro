@@ -1,5 +1,5 @@
 ---
-import { projects } from '../data/projects';
+import { heroProjects as projects } from '../data/projects';
 import { withBase } from '../utils/paths';
 import Arrow from './Arrow.astro';
 const previews = projects.map(p => ({ name: p.name, image: withBase(`/images/projects/${p.slug}-mobile-440.webp`), href: withBase(`/work/${p.slug}/`), bg: p.mobileBar.bg, fg: p.mobileBar.fg }));

@@ -5,7 +5,7 @@
 import fs from 'node:fs';
 import { withBase } from '../utils/paths';
 import Arrow from './Arrow.astro';
-import { projects, canvasHues as hues } from '../data/projects';
+import { heroProjects as projects, canvasHues as hues } from '../data/projects';
 interface Props { card?: string }
 const { card = 'clamp(240px, 30vw, 460px)' } = Astro.props;
 // On phones each card is drawn as one of three flagship phone designs, in turn round the ring (each

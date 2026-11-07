@@ -1,10 +1,12 @@
 import sharp from 'sharp';
-import { mkdir, writeFile, stat } from 'node:fs/promises';
+import { mkdir, writeFile, readFile, stat } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 
 const source = fileURLToPath(new URL('../tmp/hd-captures/', import.meta.url));
 const output = fileURLToPath(new URL('../public/images/projects/', import.meta.url));
-const projects = ['tero', 'road-armor', 'omenz', 'coptrz', 'skinistry', 'light-my-bricks'];
+const allSlugs = ['tero', 'road-armor', 'omenz', 'coptrz', 'skinistry', 'light-my-bricks', 'monsera', 'narrative-hub', 'teamtown', 'financial-advisor-uk', 'all-terrain-industries'];
+// Pass slugs to prepare only those projects (e.g. `node scripts/prepare-project-images.mjs teamtown`); the manifest keeps the rest.
+const projects = process.argv.length > 2 ? process.argv.slice(2) : allSlugs;
 const widths = [320, 480, 640, 960, 1275, 1440, 1920];
 const mobileWidths = [220, 330, 440, 720];
 
@@ -16,7 +18,9 @@ for (const slug of projects) {
   }
 }
 await mkdir(output, { recursive: true });
-const manifest = { captured: '2026-11-05', method: 'Native browser captures, no enlargement', desktop: '1920 pixels wide; 1072–1080 pixels high', mobile: '720 × 1564', files: [] };
+const previous = await readFile(`${output}capture-manifest.json`, 'utf8').then(JSON.parse).catch(() => ({ files: [] }));
+const manifest = { captured: '2026-11-05', method: 'Native browser captures, no enlargement', desktop: '1920 pixels wide; 1072–1080 pixels high', mobile: '720 × 1564',
+  files: previous.files.filter((entry) => !projects.some((slug) => entry.file.startsWith(`${slug}-`) || entry.file === `${slug}.webp`)) };
 for (const slug of projects) {
   for (const [kind, variants] of [['desktop', widths], ['mobile', mobileWidths]]) {
     for (const width of variants) {
