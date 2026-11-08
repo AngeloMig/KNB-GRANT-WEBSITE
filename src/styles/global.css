@@ -11057,3 +11057,61 @@ html:active-view-transition-type(grow)::view-transition-new(root) {
     position: relative;
   }
 }
+
+/* The timeline is one line now (the week squares are gone): taller, with the launch flag standing at
+   its end. Tapping a phase lifts its part of the line and dims the rest. */
+.wiz-summary .wiz-line {
+  margin-top: 30px;
+}
+.wiz-summary .wiz-line-track {
+  height: 14px;
+}
+.wiz-summary .wiz-line-track i {
+  border-radius: 5px;
+  cursor: pointer;
+  transition: flex-grow 0.6s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.3s, transform 0.3s var(--ease);
+}
+.wiz-summary .wiz-line[data-focus]:not([data-focus=""]) .wiz-line-track i {
+  opacity: 0.25;
+}
+.wiz-line[data-focus="discovery"] .wiz-line-track i[data-phase="discovery"],
+.wiz-line[data-focus="design"] .wiz-line-track i[data-phase="design"],
+.wiz-line[data-focus="build"] .wiz-line-track i[data-phase="build"],
+.wiz-line[data-focus="data"] .wiz-line-track i[data-phase="data"],
+.wiz-line[data-focus="content"] .wiz-line-track i[data-phase="content"],
+.wiz-line[data-focus="qa"] .wiz-line-track i[data-phase="qa"] {
+  opacity: 1 !important;
+  transform: scaleY(1.35);
+}
+.wiz-line-flag {
+  position: absolute;
+  right: 0;
+  bottom: 100%;
+  width: 2px;
+  height: 22px;
+  margin-bottom: -14px;
+  border-radius: 1px;
+  background: var(--ink);
+  transform-origin: bottom;
+}
+.wiz-line-flag::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 2px;
+  width: 13px;
+  height: 10px;
+  background: oklch(0.62 0.17 35);
+  clip-path: polygon(0 0, 100% 50%, 0 100%);
+  transform-origin: left center;
+  animation: wiz-flag 2.4s ease-in-out infinite;
+}
+.wiz-summary.is-finishing .wiz-line-flag {
+  animation: wiz-flag-up 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) 1.45s both;
+}
+.wiz-summary.is-finishing .wiz-runner {
+  z-index: 1;
+}
+@media (prefers-reduced-motion: reduce) {
+  .wiz-line-flag::before { animation: none; }
+}

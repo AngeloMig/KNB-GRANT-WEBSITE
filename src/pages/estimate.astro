@@ -170,8 +170,7 @@ const examples = projects.map((p) => ({ name: p.name, platform: p.platform, cate
         <p class="wiz-pick" hidden></p>
         <div class="wiz-phases" hidden>
           <div class="wiz-timeline">
-            <div class="wiz-line" aria-hidden="true"><span class="wiz-line-track"></span><span class="wiz-runner"></span></div>
-            <div class="wiz-weeks" role="img"></div>
+            <div class="wiz-line" role="img"><span class="wiz-line-track"></span><span class="wiz-runner" aria-hidden="true"></span><span class="wiz-line-flag" aria-hidden="true"></span></div>
             <div class="wiz-weeks-scale" aria-hidden="true"><span>Kick-off</span><span class="wiz-weeks-end">Launch</span></div>
           </div>
           <ul class="wiz-legend"></ul>
@@ -238,7 +237,8 @@ const examples = projects.map((p) => ({ name: p.name, platform: p.platform, cate
     const monthsLine = summary.querySelector('.wiz-months')!;
     const barValue = document.querySelector('.bar-value');
     const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const weeksGrid = summary.querySelector<HTMLElement>('.wiz-weeks')!;
+    // The timeline: one line of phases from kick-off to launch (the flag), hatched past the likely end.
+    const weeksGrid = summary.querySelector<HTMLElement>('.wiz-line')!;
     const weeksEnd = summary.querySelector<HTMLElement>('.wiz-weeks-end')!;
     const phaseWhy = summary.querySelector<HTMLElement>('.wiz-phase-why')!;
     const pickLine = summary.querySelector<HTMLElement>('.wiz-pick')!;
@@ -311,41 +311,17 @@ const examples = projects.map((p) => ({ name: p.name, platform: p.platform, cate
     // carries a launch flag. New squares pop in; changed ones recolour.
     const renderWeeks = (phases: Phase[], low: number, high: number) => {
       const total = phases.reduce((s, p) => s + p.weeks, 0) || 1;
-      const per = high > 30 ? 2 : 1;
-      const cells = Math.max(1, Math.ceil(high / per));
-      const solid = Math.max(1, Math.round(low / per));
-      let acc = 0;
-      const bounds = phases.map((p) => { acc += (p.weeks / total) * low; return { end: acc, p }; });
-      while (weeksGrid.children.length > cells) weeksGrid.lastElementChild!.remove();
-      let fresh = 0;
-      for (let i = 0; i < cells; i++) {
-        let cell = weeksGrid.children[i] as HTMLElement | undefined;
-        const created = !cell;
-        if (!cell) { cell = document.createElement('span'); weeksGrid.append(cell); }
-        const mid = (i + 0.5) * per;
-        const inRange = i < solid;
-        const phase = (inRange ? bounds.find((b) => mid <= b.end + 1e-6)?.p : undefined) ?? phases[phases.length - 1];
-        const cls = `wk phase-${phase.id}${inRange ? '' : ' is-maybe'}${i === cells - 1 ? ' is-launch' : ''}`;
-        if (created && !reduce) { cell.className = `${cls} is-new`; cell.style.setProperty('--d', String(fresh++)); }
-        else if (cell.className.replace(' is-new', '') !== cls) cell.className = cls;
-        cell.dataset.phase = phase.id;
-        cell.style.setProperty('--n', String(i));
-        cell.title = `${per === 1 ? `Week ${i + 1}` : `Weeks ${i * per + 1}–${i * per + per}`} · ${inRange ? phase.label : 'Possible extra time'}`;
-      }
-      weeksGrid.style.setProperty('--cols', String(Math.min(cells, 13)));
-      summary.style.setProperty('--cells', String(cells));
-      // The phase line above the squares: each phase as wide as its share of the time.
+      // The phases share the likely weeks; a hatched end runs on to the high end of the range.
       const lineTrack = summary.querySelector<HTMLElement>('.wiz-line-track')!;
-      // Sized like the squares under it: the phases share the likely weeks, then a hatched end for the rest.
       const key = `${phases.map((p) => `${p.id}:${p.weeks.toFixed(2)}`).join()}|${low}|${high}`;
       if (lineTrack.dataset.key !== key) {
         lineTrack.dataset.key = key;
-        lineTrack.innerHTML = phases.map((p) => `<i class="phase-${p.id}" style="flex-grow:${((p.weeks / total) * low).toFixed(3)}"></i>`).join('') + (high > low ? `<i class="is-maybe" style="flex-grow:${high - low}"></i>` : '');
+        lineTrack.innerHTML = phases.map((p) => `<i class="phase-${p.id}" data-phase="${p.id}" title="${p.label}: ~${p.display}" style="flex-grow:${((p.weeks / total) * low).toFixed(3)}"></i>`).join('') + (high > low ? `<i class="is-maybe" title="Possible extra time" style="flex-grow:${high - low}"></i>` : '');
       }
       weeksGrid.setAttribute('aria-label', `About ${low} to ${high} weeks: ${phases.map((p) => `${p.label} about ${p.display}`).join(', ')}.`);
-      weeksEnd.textContent = `Launch · week ${high}${per > 1 ? ' (1 square = 2 weeks)' : ''}`;
+      weeksEnd.textContent = `Launch · week ${high}`;
     };
-    // Tap or hover a phase (in the legend or the squares) to see what happens in it.
+    // Tap or hover a phase (in the legend or on the line) to see what happens in it.
     let shownPhases: Phase[] = [];
     const focusPhase = (id: string | null) => {
       weeksGrid.dataset.focus = id ?? '';
@@ -356,8 +332,8 @@ const examples = projects.map((p) => ({ name: p.name, platform: p.platform, cate
 
     /* ---------- The finish: the timeline draws itself ---------- */
     // When someone reaches their brief, a line runs from kick-off to launch, colouring each phase as it
-    // passes; the week squares light up under it as it goes, the launch flag goes up, and the number follows
-    // in. Plays once per arrival, when the summary is on screen (on phones it sits below the questions).
+    // passes; the launch flag goes up at the end, and the number follows in. Plays once per arrival, when
+    // the summary is on screen (on phones it sits below the questions).
     let finishPending = false;
     let summaryOnScreen = false;
     const playFinish = () => {
@@ -705,7 +681,7 @@ const examples = projects.map((p) => ({ name: p.name, platform: p.platform, cate
       laterMail.href = `mailto:${contact.email}?subject=${encodeURIComponent('My project estimate')}&body=${encodeURIComponent(brief)}`;
     };
     legend.addEventListener('click', (event) => { const b = (event.target as HTMLElement).closest<HTMLButtonElement>('[data-phase]'); if (b) focusPhase(b.getAttribute('aria-pressed') === 'true' ? null : b.dataset.phase!); });
-    weeksGrid.addEventListener('pointerover', (event) => { const cell = (event.target as HTMLElement).closest<HTMLElement>('.wk'); if (cell) focusPhase(cell.dataset.phase!); });
+    weeksGrid.addEventListener('pointerover', (event) => { const part = (event.target as HTMLElement).closest<HTMLElement>('[data-phase]'); if (part) focusPhase(part.dataset.phase!); });
     weeksGrid.addEventListener('pointerleave', () => focusPhase(null));
     answersBox.addEventListener('click', (event) => { const b = (event.target as HTMLElement).closest<HTMLButtonElement>('[data-go]'); if (b) go(b.dataset.go!, -1); });
 

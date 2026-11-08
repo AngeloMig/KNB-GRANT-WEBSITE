@@ -1,0 +1,223 @@
+---
+// Design preview: 10 ideas for the homepage marquee ("Shopify · Webflow · WordPress · …"). Local preview
+// only: in a build this route has no pages. Open http://localhost:4321/ideas/marquee/.
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import IdeaLegend from '../../components/IdeaLegend.astro';
+import { projects, canvasHues } from '../../data/projects';
+import { withBase } from '../../utils/paths';
+
+export function getStaticPaths() {
+  return import.meta.env.DEV ? [{ params: { preview: 'ideas' } }] : [];
+}
+
+const IDEAS = [
+  [1, 'Pauses on hover'], [2, 'Words that link'], [3, 'Scroll-linked speed'], [4, 'Two rows, opposite ways'], [5, 'Outline fills in the middle'],
+  [6, 'Icons between words'], [7, 'Real numbers'], [8, 'Dot letters that ripple'], [9, 'Tilted ribbons'], [10, 'Highlight in the middle'],
+] as const;
+const NOTES: Record<number, string> = {
+  1: 'Move over it: the strip slows to a stop and the word under the cursor lights up. Move away and it carries on.',
+  2: 'Every word goes somewhere: a platform to work built on it, a service to the page that starts it. A small arrow shows on hover.',
+  3: 'Scroll the page: the strip speeds up with you, runs backwards when you scroll up, and leans a little with the speed.',
+  4: 'Platforms run one way in solid type; services run the other way underneath, outlined and smaller.',
+  5: 'Every word is outlined; as it reaches the middle of the screen it fills in solid, then empties again on the way out.',
+  6: 'A small, generic icon for each word instead of the dots: a bag for Shopify, a page for WordPress, a magnifier for SEO… (simple marks, not brand logos).',
+  7: 'Real counts from the project list instead of bare words, so the strip doubles as proof.',
+  8: 'The words drawn in the same dot style as the page titles, with a gentle ripple running through the dots.',
+  9: 'The strip tilted like tape across the page, with a second, fainter ribbon crossing behind it the other way.',
+  10: 'The word in the middle grows and takes the colour of the project at the front of the orbit (here it changes every few seconds); the rest stay grey.',
+};
+const words = ['Shopify', 'Webflow', 'WordPress', 'Migrations', 'Technical SEO', 'Integrations'];
+const links: Record<string, string> = { Shopify: withBase('/work/tero/'), Webflow: withBase('/work/teamtown/'), WordPress: withBase('/work/coptrz/'), Migrations: withBase('/estimate/'), 'Technical SEO': withBase('/contact/#audit'), Integrations: withBase('/estimate/') };
+const count = (p: string) => projects.filter((x) => x.platform === p).length;
+const proof = [`${count('Shopify')} Shopify stores`, `${count('Webflow')} Webflow sites`, `${count('WordPress')} WordPress sites`, `${projects.length} projects live`, 'Migrations', 'Technical SEO', 'Integrations'];
+const hues = projects.slice(0, 6).map((p) => canvasHues[p.canvas] ?? 60);
+---
+<BaseLayout title="Marquee ideas | Grant Dev14" description="Local design preview." noindex>
+  <IdeaLegend ideas={IDEAS} links={[{ label: 'Compare with the current homepage', href: '/' }]} />
+  <div class="wrap mq-page">
+    <header class="mq-head">
+      <span class="tiny-heading">Preview · the homepage marquee</span>
+      <h1 class="display">Ten moving<br />strips</h1>
+      <p>Ten ways to make the “Shopify · Webflow · WordPress…” strip under the hero do more. Hover, scroll and click to try them.</p>
+    </header>
+    {IDEAS.map(([n, name]) => (
+      <section class="mq" id={`idea-${n}`}>
+        <div class="mq-top"><span class="idea-tag"><b>{n}</b>{name}</span><p class="mq-why">{NOTES[n]}</p></div>
+        <div class:list={['mq-demo', `mq-v${n}`]} data-v={n} data-words={JSON.stringify(n === 7 ? proof : words)} data-links={n === 2 ? JSON.stringify(links) : undefined} data-hues={n === 10 ? JSON.stringify(hues) : undefined}></div>
+      </section>
+    ))}
+  </div>
+</BaseLayout>
+
+<script>
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const ICONS: Record<string, string> = {
+    Shopify: '<path d="M6 8h12l-1 12H7L6 8Z"/><path d="M9 8a3 3 0 0 1 6 0"/>',
+    Webflow: '<path d="M3 16c3-6 5-6 7 0s4 6 7 0 3-6 4-6"/>',
+    WordPress: '<path d="M7 3h7l4 4v14H7z"/><path d="M14 3v4h4M10 12h5M10 16h5"/>',
+    Migrations: '<path d="M4 8h13l-3-3M20 16H7l3 3"/>',
+    'Technical SEO': '<circle cx="10" cy="10" r="6"/><path d="m15 15 5 5"/>',
+    Integrations: '<path d="M9 3v5M15 3v5M7 8h10v4a5 5 0 0 1-10 0V8ZM12 17v4"/>',
+  };
+  const esc = (t: string) => t.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
+
+  /** A strip that moves by script, so each idea can steer its speed and react to where each word is. */
+  class Strip {
+    x = 0; speed = 1; target = 1; groupW = 0;
+    track: HTMLElement; items: HTMLElement[] = [];
+    constructor(public host: HTMLElement, html: string, public dir = 1, public base = 0.6) {
+      this.track = document.createElement('div'); this.track.className = 'mq-track';
+      this.track.innerHTML = `<div class="mq-group">${html}</div>`.repeat(3);
+      host.append(this.track);
+      this.items = [...this.track.querySelectorAll<HTMLElement>('.mq-item')];
+      const measure = () => { this.groupW = (this.track.firstElementChild as HTMLElement).offsetWidth; };
+      measure(); document.fonts?.ready.then(measure); addEventListener('resize', measure);
+    }
+    step(dt: number) {
+      this.speed += (this.target - this.speed) * Math.min(1, 0.08 * dt);
+      if (!reduce) this.x -= this.base * this.speed * this.dir * dt;
+      if (this.groupW) { while (this.x <= -this.groupW) this.x += this.groupW; while (this.x > 0) this.x -= this.groupW; }
+      this.track.style.transform = `translate3d(${this.x.toFixed(2)}px,0,0)`;
+    }
+  }
+  const wordsHtml = (list: string[], sep = '<i class="mq-dot"></i>', wrap = (w: string) => `<span class="mq-item">${esc(w)}</span>`) => list.map((w) => `${wrap(w)}${sep}`).join('');
+  const loops: ((dt: number, t: number) => void)[] = [];
+  let last = performance.now();
+  const tick = (t: number) => { const dt = Math.min(3, (t - last) / 16.67); last = t; loops.forEach((f) => f(dt, t)); requestAnimationFrame(tick); };
+  requestAnimationFrame(tick);
+  const centreOf = (el: HTMLElement) => { const r = el.getBoundingClientRect(); return r.left + r.width / 2; };
+
+  document.querySelectorAll<HTMLElement>('.mq-demo').forEach((box) => {
+    const v = Number(box.dataset.v);
+    const list: string[] = JSON.parse(box.dataset.words!);
+    if (v === 1) {
+      const s = new Strip(box, wordsHtml(list));
+      box.addEventListener('pointerenter', () => { s.target = 0; });
+      box.addEventListener('pointerleave', () => { s.target = 1; s.items.forEach((i) => i.classList.remove('is-lit')); });
+      box.addEventListener('pointermove', (e) => { s.items.forEach((i) => { const r = i.getBoundingClientRect(); i.classList.toggle('is-lit', e.clientX >= r.left && e.clientX <= r.right); }); });
+      loops.push((dt) => s.step(dt));
+    }
+    if (v === 2) {
+      const links: Record<string, string> = JSON.parse(box.dataset.links!);
+      const s = new Strip(box, wordsHtml(list, '<i class="mq-dot"></i>', (w) => `<a class="mq-item" href="${links[w]}">${esc(w)}<sup>↗</sup></a>`));
+      box.addEventListener('pointerenter', () => { s.target = 0.15; });
+      box.addEventListener('pointerleave', () => { s.target = 1; });
+      loops.push((dt) => s.step(dt));
+    }
+    if (v === 3) {
+      const s = new Strip(box, wordsHtml(list));
+      let lastY = scrollY, vel = 0;
+      addEventListener('scroll', () => { vel += (scrollY - lastY) * 0.06; lastY = scrollY; }, { passive: true });
+      loops.push((dt) => { vel *= 0.9 ** dt; s.target = 1 + vel; s.speed = s.target; s.step(dt); s.track.style.transform += ` skewX(${Math.max(-12, Math.min(12, -vel * 1.5)).toFixed(2)}deg)`; });
+    }
+    if (v === 4) {
+      const a = document.createElement('div'), b = document.createElement('div');
+      a.className = 'mq-row'; b.className = 'mq-row mq-row-b'; box.append(a, b);
+      const s1 = new Strip(a, wordsHtml(list.slice(0, 3)));
+      const s2 = new Strip(b, wordsHtml(list.slice(3), '<i class="mq-plus">+</i>'), -1, 0.5);
+      loops.push((dt) => { s1.step(dt); s2.step(dt); });
+    }
+    if (v === 5) {
+      const s = new Strip(box, wordsHtml(list));
+      loops.push((dt) => { s.step(dt); const mid = innerWidth / 2; s.items.forEach((i) => { const d = Math.abs(centreOf(i) - mid) / (innerWidth * 0.32); i.style.setProperty('--fill', Math.max(0, 1 - d).toFixed(3)); }); });
+    }
+    if (v === 6) {
+      const s = new Strip(box, list.map((w) => `<span class="mq-item">${esc(w)}</span><svg class="mq-icon" viewBox="0 0 24 24" aria-hidden="true">${ICONS[w] ?? ''}</svg>`).join(''));
+      loops.push((dt) => s.step(dt));
+    }
+    if (v === 7) {
+      const s = new Strip(box, wordsHtml(list, '<i class="mq-dot"></i>', (w) => { const m = w.match(/^(\d+)\s(.+)$/); return m ? `<span class="mq-item"><b>${m[1]}</b>${esc(m[2])}</span>` : `<span class="mq-item">${esc(w)}</span>`; }));
+      loops.push((dt) => s.step(dt));
+    }
+    if (v === 8) {
+      // Dot letters: the phrase drawn once into a strip of dots, then drawn each frame with a ripple.
+      const cv = document.createElement('canvas'); cv.className = 'mq-canvas'; box.append(cv);
+      const ctx = cv.getContext('2d')!;
+      const text = `${list.join('   ·   ')}   ·   `;
+      let dots: { x: number; y: number }[] = [], stripW = 1, H = 0, W = 0, x = 0;
+      const build = () => {
+        const dpr = Math.min(2, devicePixelRatio || 1);
+        W = box.clientWidth; H = Math.round(Math.min(90, Math.max(56, innerWidth * 0.055)));
+        cv.width = W * dpr; cv.height = H * dpr; cv.style.height = `${H}px`; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        const o = document.createElement('canvas').getContext('2d', { willReadFrequently: true })!;
+        o.font = `800 ${H * 0.9}px "Big Shoulders Display"`;
+        stripW = Math.ceil(o.measureText(text).width);
+        o.canvas.width = stripW; o.canvas.height = H; o.font = `800 ${H * 0.9}px "Big Shoulders Display"`; o.textBaseline = 'alphabetic'; o.fillText(text, 0, H * 0.84);
+        const data = o.getImageData(0, 0, stripW, H).data, gap = 4; dots = [];
+        for (let yy = gap / 2; yy < H; yy += gap) for (let xx = gap / 2; xx < stripW; xx += gap) if (data[((yy | 0) * stripW + (xx | 0)) * 4 + 3] > 128) dots.push({ x: xx, y: yy });
+      };
+      document.fonts?.ready.then(build); build(); addEventListener('resize', build);
+      const ink = getComputedStyle(box).color;
+      loops.push((dt, t) => {
+        if (!reduce) x = (x + 0.6 * dt) % stripW;
+        ctx.clearRect(0, 0, W, H); ctx.fillStyle = ink; ctx.beginPath();
+        for (let rep = -1; rep * stripW - x < W; rep++) {
+          const off = rep * stripW - x;
+          for (const d of dots) { const px = d.x + off; if (px < -4 || px > W + 4) continue; const r = 1.2 + 0.6 * Math.sin(px * 0.02 - t * 0.004); ctx.moveTo(px + r, d.y); ctx.arc(px, d.y, r, 0, 6.283); }
+        }
+        ctx.fill();
+      });
+    }
+    if (v === 9) {
+      const back = document.createElement('div'), front = document.createElement('div');
+      back.className = 'mq-ribbon mq-ribbon-back'; front.className = 'mq-ribbon mq-ribbon-front'; box.append(back, front);
+      const s1 = new Strip(front, wordsHtml(list, '<i class="mq-star">✦</i>'));
+      const s2 = new Strip(back, wordsHtml(list, '<i class="mq-star">✦</i>'), -1, 0.4);
+      loops.push((dt) => { s1.step(dt); s2.step(dt); });
+    }
+    if (v === 10) {
+      const hues: number[] = JSON.parse(box.dataset.hues!);
+      let h = 0; box.style.setProperty('--hue', String(hues[0]));
+      setInterval(() => { h = (h + 1) % hues.length; box.style.setProperty('--hue', String(hues[h])); }, 3600);
+      const s = new Strip(box, wordsHtml(list));
+      loops.push((dt) => { s.step(dt); const mid = innerWidth / 2; s.items.forEach((i) => { const d = Math.abs(centreOf(i) - mid) / (innerWidth * 0.18); const k = Math.max(0, 1 - d); i.style.setProperty('--k', k.toFixed(3)); }); });
+    }
+  });
+</script>
+
+<style is:global>
+  .mq-page { padding-bottom: 160px; }
+  .mq-head { display: grid; gap: 18px; max-width: 820px; padding-block: 24px 40px; }
+  .mq-head h1 { margin: 0; font-size: clamp(56px, 8vw, 130px); }
+  .mq-head p { margin: 0; color: var(--muted); font-size: 17px; line-height: 1.5; }
+  .mq { padding-block: 44px; border-top: 1px solid var(--line); }
+  .mq-top { display: grid; gap: 4px; margin-bottom: 22px; }
+  .mq-why { max-width: 700px; margin: 0; color: var(--muted); font-size: 15px; line-height: 1.5; }
+  .mq-demo { position: relative; margin-inline: calc(50% - 50vw); overflow: hidden; border-block: 1px solid var(--line); padding-block: 16px; color: var(--ink); }
+  .mq-track { display: flex; width: max-content; will-change: transform; }
+  .mq-group { display: flex; flex-shrink: 0; align-items: center; }
+  .mq-item { padding-inline: 0.5em; font-family: "Big Shoulders Display", Impact, sans-serif; font-weight: 800; font-size: clamp(34px, 4.2vw, 64px); line-height: 1; letter-spacing: -0.02em; white-space: nowrap; color: inherit; text-decoration: none; transition: color 0.3s; }
+  .mq-dot { flex-shrink: 0; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+
+  /* 1 */
+  .mq-v1 .mq-item.is-lit { color: oklch(0.55 0.17 35); }
+  /* 2 */
+  .mq-v2 a.mq-item { position: relative; } .mq-v2 a.mq-item sup { font-size: 0.4em; margin-left: 2px; opacity: 0; transition: opacity 0.25s; vertical-align: super; }
+  .mq-v2 a.mq-item::after { content: ""; position: absolute; left: 0.5em; right: 0.5em; bottom: -4px; height: 3px; background: currentColor; transform: scaleX(0); transform-origin: left; transition: transform 0.35s var(--ease); }
+  .mq-v2 a.mq-item:hover sup { opacity: 1; } .mq-v2 a.mq-item:hover::after { transform: scaleX(1); } .mq-v2 a.mq-item:hover { color: oklch(0.45 0.12 245); }
+  /* 3 */
+  .mq-v3 .mq-track { transform-origin: center; }
+  /* 4 */
+  .mq-v4 { padding-block: 10px; display: grid; gap: 4px; }
+  .mq-row { overflow: hidden; } .mq-row-b .mq-item { font-size: clamp(24px, 2.8vw, 40px); color: transparent; -webkit-text-stroke: 1.4px var(--ink); }
+  .mq-plus { font-style: normal; font-weight: 700; font-size: 22px; padding-inline: 4px; color: var(--muted); }
+  /* 5 */
+  .mq-v5 .mq-item { --fill: 0; color: color-mix(in oklch, var(--ink) calc(var(--fill) * 100%), transparent); -webkit-text-stroke: 1.4px var(--ink); }
+  /* 6 */
+  .mq-icon { flex-shrink: 0; width: clamp(26px, 2.8vw, 42px); height: clamp(26px, 2.8vw, 42px); margin-inline: 6px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  /* 7 */
+  .mq-v7 .mq-item b { font: inherit; margin-right: 0.18em; color: oklch(0.55 0.17 35); }
+  /* 8 */
+  .mq-canvas { display: block; width: 100%; }
+  /* 9 */
+  .mq-v9 { height: 170px; border: 0; padding: 0; }
+  .mq-ribbon { position: absolute; left: -5%; right: -5%; top: 50%; padding-block: 12px; overflow: hidden; }
+  .mq-ribbon-front { rotate: -3deg; translate: 0 -50%; background: var(--ink); color: var(--bg); z-index: 2; box-shadow: 0 12px 24px oklch(0 0 0 / 0.16); }
+  .mq-ribbon-back { rotate: 2.5deg; translate: 0 -50%; background: oklch(0.92 0.05 80); color: oklch(0.45 0.08 70); }
+  .mq-ribbon-back .mq-item { font-size: clamp(26px, 3vw, 44px); }
+  .mq-star { font-style: normal; font-size: 18px; padding-inline: 6px; }
+  /* 10 */
+  .mq-v10 { --hue: 245; padding-block: 26px; }
+  .mq-v10 .mq-item { --k: 0; color: color-mix(in oklch, oklch(0.42 0.12 var(--hue)) calc(var(--k) * 100%), color-mix(in oklch, var(--ink) 28%, transparent)); transform: scale(calc(1 + var(--k) * 0.18)); transition: color 0.6s; }
+  .mq-v10 .mq-dot { background: color-mix(in oklch, var(--ink) 25%, transparent); }
+</style>
