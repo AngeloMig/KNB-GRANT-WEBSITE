@@ -193,3 +193,43 @@ Official Google report: https://pagespeed.web.dev/analysis/https-angelomig-githu
 - Other findings: published desktop CLS 0.18; mobile touch targets; a menu preview image declares 480×270 while the refreshed Light My Bricks image is 480×268. Both published form factors retain SEO 100.
 - Recommended optimization order: profile and reduce/chunk actual canvas/WebGL initialization while retaining the approved 3D orbit; prepare only visible decorative content; address desktop layout shift, touch targets and the incorrect image dimensions. Re-audit the exact deployed revision afterward.
 - Reports: ignored output/pagespeed-summary-2026-11-05.json, pagespeed-latest-desktop-2026-11-05.report.html, pagespeed-latest-mobile-2026-11-05.report.html and pagespeed-project-mobile-2026-11-05.report.html. Project trace/devtools data were saved for follow-up profiling. No frontend code changed during this measurement pass.
+
+## Quote design audit — 9 November 2026
+
+Scope: local quote dashboard, classic and guided editors, pricing, invoices, payment entry, deletion confirmation, email composition, business profile, support setup and blank website-audit creation. Inspected at 1280px desktop, 768px tablet, 390px and 320px mobile. Used sample data; did not connect the tracker, send email, save a payment, accept a quote, or modify live records. Real iPhone keyboard/zoom and external tracker integration remain outside this design audit.
+
+### Button refinement completed
+
+- The fixed mobile toolbar stays 49px high and aligned with the navigation circle. Its buttons now paint a 36px-high pill inside a 44px target. The previous global 2px outline with 6px external offset made focused buttons occupy 60px visually, exceeding the toolbar; focus outlines are now inset.
+- The mobile PDF accessible name now matches its visible “Download PDF” label; narrow guided mode retains visible “PDF”. Controls fit at 320px and 390px. Proof: ignored `output/quote-buttons-refined-390.jpg` and `quote-buttons-refined-320.jpg`.
+
+### Measured production baseline
+
+Lighthouse 13.5, local static `dist-github` export served with text gzip and 10-minute cache, clean Chrome profile, default simulated mobile/desktop presets, serial runs. These are first-screen local lab measurements from the build before the button refinement, not deployed results or an audit of every saved-quote state. SEO was intentionally excluded because this private tool must stay noindex.
+
+| Preset | Performance | Accessibility | Best practices | LCP | TBT | CLS |
+| --- | --- | --- | --- | --- | --- | --- |
+| Desktop | 100 | 96 | 100 | 0.6s | 0ms | 0.020 |
+| Mobile | 90 | 96 | 100 | 2.1s | 290ms | 0.049 |
+
+Reports: ignored `output/quote-audit-{desktop,mobile}-2026-11-09.report.{html,json}`. Manual DOM measurements: `output/quote-design-audit-measurements-2026-11-09.json`.
+
+### Remaining findings, prioritized
+
+No P0 blockers found. Nine grouped findings: three P1, five P2, one P3. Manual rubric: accessibility 2/4, performance 3/4, responsive design 2/4, theming 3/4, design anti-patterns 2/4 = 12/20 (significant refinement needed). This rubric is separate from Lighthouse.
+
+1. **P1 — Keyboard file actions.** `quote.astro` uses labels around `hidden` file inputs for Restore backup, logo and signature uploads. Those labels have no keyboard activation/focus target. Replace with native focusable file controls or real buttons that activate the pickers. Check WCAG 2.1.1.
+2. **P1 — Persistent form labels.** `q-brief` and `q-audit-paste` rely on placeholder text instead of explicit labels. Dynamic payment entry exposes accessible names but lacks visible field labels for amount, date, method and reference once values are present. Add associated, persistent labels (WCAG 3.3.2; programmatic relationships under 1.3.1).
+3. **P1 — Contrast.** Lighthouse measured inactive-but-operable section numbers in `.q-jump a i` at 3.23:1, below the 4.5:1 text threshold. Normal input borders use neutral `oklch(0.83 0 0)` against white, about 1.69:1; increase to at least 3:1 where the border identifies the field. Dashboard zero-alert opacity also needs review; do not treat enabled controls as disabled. Check WCAG 1.4.3 and 1.4.11.
+4. **P2 — Inconsistent touch sizes and text scale.** Many secondary actions are 28px high, view tabs 31px, payment inputs about 36px and general fields use 14px text. The fixed toolbar and invoice actions use 44px. Establish consistent primary/secondary visual sizes with roomy hit areas. Below 44px is a comfort concern, not automatically a WCAG AA failure; 2.5.8 has a 24px minimum and spacing/equivalence exceptions.
+5. **P2 — Competing navigation.** Guided mode shows a next-business-action callout, stages, section tabs, content Back/Next and fixed Next/PDF controls. At 390px these occupy most of the initial screen before the active form. Keep one primary progression action and clarify the separate business recommendation.
+6. **P2 — Focus placement.** Escape from the mobile More menu leaves focus on the document instead of returning it to More. Support setup focuses a price input, scrolling past the top package choices. Return focus to the invoking control and open long dialogs at their title/start.
+7. **P2 — Quote-row semantics.** Dashboard rows are clickable, focusable articles with an Enter handler, but their open action is not exposed as a named link/button. Add an explicit Open quote control while preserving the independent status and delete actions.
+8. **P2 — Startup work.** Mobile baseline recorded 290ms TBT, about 59ms forced reflow in the quote entry module and 31KiB estimated unused CSS. `renderEditor()` builds multiple hidden sections. Profile/defer hidden panel rendering and split quote-specific CSS; preserve lazy PDF loading. Do not infer a live regression from these local results.
+9. **P3 — Visual density.** Large condensed marketing typography, nested rounded panels, many pill controls and clipped single-line checklist descriptions compete with the financial/editor content. Simplify the task area's heading scale and containers; use multiline display/editing for long descriptions.
+
+Strengths to retain: monochrome tokens; native dialogs; invoice action grouping; labeled destructive controls; confirmation plus Undo; debounced local saving and backup notices; lazy PDF loading; no observed page overflow at the tested widths; noindex and encrypted published quote page.
+
+The source detector returned two image warnings for hidden logo/signature previews. Both are intentional optional previews, populated only when an image exists; they are false positives, not shipped broken images. This audit did not inject overlays or change browser security settings.
+
+Recommended order: fix P1 keyboard/label/contrast issues, unify mobile controls and progression, improve focus/semantics, profile startup, then finish visual polish. Remaining findings are documented, not represented as fixed by this button change.

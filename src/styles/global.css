@@ -3388,7 +3388,7 @@ html.menu-closing,
     height: 49px;
     flex-wrap: nowrap;
     gap: 6px;
-    padding: 2px 3px 3px 14px;
+    padding: 2.5px 3px 2.5px 14px;
   }
   .q-mobile-bar > span {
     overflow: hidden;
@@ -3402,6 +3402,35 @@ html.menu-closing,
     overflow: hidden;
     padding-inline: 12px;
     font-size: 13px;
+    position: relative;
+    isolation: isolate;
+    border: 0;
+    background: transparent;
+  }
+  /* Compact 36px visual buttons retain their 44px touch targets. */
+  .q-mobile-bar .q-btn::before {
+    content: "";
+    position: absolute;
+    inset: 4px 0;
+    z-index: -1;
+    border-radius: inherit;
+    background: var(--bg);
+    pointer-events: none;
+  }
+  .q-mobile-bar #q-mobile-next::before {
+    border: 1px solid oklch(1 0 0 / 0.4);
+    background: transparent;
+  }
+  .q-mobile-bar .q-btn.q-ghost:hover {
+    background: transparent;
+  }
+  .q-mobile-bar .q-btn:focus-visible {
+    outline: 2px solid var(--ink);
+    outline-offset: -7px;
+  }
+  .q-mobile-bar #q-mobile-next:focus-visible {
+    outline-color: var(--bg);
+    outline-offset: -4px;
   }
 }
 @media (max-width: 360px) {
