@@ -880,7 +880,8 @@ function renderInvoices() {
     return el('div', { className: 'q-invoice-wrap' },
       el('div', { className: 'q-invoice' },
         el('div', {}, el('strong', { textContent: inv.number }), el('span', { textContent: `${inv.milestone}${inv.changeId || inv.lines ? '' : ` · ${inv.percent}%`}${inv.payments.length ? ` · paid ${money(paidTotal(inv), inv.currency)}` : ''}` })),
-        el('strong', { className: 'q-amount', textContent: money(inv.amount, inv.currency) }), chip, view, pdf, pay,
+        el('strong', { className: 'q-amount', textContent: money(inv.amount, inv.currency) }), chip,
+        el('div', { className: 'q-invoice-actions', role: 'group', ariaLabel: `Actions for ${inv.number}` }, view, pdf, pay,
         Object.assign(el('button', { type: 'button', className: 'q-btn q-ghost q-small', textContent: 'Email' }), { onclick: () => openEmail(state, st !== 'paid' && inv.due < now ? 'reminder' : 'invoice', { invoice: inv }) }),
         iconButton('×', `Delete ${inv.number}`, () => deleteWithUndo({
           title: `Delete invoice ${inv.number}?`,
@@ -888,7 +889,7 @@ function renderInvoices() {
           list: inv.payments.length ? [inv.payments.length === 1 ? `1 recorded payment (${money(paidTotal(inv), inv.currency)}) and its receipt` : `${inv.payments.length} recorded payments (${money(paidTotal(inv), inv.currency)}) and their receipts`] : [],
           done: `Deleted ${inv.number}`,
           run: () => { state.invoices.splice(index, 1); renderInvoices(); renderSchedule(); renderChanges(); renderSummary(); save(); },
-        }), 'is-danger')),
+        }), 'is-danger'))),
       panel);
   }), el('datalist', { id: 'q-methods' }, ...paymentMethods().map((m) => new Option(m))));
 }
@@ -1767,11 +1768,11 @@ const isIconButton = (b: HTMLElement) => b.classList.contains('q-icon-btn');
 
 /** Saves a PDF, with clear feedback on the button (and a toast if it fails). */
 async function savePdf(button: HTMLButtonElement, build: Builder) {
-  const label = button.textContent;
+  const label = button.innerHTML;
   if (!isIconButton(button)) button.textContent = 'Preparing…';
   button.disabled = true;
   const m = await loadPdf();
-  if (!m) { button.textContent = label; button.disabled = false; return; }
+  if (!m) { button.innerHTML = label; button.disabled = false; return; }
   try {
     await m.download(build(m));
     if (!isIconButton(button)) button.textContent = 'Downloaded';
@@ -1781,7 +1782,7 @@ async function savePdf(button: HTMLButtonElement, build: Builder) {
     if (!isIconButton(button)) button.textContent = 'Couldn’t create PDF';
     toast(`Couldn’t create the PDF${error instanceof Error && error.message ? ` (${error.message})` : ''}. Try View instead.`, true);
   }
-  window.setTimeout(() => { button.textContent = label; button.disabled = false; }, 2200);
+  window.setTimeout(() => { button.innerHTML = label; button.disabled = false; }, 2200);
 }
 
 /** Shows a PDF in the preview window (a new tab on phones). */
@@ -2056,6 +2057,7 @@ let layout: 'guided' | 'classic' = (new URLSearchParams(location.search).get('la
 const guided = () => layout === 'guided';
 function applyLayout() {
   $('.quote-page').classList.toggle('q-guided', guided());
+  $('#q-mobile-next').hidden = !guided();
   // Folded extras: closed in the guided layout, always open in the classic one.
   document.querySelectorAll<HTMLDetailsElement>('details.q-more').forEach((d) => { d.open = !guided(); });
   $('#q-layout-toggle').textContent = guided() ? 'Classic layout' : 'Guided layout';

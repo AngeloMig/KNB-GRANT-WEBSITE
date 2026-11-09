@@ -3055,8 +3055,8 @@ html.menu-closing,
   color: var(--muted);
 }
 .q-invoice {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto auto auto auto 28px;
+  display: flex;
+  flex-wrap: wrap;
   gap: 10px;
   align-items: center;
   padding: 10px 0;
@@ -3066,6 +3066,28 @@ html.menu-closing,
   display: grid;
   gap: 1px;
   min-width: 0;
+}
+.q-invoice > div:first-child {
+  flex: 1 1 14rem;
+  overflow-wrap: anywhere;
+}
+.q-invoice > .q-amount,
+.q-invoice > .q-chip-status {
+  flex: none;
+}
+.q-invoice > .q-invoice-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+.q-invoice-actions > button {
+  flex: none;
+  min-height: 36px;
+}
+.q-invoice-actions > .q-icon {
+  min-width: 36px;
 }
 .q-invoice > div span {
   font-size: 12.5px;
@@ -3321,9 +3343,6 @@ html.menu-closing,
     grid-column: 1 / -1;
     justify-self: start;
   }
-  .q-invoice {
-    grid-template-columns: minmax(0, 1fr) auto;
-  }
   .q-mobile-bar:not([hidden]) {
     position: fixed;
     z-index: 20;
@@ -3331,6 +3350,7 @@ html.menu-closing,
     bottom: 12px;
     left: 12px;
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
     gap: 12px;
@@ -3340,11 +3360,15 @@ html.menu-closing,
     color: var(--bg);
     box-shadow: 0 12px 30px oklch(0 0 0 / 0.25);
   }
-  .q-mobile-bar span {
+  .q-mobile-bar > span {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow-wrap: anywhere;
     font-weight: 600;
     font-variant-numeric: tabular-nums;
   }
   .q-mobile-bar .q-btn {
+    min-height: 44px;
     background: var(--bg);
     color: var(--ink);
   }
@@ -3353,6 +3377,36 @@ html.menu-closing,
   }
   .q-toast {
     bottom: 84px;
+  }
+}
+
+/* Leave the phone navigation button its own space beside the quote toolbar. */
+@media (max-width: 640px) {
+  .q-mobile-bar:not([hidden]) {
+    right: calc(16px + 49px + 12px);
+    bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+    height: 49px;
+    flex-wrap: nowrap;
+    gap: 6px;
+    padding: 2px 3px 3px 14px;
+  }
+  .q-mobile-bar > span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .q-mobile-bar .q-btn {
+    flex: 0 1 auto;
+    min-width: 44px;
+    height: 44px;
+    overflow: hidden;
+    padding-inline: 12px;
+    font-size: 13px;
+  }
+}
+@media (max-width: 360px) {
+  body:has(.quote-page.q-guided) .q-mobile-download-verb {
+    display: none;
   }
 }
 
@@ -3466,9 +3520,6 @@ html.menu-closing,
 }
 .q-invoice-wrap .q-invoice {
   border-top: 0;
-}
-.q-invoice {
-  grid-template-columns: minmax(0, 1fr) auto auto auto auto auto 28px;
 }
 .q-pay-panel {
   margin: 0 0 12px;
@@ -8627,7 +8678,15 @@ html:active-view-transition-type(grow)::view-transition-new(root) {
   .q-invoice > :nth-child(n + 3) {
     order: 3;
   }
-  .q-invoice > .q-icon {
+  .q-invoice > .q-invoice-actions {
+    flex-basis: 100%;
+    margin-left: 0;
+  }
+  .q-invoice-actions > button {
+    min-height: 44px;
+  }
+  .q-invoice-actions > .q-icon {
+    min-width: 44px;
     margin-left: auto;
   }
 

@@ -24,6 +24,8 @@ for (const name of generated) {
 }
 await cp(new URL('../dist-github/', import.meta.url), new URL('../docs/', import.meta.url), { recursive: true });
 await writeFile(new URL('../docs/.nojekyll', import.meta.url), '');
+// Media for the local design previews (public/_preview) never ships.
+await rm(new URL('../docs/_preview', import.meta.url), { recursive: true, force: true });
 
 // The private quote builder is published encrypted (or locked if no password is set).
 const quote = await protectQuote(new URL('../', import.meta.url));

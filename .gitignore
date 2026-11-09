@@ -12,3 +12,6 @@ tmp/
 
 # Browser test snapshots (playwright-cli)
 .playwright-cli/
+
+# Media for local design previews (never published)
+public/_preview/

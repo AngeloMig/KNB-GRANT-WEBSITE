@@ -670,11 +670,17 @@ import ProjectOrbit from './ProjectOrbit.astro';
     addEventListener('resize', () => { measureHero(); checkPast(); });
     addEventListener('scroll', () => { if (!checkQueued) { checkQueued = true; requestAnimationFrame(checkPast); } }, { passive: true });
 
-    // ── Scrolling on from the hero turns the ring a little and tips it back.
-    if (motion) addEventListener('scroll', () => {
-      const p = Math.min(1, Math.max(0, scrollY / (heroH * 0.75)));
-      orbit.nudge = { rot: p * 22, tilt: p * 12 };
-    }, { passive: true });
+    // Keep the selected phone centered during native mobile scrolling.
+    // Desktop retains its sideways turn; both layouts retain the subtle tilt.
+    const updateScrollNudge = () => {
+      const p = Math.min(1, Math.max(0, scrollY / Math.max(1, heroH * 0.75)));
+      orbit.nudge = { rot: mobileModels.matches ? 0 : p * 22, tilt: p * 12 };
+    };
+    if (motion) {
+      addEventListener('scroll', updateScrollNudge, { passive: true });
+      mobileModels.addEventListener('change', updateScrollNudge);
+      requestAnimationFrame(updateScrollNudge);
+    }
     if (fine) {
       stage.addEventListener('pointermove', (e) => { const r = track.getBoundingClientRect(); px = e.clientX - r.left; py = e.clientY - r.top; });
       stage.addEventListener('pointerleave', () => { px = py = -1e4; });

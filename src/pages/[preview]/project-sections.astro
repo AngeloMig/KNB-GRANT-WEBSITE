@@ -1,0 +1,421 @@
+---
+// Design preview: 10 new sections for the project pages, shown on Tero (and Road Armor for the
+// before/after). Local preview only: in a build this route has no pages, and its media lives in
+// public/_preview (removed from docs/ by the build). Open http://localhost:4321/ideas/project-sections/.
+// Everything marked "Real" was read from the live site on 8 Nov 2026; "Needs you" sections are layouts only.
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import IdeaLegend from '../../components/IdeaLegend.astro';
+import { withBase } from '../../utils/paths';
+
+export function getStaticPaths() {
+  return import.meta.env.DEV ? [{ params: { preview: 'ideas' } }] : [];
+}
+
+const IDEAS = [
+  [1, 'The fonts it uses'], [2, 'Speed report'], [3, 'Built with'], [4, 'Before and after'], [5, 'A tour of the pages'],
+  [6, 'Phone, tablet, desktop'], [7, 'In motion'], [8, 'Plan one like this'], [9, 'At a glance'], [10, 'In the client’s words'],
+  [11, 'Feature hotspots'], [12, 'Brand kit'], [13, 'Scroll story'], [14, 'More like this'], [15, 'Live check and time zone'],
+] as const;
+const NOTES: Record<number, [string, string]> = {
+  1: ['Real · read from tero.au', 'The typefaces the site uses, as a specimen: big “Aa”, the alphabet and a sample line. Found automatically from the live site.'],
+  2: ['Real · measured today', 'The site’s own Google Lighthouse scores, drawn like PageSpeed. Worth showing only where they’re strong: Tero scores 49 for performance on a phone (it’s a heavy video site), so this one would stay off its page.'],
+  3: ['Real · detected on tero.au', 'The platform, theme and tools the site runs on, found in its code, as chips. You’d confirm the list once per project.'],
+  4: ['Needs an old screenshot', 'Drag the handle to compare the old site with the new one. Road Armor today on the right; the left needs a screenshot of the site before (the Wayback Machine’s copies of these sites load without their styling).'],
+  5: ['Real · Tero’s own pages', 'More than the homepage: a filmstrip of the key pages (here the Origin story, a product page and the Journal), each opening larger.'],
+  6: ['Real · three captures', 'One frame that changes width: tap Phone, Tablet or Desktop and it resizes to show how the layout adapts.'],
+  7: ['Real · recorded from tero.au', 'A short silent clip of the site in use (here a scroll down the homepage), looping inside a browser frame, so its motion comes across.'],
+  8: ['Real · works today', '“Want one like this?” with the estimator already set up for this kind of project (a new Shopify store), so it starts two questions in.'],
+  9: ['Needs your facts', 'The project in numbers: your role, how long it took, pages built, what launched. The values here are blanks for you to fill in.'],
+  10: ['Needs client approval', 'A short quote and who said it, shown only once the client has approved the words. No quote is shown here.'],
+  11: ['Real · notes to confirm', 'Numbered dots on the homepage. Tap one to read about that part. The notes here describe what’s on the live site; you’d confirm the wording.'],
+  12: ['Real · from the page’s data', 'The brand on one sheet: the colours read from the site, its typeface and crops of its own imagery, laid out like a designer’s brand board.'],
+  13: ['Captions need you', 'Scroll on and the laptop stays put while the full homepage scrolls inside it, with a caption for each part. The screenshot is real; the captions are placeholders for a line from you.'],
+  14: ['Real · same platform', 'Before the next project, a few more built on the same platform, so a visitor keeps browsing instead of leaving.'],
+  15: ['Live check real · city needs you', 'A badge showing the site answered when the page was built, and the client’s local time next to Grant’s. The .au address says Australia; the city (Melbourne here) is a guess to confirm.'],
+};
+const fullpages = (await import('../../data/project-fullpages.json')).default as Record<string, { desktop: Record<string, number>; palette: { hex: string; share: number }[] }>;
+const teroFull = fullpages.tero;
+const { projects } = await import('../../data/projects');
+const similar = projects.filter((p) => p.platform === 'Shopify' && p.slug !== 'tero').slice(0, 3);
+const hotspots = [
+  { x: 20, y: 11, title: 'Four ways in', text: 'Origin, Library, Product and Journal: the whole site in four words.' },
+  { x: 56, y: 11, title: 'The wordmark', text: 'The Tero name, set in the same monospaced type as the rest of the site.' },
+  { x: 62, y: 46, title: 'The promise', text: '“A listening app for the bath”: what Tero is, in one line, over the water video.' },
+  { x: 74, y: 88, title: 'Join', text: 'Sign up for access; the way in arrives by email.' },
+  { x: 90, y: 88, title: 'The releases', text: 'Straight to the library of recordings.' },
+];
+const story = [
+  { at: 0, title: 'The hero', text: 'A line from you about the opening screen.' },
+  { at: 0.28, title: 'The releases', text: 'A line from you about this part of the page.' },
+  { at: 0.55, title: 'The story', text: 'A line from you about this part of the page.' },
+  { at: 0.82, title: 'The footer', text: 'A line from you about how the page ends.' },
+];
+const checkedOn = '9 Nov 2026';
+const isLight = (hex: string) => { const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255); return 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.55; };
+// A share link that opens the estimator on a new Shopify store.
+const brief = Buffer.from(JSON.stringify({ type: 'new', platform: 'shopify' })).toString('base64url');
+const estimateLink = `${withBase('/estimate/')}?brief=${brief}`;
+const media = (f: string) => withBase(`/_preview/project-sections/${f}`);
+const stack = [
+  { name: 'Shopify', note: 'Platform', kind: 'platform' },
+  { name: 'Custom theme', note: '“Tero/main”, built for the brand', kind: 'theme' },
+  { name: 'Klaviyo', note: 'Email sign-ups and flows', kind: 'tool' },
+  { name: 'Shop Pay', note: 'Express checkout', kind: 'tool' },
+  { name: 'Meta Pixel', note: 'Ad tracking', kind: 'tool' },
+];
+const scores = [['Performance', 49], ['Accessibility', 91], ['Best Practices', 75], ['SEO', 92]] as const;
+const pages = [
+  { file: 'tero-page-0.webp', title: 'Origin', sub: 'The story page' },
+  { file: 'tero-page-1.webp', title: 'FATHOM', sub: 'A product page' },
+  { file: 'tero-page-2.webp', title: 'Journal', sub: 'The blog' },
+];
+const band = (n: number) => (n >= 90 ? 'good' : n >= 50 ? 'ok' : 'poor');
+---
+<BaseLayout title="Project section ideas | Grant Dev14" description="Local design preview." noindex>
+  <IdeaLegend ideas={IDEAS} links={[{ label: 'Open Tero’s project page', href: '/work/tero/' }]} />
+  <div class="wrap ps-page">
+    <header class="ps-head">
+      <span class="tiny-heading">Preview · new project page sections</span>
+      <h1 class="display">Ten more<br />sections</h1>
+      <p>New sections for the project pages, shown on Tero. Sections marked <b>Real</b> use what was read from the live site today; the ones marked <b>Needs you</b> are layouts waiting for your facts or a client’s approval.</p>
+    </header>
+
+    <section class="ps" id="idea-1">
+      <div class="ps-top"><span class="idea-tag"><b>1</b>{IDEAS[0][1]}<em>{NOTES[1][0]}</em></span><p class="ps-why">{NOTES[1][1]}</p></div>
+      <div class="ps-fonts">
+        <div class="ps-font-card"><span class="ps-aa">Aa</span><div><strong>JetBrains Mono</strong><small>Headings, body and buttons</small></div></div>
+        <div class="ps-font-sample"><p class="ps-alpha">ABCDEFGHIJKLM<br />NOPQRSTUVWXYZ<br />abcdefghijklm<br />nopqrstuvwxyz<br />0123456789</p><p class="ps-line">A listening app for the bath.</p><div class="ps-weights"><span style="font-weight:300">Light</span><span style="font-weight:400">Regular</span><span style="font-weight:700">Bold</span></div></div>
+      </div>
+    </section>
+
+    <section class="ps" id="idea-2">
+      <div class="ps-top"><span class="idea-tag"><b>2</b>{IDEAS[1][1]}<em>{NOTES[2][0]}</em></span><p class="ps-why">{NOTES[2][1]}</p></div>
+      <div class="speed-check ps-speed">
+        <p class="speed-check-head"><span class="speed-check-site">tero.au</span><span class="speed-check-mode">Mobile · 8 Nov 2026</span></p>
+        <div class="speed-gauges">{scores.map(([n, v]) => (
+          <div class="gauge" data-band={band(v)} style={`--score:${v}`}>
+            <span class="gauge-ring"><svg viewBox="0 0 120 120" aria-hidden="true"><circle class="gauge-track" cx="60" cy="60" r="54" /><circle class="gauge-bar" cx="60" cy="60" r="54" pathLength="100" /></svg><span class="gauge-num">{v}</span></span>
+            <span class="gauge-label">{n}</span>
+          </div>
+        ))}</div>
+        <p class="speed-check-note">Measured with Google Lighthouse on a simulated phone. Scores move with each test and with changes to the live site.</p>
+      </div>
+    </section>
+
+    <section class="ps" id="idea-3">
+      <div class="ps-top"><span class="idea-tag"><b>3</b>{IDEAS[2][1]}<em>{NOTES[3][0]}</em></span><p class="ps-why">{NOTES[3][1]}</p></div>
+      <div class="ps-stack">{stack.map((t) => <span class:list={['ps-chip', `is-${t.kind}`]}><strong>{t.name}</strong><small>{t.note}</small></span>)}</div>
+    </section>
+
+    <section class="ps" id="idea-4">
+      <div class="ps-top"><span class="idea-tag"><b>4</b>{IDEAS[3][1]}<em>{NOTES[4][0]}</em></span><p class="ps-why">{NOTES[4][1]}</p></div>
+      <div class="ps-compare" style="--at:50%">
+        <img src={withBase('/images/projects/road-armor-1440.webp')} alt="Road Armor homepage today" width="1440" height="810" />
+        <div class="ps-before"><div class="ps-before-inner"><span>Before</span><p>An old screenshot of the site goes here</p></div></div>
+        <span class="ps-handle" aria-hidden="true"><i>‹ ›</i></span>
+        <span class="ps-tag ps-tag-l">Before</span><span class="ps-tag ps-tag-r">Now</span>
+        <input type="range" min="0" max="100" value="50" aria-label="Compare before and now" />
+      </div>
+    </section>
+
+    <section class="ps" id="idea-5">
+      <div class="ps-top"><span class="idea-tag"><b>5</b>{IDEAS[4][1]}<em>{NOTES[5][0]}</em></span><p class="ps-why">{NOTES[5][1]}</p></div>
+      <div class="ps-film">{pages.map((p, i) => (
+        <button type="button" class="ps-frame" style={`--i:${i}`}><span class="ps-frame-bar"><i></i><i></i><i></i></span><img src={media(p.file)} alt={`Tero ${p.title} page`} width="1100" height="688" loading="lazy" /><span class="ps-frame-cap"><strong>{p.title}</strong><small>{p.sub}</small></span></button>
+      ))}</div>
+    </section>
+
+    <section class="ps" id="idea-6">
+      <div class="ps-top"><span class="idea-tag"><b>6</b>{IDEAS[5][1]}<em>{NOTES[6][0]}</em></span><p class="ps-why">{NOTES[6][1]}</p></div>
+      <div class="ps-resp" data-w="desktop">
+        <div class="ps-resp-switch" role="group" aria-label="Screen size"><button type="button" data-w="phone">Phone</button><button type="button" data-w="tablet">Tablet</button><button type="button" data-w="desktop" aria-pressed="true">Desktop</button></div>
+        <div class="ps-resp-stage"><div class="ps-resp-frame"><img data-w="phone" src={withBase('/images/projects/tero-mobile-720.webp')} alt="Tero on a phone" /><img data-w="tablet" src={media('tero-tablet.webp')} alt="Tero on a tablet" /><img data-w="desktop" src={withBase('/images/projects/tero-1440.webp')} alt="Tero on a desktop" /></div><span class="ps-resp-size"></span></div>
+      </div>
+    </section>
+
+    <section class="ps" id="idea-7">
+      <div class="ps-top"><span class="idea-tag"><b>7</b>{IDEAS[6][1]}<em>{NOTES[7][0]}</em></span><p class="ps-why">{NOTES[7][1]}</p></div>
+      <div class="ps-motion"><div class="ps-browser"><span class="ps-frame-bar"><i></i><i></i><i></i><b>tero.au</b></span><video src={media('tero-scroll.webm')} muted loop playsinline autoplay preload="metadata" aria-label="A scroll down the Tero homepage"></video></div></div>
+    </section>
+
+    <section class="ps" id="idea-8">
+      <div class="ps-top"><span class="idea-tag"><b>8</b>{IDEAS[7][1]}<em>{NOTES[8][0]}</em></span><p class="ps-why">{NOTES[8][1]}</p></div>
+      <a class="ps-plan" href={estimateLink}>
+        <span class="ps-plan-left"><small>Want one like this?</small><strong>Plan your own Shopify store</strong><span class="ps-plan-chips"><i>A new website or store</i><i>Shopify</i><i>Already filled in</i></span></span>
+        <span class="ps-plan-go">Start the estimate ↗</span>
+      </a>
+    </section>
+
+    <section class="ps" id="idea-9">
+      <div class="ps-top"><span class="idea-tag"><b>9</b>{IDEAS[8][1]}<em>{NOTES[9][0]}</em></span><p class="ps-why">{NOTES[9][1]}</p></div>
+      <div class="ps-glance">{[['Role', 'Your role'], ['Timeline', 'Weeks, start to launch'], ['Pages built', 'Templates and pages'], ['Launched', 'Month and year']].map(([k, hint]) => <div><small>{k}</small><strong class="ps-blank">—</strong><span>{hint}</span></div>)}</div>
+    </section>
+
+    <section class="ps" id="idea-10">
+      <div class="ps-top"><span class="idea-tag"><b>10</b>{IDEAS[9][1]}<em>{NOTES[10][0]}</em></span><p class="ps-why">{NOTES[10][1]}</p></div>
+      <figure class="ps-quote"><span class="ps-quote-mark" aria-hidden="true">“</span><blockquote class="ps-blank-quote">The client’s approved words go here.</blockquote><figcaption><span class="ps-avatar" aria-hidden="true"></span><span><strong>Name</strong><small>Role, company</small></span></figcaption></figure>
+    </section>
+
+    <section class="ps" id="idea-11">
+      <div class="ps-top"><span class="idea-tag"><b>11</b>{IDEAS[10][1]}<em>{NOTES[11][0]}</em></span><p class="ps-why">{NOTES[11][1]}</p></div>
+      <div class="ps-hot">
+        <div class="ps-hot-pic">
+          <img src={withBase('/images/projects/tero-1440.webp')} alt="Tero homepage" width="1440" height="810" />
+          {hotspots.map((h, i) => <button type="button" class="ps-dot" style={`--x:${h.x}%;--y:${h.y}%`} aria-label={h.title} data-i={i}>{i + 1}</button>)}
+        </div>
+        <div class="ps-hot-note" aria-live="polite"><strong></strong><p></p></div>
+      </div>
+      <script type="application/json" class="ps-hot-data" set:html={JSON.stringify(hotspots)} />
+    </section>
+
+    <section class="ps" id="idea-12">
+      <div class="ps-top"><span class="idea-tag"><b>12</b>{IDEAS[11][1]}<em>{NOTES[12][0]}</em></span><p class="ps-why">{NOTES[12][1]}</p></div>
+      <div class="ps-kit">
+        <div class="kit-logo"><img src={withBase('/images/projects/tero-1920.webp')} alt="" /><small>Wordmark</small></div>
+        <div class="kit-type"><span>Aa</span><small>JetBrains Mono</small></div>
+        <div class="kit-colours">{teroFull.palette.slice(0, 5).map((c) => <span class:list={[{ light: isLight(c.hex) }]} style={`--c:${c.hex}`}><small>{c.hex.toUpperCase()}</small></span>)}</div>
+        <div class="kit-img kit-img-a"><img src={withBase('/images/projects/tero-1920.webp')} alt="" /></div>
+        <div class="kit-img kit-img-b"><img src={media('tero-page-2.webp')} alt="" /></div>
+        <div class="kit-line"><p>A LISTENING APP<br />FOR THE BATH</p><small>Tone of voice</small></div>
+      </div>
+    </section>
+
+    <section class="ps ps-story-wrap" id="idea-13">
+      <div class="ps-top"><span class="idea-tag"><b>13</b>{IDEAS[12][1]}<em>{NOTES[13][0]}</em></span><p class="ps-why">{NOTES[13][1]}</p></div>
+      <div class="ps-story" style={`--ratio:${(teroFull.desktop['1100'] / 1100).toFixed(4)}`}>
+        <div class="story-stick">
+          <div class="story-laptop"><div class="story-screen"><img src={withBase('/images/projects/full/tero-desktop-1100.webp')} alt="Tero full homepage" width="1100" height={teroFull.desktop['1100']} /></div><span class="story-base"></span></div>
+          <ol class="story-caps">{story.map((c, i) => <li data-at={c.at} class={i === 0 ? 'is-on' : ''}><small>{String(i + 1).padStart(2, '0')}</small><strong>{c.title}</strong><p>{c.text}</p></li>)}</ol>
+        </div>
+      </div>
+    </section>
+
+    <section class="ps" id="idea-14">
+      <div class="ps-top"><span class="idea-tag"><b>14</b>{IDEAS[13][1]}<em>{NOTES[14][0]}</em></span><p class="ps-why">{NOTES[14][1]}</p></div>
+      <div class="ps-more-like"><p class="ps-more-title">More Shopify work</p><div class="ps-more-grid">{similar.map((p) => (
+        <a class="ps-like" href={withBase(`/work/${p.slug}/`)}><img src={withBase(`/images/projects/${p.slug}-640.webp`)} alt="" width="640" height="360" loading="lazy" /><strong>{p.name}</strong><small>{p.category}</small></a>
+      ))}</div></div>
+    </section>
+
+    <section class="ps" id="idea-15">
+      <div class="ps-top"><span class="idea-tag"><b>15</b>{IDEAS[14][1]}<em>{NOTES[15][0]}</em></span><p class="ps-why">{NOTES[15][1]}</p></div>
+      <div class="ps-live">
+        <span class="live-badge"><i></i>Live now · checked {checkedOn}</span>
+        <div class="live-clocks">
+          <div class="live-clock" data-tz="Asia/Manila"><small>Grant · Philippines</small><strong>--:--</strong><span></span></div>
+          <span class="live-diff"></span>
+          <div class="live-clock" data-tz="Australia/Melbourne"><small>Client · Melbourne <em>to confirm</em></small><strong>--:--</strong><span></span></div>
+        </div>
+        <p class="live-note"></p>
+      </div>
+    </section>
+  </div>
+</BaseLayout>
+
+<script>
+  // 4 · before/after handle
+  document.querySelectorAll<HTMLElement>('.ps-compare').forEach((box) => {
+    const range = box.querySelector<HTMLInputElement>('input')!;
+    range.addEventListener('input', () => box.style.setProperty('--at', `${range.value}%`));
+  });
+  // 5 · filmstrip: tap a page to see it larger
+  document.querySelectorAll<HTMLElement>('.ps-frame').forEach((f) => f.addEventListener('click', () => f.parentElement!.querySelectorAll('.ps-frame').forEach((x) => x.classList.toggle('is-open', x === f && !f.classList.contains('is-open')))));
+  // 11 · hotspots
+  document.querySelectorAll<HTMLElement>('.ps-hot').forEach((box) => {
+    const data = JSON.parse(box.parentElement!.querySelector('.ps-hot-data')!.textContent!) as { title: string; text: string }[];
+    const note = box.querySelector<HTMLElement>('.ps-hot-note')!;
+    const open = (i: number) => { box.querySelectorAll('.ps-dot').forEach((d) => d.classList.toggle('is-on', Number((d as HTMLElement).dataset.i) === i)); note.querySelector('strong')!.textContent = `${i + 1} · ${data[i].title}`; note.querySelector('p')!.textContent = data[i].text; note.classList.add('is-on'); };
+    box.querySelectorAll<HTMLElement>('.ps-dot').forEach((d) => d.addEventListener('click', () => open(Number(d.dataset.i))));
+    open(0);
+  });
+  // 13 · scroll story: the full page scrolls inside the pinned laptop as the section passes
+  document.querySelectorAll<HTMLElement>('.ps-story').forEach((box) => {
+    const img = box.querySelector<HTMLElement>('.story-screen img')!, caps = [...box.querySelectorAll<HTMLElement>('.story-caps li')];
+    let queued = false;
+    const update = () => {
+      queued = false;
+      const r = box.getBoundingClientRect(), total = r.height - innerHeight;
+      const p = Math.min(1, Math.max(0, -r.top / (total || 1)));
+      const screen = img.parentElement!;
+      img.style.transform = `translateY(${(-(img.offsetHeight - screen.clientHeight) * p).toFixed(1)}px)`;
+      let on = 0; caps.forEach((c, i) => { if (p >= Number(c.dataset.at) - 0.02) on = i; });
+      caps.forEach((c, i) => c.classList.toggle('is-on', i === on));
+    };
+    addEventListener('scroll', () => { if (!queued) { queued = true; requestAnimationFrame(update); } }, { passive: true });
+    update();
+  });
+  // 15 · clocks
+  document.querySelectorAll<HTMLElement>('.ps-live').forEach((box) => {
+    const clocks = [...box.querySelectorAll<HTMLElement>('.live-clock')];
+    const offset = (tz: string) => { const d = new Date(); const s = d.toLocaleString('en-US', { timeZone: tz }); return (new Date(s).getTime() - new Date(d.toLocaleString('en-US', { timeZone: 'UTC' })).getTime()) / 36e5; };
+    const tick = () => {
+      clocks.forEach((c) => { const tz = c.dataset.tz!; const now = new Date(); c.querySelector('strong')!.textContent = now.toLocaleTimeString('en-GB', { timeZone: tz, hour: '2-digit', minute: '2-digit' }); c.querySelector('span')!.textContent = now.toLocaleDateString('en-GB', { timeZone: tz, weekday: 'long' }); });
+      const diff = offset(clocks[1].dataset.tz!) - offset(clocks[0].dataset.tz!);
+      box.querySelector('.live-diff')!.textContent = diff === 0 ? 'Same time' : `${diff > 0 ? '+' : '−'}${Math.abs(diff)} h`;
+      box.querySelector('.live-note')!.textContent = diff === 0 ? 'Same working hours.' : `Melbourne is ${Math.abs(diff)} hour${Math.abs(diff) === 1 ? '' : 's'} ${diff > 0 ? 'ahead of' : 'behind'} Grant, so most of the working day overlaps.`;
+    };
+    tick(); setInterval(tick, 30000);
+  });
+  // 6 · responsive frame
+  document.querySelectorAll<HTMLElement>('.ps-resp').forEach((box) => {
+    const size = box.querySelector<HTMLElement>('.ps-resp-size')!;
+    const label: Record<string, string> = { phone: '390 px', tablet: '768 px', desktop: '1440 px' };
+    const set = (w: string) => { box.dataset.w = w; box.querySelectorAll<HTMLButtonElement>('.ps-resp-switch button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.w === w))); size.textContent = label[w]; };
+    box.querySelectorAll<HTMLButtonElement>('.ps-resp-switch button').forEach((b) => b.addEventListener('click', () => set(b.dataset.w!)));
+    set('desktop');
+  });
+</script>
+
+<style is:global>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;700&display=swap');
+  .ps-page { padding-bottom: 160px; }
+  .ps-head { display: grid; gap: 18px; max-width: 820px; padding-block: 24px 40px; }
+  .ps-head h1 { margin: 0; font-size: clamp(56px, 8vw, 130px); }
+  .ps-head p { margin: 0; color: var(--muted); font-size: 17px; line-height: 1.5; }
+  .ps { padding-block: 44px; border-top: 1px solid var(--line); }
+  .ps-top { display: grid; gap: 4px; margin-bottom: 22px; }
+  .ps-why { max-width: 720px; margin: 0; color: var(--muted); font-size: 15px; line-height: 1.5; }
+
+  /* 1 · fonts */
+  .ps-fonts { display: grid; grid-template-columns: 340px 1fr; gap: 16px; }
+  .ps-font-card { display: grid; align-content: space-between; min-height: 260px; padding: 24px; border-radius: 22px; background: #6b8f92; color: #fff; font-family: "JetBrains Mono", monospace; }
+  .ps-aa { font-size: 140px; line-height: 0.9; letter-spacing: -0.04em; }
+  .ps-font-card strong { display: block; font-size: 20px; } .ps-font-card small { opacity: 0.8; font-size: 12px; }
+  .ps-font-sample { display: grid; gap: 14px; padding: 24px; border-radius: 22px; background: var(--surface); font-family: "JetBrains Mono", monospace; }
+  .ps-alpha { margin: 0; font-size: 22px; line-height: 1.35; letter-spacing: 0.06em; }
+  .ps-line { margin: 0; font-size: 26px; text-transform: uppercase; letter-spacing: 0.04em; }
+  .ps-weights { display: flex; gap: 18px; font-size: 15px; color: var(--muted); }
+
+  /* 2 · speed */
+  .ps-speed { max-width: 560px; box-shadow: 0 0 0 1px var(--line); }
+
+  /* 3 · stack */
+  .ps-stack { display: flex; flex-wrap: wrap; gap: 10px; }
+  .ps-chip { display: grid; gap: 2px; padding: 14px 18px; border-radius: 16px; box-shadow: 0 0 0 1px var(--line); }
+  .ps-chip strong { font-size: 16px; } .ps-chip small { font-size: 12px; color: var(--muted); }
+  .ps-chip.is-platform { background: var(--ink); color: var(--bg); } .ps-chip.is-platform small { color: oklch(0.8 0 0); }
+  .ps-chip.is-theme { background: var(--surface); }
+
+  /* 4 · before / after */
+  .ps-compare { position: relative; max-width: 980px; aspect-ratio: 16 / 9; border-radius: 18px; overflow: hidden; box-shadow: 0 0 0 1px var(--line); }
+  .ps-compare img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: top; }
+  .ps-before { position: absolute; inset: 0; clip-path: inset(0 calc(100% - var(--at)) 0 0); background: repeating-linear-gradient(135deg, var(--surface) 0 14px, color-mix(in oklch, var(--surface) 60%, var(--bg)) 14px 28px); }
+  .ps-before-inner { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: 6px; width: 50%; text-align: center; }
+  .ps-before-inner span { font-family: "Big Shoulders Display", Impact, sans-serif; font-size: 46px; } .ps-before-inner p { margin: 0; font-size: 13px; color: var(--muted); }
+  .ps-handle { position: absolute; top: 0; bottom: 0; left: var(--at); width: 3px; margin-left: -1.5px; background: var(--bg); box-shadow: 0 0 0 1px oklch(0 0 0 / 0.15); pointer-events: none; }
+  .ps-handle i { position: absolute; top: 50%; left: 50%; display: grid; place-items: center; width: 44px; height: 44px; margin: -22px 0 0 -22px; border-radius: 50%; background: var(--bg); box-shadow: 0 4px 12px oklch(0 0 0 / 0.25); font-style: normal; font-size: 14px; font-weight: 700; }
+  .ps-tag { position: absolute; top: 14px; padding: 4px 10px; border-radius: 999px; background: oklch(0 0 0 / 0.6); color: #fff; font-size: 12px; pointer-events: none; } .ps-tag-l { left: 14px; } .ps-tag-r { right: 14px; }
+  .ps-compare input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: ew-resize; }
+
+  /* 5 · filmstrip */
+  .ps-film { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+  .ps-frame { display: grid; padding: 0; border: 0; border-radius: 14px; background: var(--bg); box-shadow: 0 0 0 1px var(--line), 0 10px 22px oklch(0 0 0 / 0.06); overflow: hidden; text-align: left; cursor: zoom-in; transition: transform 0.5s var(--ease); }
+  .ps-frame:hover { transform: translateY(-4px) rotate(calc((var(--i) - 1) * 0.6deg)); }
+  .ps-frame img { display: block; width: 100%; height: auto; aspect-ratio: 16 / 10; object-fit: cover; object-position: top; }
+  .ps-frame-bar { display: flex; align-items: center; gap: 5px; height: 26px; padding-inline: 10px; background: #f4f4f5; border-bottom: 1px solid #e4e4e7; } .ps-frame-bar i { width: 8px; height: 8px; border-radius: 50%; background: #d4d4d8; } .ps-frame-bar b { margin-inline: auto; font-size: 11px; font-weight: 500; color: #71717a; }
+  .ps-frame-cap { display: grid; padding: 12px 14px; } .ps-frame-cap strong { font-size: 14px; } .ps-frame-cap small { font-size: 12px; color: var(--muted); }
+  .ps-frame.is-open { grid-column: 1 / -1; grid-row: 1; cursor: zoom-out; }
+
+  /* 6 · responsive */
+  .ps-resp { display: grid; gap: 16px; }
+  .ps-resp-switch { display: flex; width: fit-content; padding: 4px; border-radius: 999px; background: var(--surface); }
+  .ps-resp-switch button { padding: 9px 18px; border: 0; border-radius: 999px; background: none; color: var(--ink); font-size: 13px; cursor: pointer; } .ps-resp-switch button[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+  .ps-resp-stage { display: grid; justify-items: center; gap: 10px; padding: 26px; border-radius: 22px; background: var(--surface); }
+  .ps-resp-frame { position: relative; width: 100%; max-width: 980px; height: 520px; border: 8px solid #111; border-radius: 18px; overflow: hidden; background: #fff; transition: max-width 0.7s cubic-bezier(0.65, 0, 0.35, 1), border-radius 0.7s; }
+  .ps-resp[data-w="tablet"] .ps-resp-frame { max-width: 400px; border-radius: 26px; } .ps-resp[data-w="phone"] .ps-resp-frame { max-width: 250px; border-radius: 34px; }
+  .ps-resp-frame img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: top; opacity: 0; transition: opacity 0.4s 0.3s; }
+  .ps-resp[data-w="phone"] img[data-w="phone"], .ps-resp[data-w="tablet"] img[data-w="tablet"], .ps-resp[data-w="desktop"] img[data-w="desktop"] { opacity: 1; }
+  .ps-resp-size { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+  /* 7 · motion */
+  .ps-motion { max-width: 860px; }
+  .ps-browser { border-radius: 14px; overflow: hidden; box-shadow: 0 0 0 1px var(--line), 0 20px 40px oklch(0 0 0 / 0.1); }
+  .ps-browser video { display: block; width: 100%; height: auto; aspect-ratio: 16 / 10; object-fit: cover; background: #111; }
+
+  /* 8 · plan one like this */
+  .ps-plan { display: flex; justify-content: space-between; align-items: center; gap: 20px; max-width: 980px; padding: 28px; border-radius: 24px; background: oklch(0.3 0.07 245); color: #fff; text-decoration: none; transition: transform 0.4s var(--ease); }
+  .ps-plan:hover { transform: translateY(-3px); }
+  .ps-plan-left { display: grid; gap: 6px; } .ps-plan small { opacity: 0.75; font-size: 13px; } .ps-plan strong { font-size: clamp(24px, 3vw, 36px); font-weight: 500; letter-spacing: -0.03em; }
+  .ps-plan-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; } .ps-plan-chips i { padding: 5px 10px; border-radius: 999px; background: oklch(1 0 0 / 0.14); font-style: normal; font-size: 12px; }
+  .ps-plan-go { flex-shrink: 0; padding: 14px 22px; border-radius: 999px; background: #fff; color: oklch(0.3 0.07 245); font-weight: 600; font-size: 14px; }
+
+  /* 9 · at a glance */
+  .ps-glance { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); max-width: 980px; border-block: 1px solid var(--line); }
+  .ps-glance > div { display: grid; gap: 4px; padding: 22px 18px; border-left: 1px solid var(--line); } .ps-glance > div:first-child { border-left: 0; padding-left: 0; }
+  .ps-glance small { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+  .ps-blank { font-family: "Big Shoulders Display", Impact, sans-serif; font-size: 52px; line-height: 1; color: color-mix(in oklch, var(--ink) 25%, transparent); }
+  .ps-glance span { font-size: 12px; color: var(--muted); }
+
+  /* 10 · quote */
+  .ps-quote { position: relative; max-width: 820px; margin: 0; padding: 34px 34px 28px; border-radius: 24px; background: oklch(0.95 0.02 245); }
+  .ps-quote-mark { position: absolute; top: -10px; left: 24px; font-family: "Big Shoulders Display", Impact, sans-serif; font-size: 120px; line-height: 1; color: oklch(0.6 0.08 245); }
+  .ps-blank-quote { margin: 24px 0 20px; font-size: clamp(22px, 2.6vw, 32px); line-height: 1.3; letter-spacing: -0.02em; color: color-mix(in oklch, var(--ink) 35%, transparent); font-style: italic; }
+  .ps-quote figcaption { display: flex; align-items: center; gap: 12px; } .ps-quote figcaption span:last-child { display: grid; } .ps-quote small { font-size: 12px; color: var(--muted); }
+  .ps-avatar { width: 40px; height: 40px; border-radius: 50%; background: color-mix(in oklch, var(--ink) 12%, transparent); }
+
+  /* 11 · hotspots */
+  .ps-hot { position: relative; max-width: 980px; border-radius: 18px; overflow: hidden; box-shadow: 0 0 0 1px var(--line); }
+  .ps-hot-pic { position: relative; } .ps-hot-pic > img { display: block; width: 100%; height: auto; }
+  .ps-dot { position: absolute; left: var(--x); top: var(--y); display: grid; place-items: center; width: 30px; height: 30px; margin: -15px 0 0 -15px; border: 0; border-radius: 50%; background: #fff; color: #111; font-size: 13px; font-weight: 700; cursor: pointer; box-shadow: 0 0 0 0 oklch(1 0 0 / 0.6); animation: ps-ping 2.4s ease-out infinite; transition: transform 0.3s var(--ease), background 0.3s, color 0.3s; }
+  .ps-dot.is-on { background: oklch(0.62 0.17 35); color: #fff; transform: scale(1.15); }
+  @keyframes ps-ping { 0% { box-shadow: 0 0 0 0 oklch(1 0 0 / 0.6); } 70%, 100% { box-shadow: 0 0 0 14px oklch(1 0 0 / 0); } }
+  .ps-hot-note { position: absolute; z-index: 2; left: 18px; bottom: 18px; pointer-events: none; max-width: 320px; padding: 14px 16px; border-radius: 14px; background: oklch(1 0 0 / 0.92); backdrop-filter: blur(8px); box-shadow: 0 10px 24px oklch(0 0 0 / 0.18); opacity: 0; transform: translateY(8px); transition: opacity 0.3s, transform 0.4s var(--ease); }
+  .ps-hot-note.is-on { opacity: 1; transform: none; } .ps-hot-note strong { font-size: 14px; } .ps-hot-note p { margin: 4px 0 0; font-size: 13px; color: #444; line-height: 1.45; }
+
+  /* 12 · brand kit */
+  .ps-kit { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); grid-template-rows: 170px 170px; gap: 10px; max-width: 980px; }
+  .ps-kit > div { position: relative; border-radius: 16px; overflow: hidden; }
+  .ps-kit small { position: absolute; left: 12px; bottom: 10px; font-size: 11px; }
+  .kit-logo { background: #0d1a1c; } .kit-logo img { position: absolute; width: 1111%; max-width: none; left: -505%; top: -12%; } .kit-logo small { color: #cfe; }
+  .kit-type { display: grid; place-items: center; background: #f3efe5; font-family: "JetBrains Mono", monospace; } .kit-type span { font-size: 86px; line-height: 1; color: #413c39; } .kit-type small { color: #413c39; }
+  .kit-colours { grid-column: span 2; display: flex; gap: 0; } .kit-colours span { position: relative; flex: 1; background: var(--c); } .kit-colours span small { color: #fff; } .kit-colours span.light small { color: #222; }
+  .kit-img img { width: 100%; height: 100%; object-fit: cover; }
+  .kit-img-a { grid-column: span 2; } .kit-img-a img { object-position: 30% 40%; }
+  .kit-img-b img { object-position: 80% 50%; }
+  .kit-line { display: grid; align-content: center; padding: 18px; background: #54747a; color: #f3efe5; font-family: "JetBrains Mono", monospace; } .kit-line p { margin: 0; font-size: 15px; letter-spacing: 0.06em; } .kit-line small { color: #f3efe5; opacity: 0.8; }
+
+  /* 13 · scroll story */
+  .ps-story { position: relative; height: 260vh; }
+  .story-stick { position: sticky; top: 9vh; display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: 40px; align-items: center; height: 82vh; }
+  .story-laptop { display: grid; justify-items: center; }
+  .story-screen { width: 100%; aspect-ratio: 16 / 10; overflow: hidden; border: 10px solid #111; border-bottom-width: 14px; border-radius: 16px 16px 4px 4px; background: #fff; }
+  .story-screen img { display: block; width: 100%; height: auto; will-change: transform; }
+  .story-base { width: 112%; height: 12px; border-radius: 0 0 14px 14px; background: linear-gradient(#d4d4d8, #a1a1aa); }
+  .story-caps { display: grid; gap: 14px; margin: 0; padding: 0; list-style: none; }
+  .story-caps li { padding: 16px 18px; border-radius: 16px; opacity: 0.3; transform: translateX(12px); transition: opacity 0.4s, transform 0.5s var(--ease), background 0.4s; }
+  .story-caps li.is-on { opacity: 1; transform: none; background: var(--surface); }
+  .story-caps small { font-size: 11px; color: var(--muted); } .story-caps strong { display: block; font-size: 20px; } .story-caps p { margin: 4px 0 0; font-size: 14px; color: var(--muted); font-style: italic; }
+
+  /* 14 · more like this */
+  .ps-more-like { max-width: 980px; }
+  .ps-more-title { margin: 0 0 14px; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; }
+  .ps-more-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+  .ps-like { display: grid; gap: 6px; color: var(--ink); text-decoration: none; }
+  .ps-like img { width: 100%; height: auto; border-radius: 14px; box-shadow: 0 0 0 1px var(--line); transition: transform 0.5s var(--ease); }
+  .ps-like:hover img { transform: translateY(-4px); } .ps-like strong { font-size: 15px; font-weight: 500; } .ps-like small { font-size: 12px; color: var(--muted); }
+
+  /* 15 · live check and time zone */
+  .ps-live { display: grid; gap: 18px; max-width: 720px; padding: 26px; border-radius: 22px; background: var(--surface); }
+  .live-badge { display: inline-flex; align-items: center; gap: 8px; width: fit-content; padding: 7px 14px; border-radius: 999px; background: oklch(0.93 0.06 150); color: oklch(0.36 0.09 150); font-size: 13px; font-weight: 600; }
+  .live-badge i { width: 8px; height: 8px; border-radius: 50%; background: oklch(0.6 0.16 150); box-shadow: 0 0 0 0 oklch(0.6 0.16 150 / 0.6); animation: ps-live 2s ease-out infinite; }
+  @keyframes ps-live { 70%, 100% { box-shadow: 0 0 0 8px oklch(0.6 0.16 150 / 0); } }
+  .live-clocks { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 14px; }
+  .live-clock { display: grid; gap: 2px; padding: 18px; border-radius: 16px; background: var(--bg); }
+  .live-clock small { font-size: 12px; color: var(--muted); } .live-clock em { font-style: normal; padding: 1px 6px; border-radius: 999px; background: var(--surface); font-size: 10.5px; }
+  .live-clock strong { font-family: "Big Shoulders Display", Impact, sans-serif; font-size: 52px; line-height: 1; font-variant-numeric: tabular-nums; } .live-clock span { font-size: 12px; color: var(--muted); }
+  .live-diff { padding: 6px 12px; border-radius: 999px; background: var(--ink); color: var(--bg); font-size: 13px; font-weight: 600; }
+  .live-note { margin: 0; font-size: 14px; color: var(--muted); }
+
+  @media (max-width: 760px) {
+    .ps-kit { grid-template-columns: 1fr 1fr; grid-template-rows: repeat(4, 130px); } .kit-colours, .kit-img-a { grid-column: span 2; }
+    .story-stick { grid-template-columns: 1fr; gap: 14px; align-content: center; } .story-caps { grid-template-columns: 1fr; } .story-caps li:not(.is-on) { display: none; }
+    .ps-more-grid { grid-template-columns: 1fr; }
+    .live-clocks { grid-template-columns: 1fr; } .live-diff { justify-self: start; }
+    .ps-hot-note { position: static; max-width: none; border-radius: 0; opacity: 1; transform: none; }
+    .ps-fonts { grid-template-columns: 1fr; } .ps-aa { font-size: 100px; } .ps-font-card { min-height: 200px; }
+    .ps-film { grid-template-columns: 1fr; }
+    .ps-plan { flex-direction: column; align-items: flex-start; }
+    .ps-glance { grid-template-columns: 1fr 1fr; } .ps-glance > div:nth-child(3) { border-left: 0; padding-left: 0; }
+    .ps-resp-frame { height: 420px; }
+  }
+</style>
