@@ -1,0 +1,265 @@
+---
+// Design preview: 20 improvements for the quote builder's line items table. Local preview only: in a
+// build this route has no pages. Open http://localhost:4321/ideas/line-items/. Each idea is a working
+// copy of the same four lines (edit the numbers; totals follow).
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import IdeaLegend from '../../components/IdeaLegend.astro';
+
+export function getStaticPaths() {
+  return import.meta.env.DEV ? [{ params: { preview: 'ideas' } }] : [];
+}
+
+const IDEAS = [
+  [1, 'A clean ledger with totals'], [2, 'Drag to reorder'], [3, 'Cells that look like text'], [4, 'The sum under each amount'], [5, 'Share-of-total bars'],
+  [6, 'Phase colours'], [7, 'Folding descriptions'], [8, 'A revisions stepper'], [9, 'Unit switch, not a dropdown'], [10, 'Actions in a ⋯ menu, with undo'],
+  [11, 'Project rate vs custom rate'], [12, 'A sticky totals bar'], [13, 'Groups with subtotals'], [14, 'Optional add-ons'], [15, 'Cards on phones'],
+  [16, 'Quick add from your library'], [17, 'Type the amount, get the hours'], [18, 'See it as the client will'], [19, 'Spreadsheet keys'], [20, 'Headline numbers on top'],
+] as const;
+const NOTES: Record<number, string> = {
+  1: 'Hairline rows instead of boxes, numbers right-aligned in even columns, and a footer with the subtotal and total, so the table reads like an invoice.',
+  2: 'A grip on each row replaces the two arrows: drag a line where you want it.',
+  3: 'The numbers sit as plain text and only show their box on hover or while typing, so the table stays calm.',
+  4: 'A small “15 hrs × $10” under each amount, so the sum is always visible.',
+  5: 'A thin bar under each line showing its share of the total: the eye goes straight to where the money is.',
+  6: 'Each line tagged with its phase colour (the same as the estimator’s timeline), so the table and the timeline match.',
+  7: 'Descriptions fold away behind a small arrow, so you can scan the lines; open one to edit it.',
+  8: 'Revisions become a clear − 2 + stepper instead of a cramped little box.',
+  9: 'hrs / days / fixed as a small switch you can see, instead of a dropdown with a far-off arrow.',
+  10: 'Favourite, duplicate and delete move into one ⋯ menu; a deleted line can be brought back with Undo.',
+  11: 'A small lock shows a line uses the project rate; change the rate and it turns into a “custom” badge you can reset.',
+  12: 'The total, hours and weeks stay pinned at the bottom of the table while you edit long quotes.',
+  13: 'Lines grouped (Build, Management) with a subtotal for each group.',
+  14: 'Mark any line optional: it shows as an add-on with a dashed outline and is left out of the total until the client picks it.',
+  15: 'On a phone each line becomes a compact card: title, description, then quantity, rate and amount in a row.',
+  16: 'Start typing a new line and your saved items appear, with their usual hours and rate.',
+  17: 'Prefer pricing by amount? Type $2,000 and the hours work themselves out at the rate.',
+  18: 'One switch flips the table between editing and exactly how the client’s PDF will show it.',
+  19: 'Move with the arrow keys, Enter adds a line below, and the cell you’re in is clearly ringed. (Click a number, then try the keys.)',
+  20: 'Before the table: the total, the hours, the weeks at your weekly hours and the effective rate, as big numbers.',
+};
+---
+<BaseLayout title="Line item ideas | Grant Dev14" description="Local design preview." noindex>
+  <IdeaLegend ideas={IDEAS} links={[{ label: 'Open the quote builder', href: '/quote/' }]} />
+  <div class="wrap li-page">
+    <header class="li-head">
+      <span class="tiny-heading">Preview · the quote builder’s line items</span>
+      <h1 class="display">Twenty better<br />line items</h1>
+      <p>Each idea is a working copy of the same four lines from your quote: change the numbers and the totals follow. Several can be combined.</p>
+    </header>
+    {IDEAS.map(([n, name]) => (
+      <section class="li" id={`idea-${n}`}>
+        <div class="li-top"><span class="idea-tag"><b>{n}</b>{name}</span><p class="li-why">{NOTES[n]}</p></div>
+        <div class:list={['li-demo', `li-v${n}`]} data-v={n}></div>
+      </section>
+    ))}
+  </div>
+</BaseLayout>
+
+<script>
+  type Line = { id: number; title: string; desc: string; qty: number; unit: 'hrs' | 'days' | 'fixed'; rate: number; phase: string; group: string; revisions?: number; optional?: boolean; fav?: boolean; customRate?: boolean };
+  const base = (): Line[] => [
+    { id: 1, title: 'Discovery & technical planning', desc: 'Kick-off call, goals, sitemap, technical plan and account setup.', qty: 15, unit: 'hrs', rate: 10, phase: 'discovery', group: 'Build' },
+    { id: 2, title: 'Shopify development', desc: '10 responsive page layouts, built from your Figma designs, with previews for your feedback.', qty: 165, unit: 'hrs', rate: 10, phase: 'build', group: 'Build', revisions: 2 },
+    { id: 3, title: 'QA, launch & handover', desc: 'Testing across devices and browsers, speed and SEO checks, go-live and a recorded walkthrough.', qty: 15, unit: 'hrs', rate: 10, phase: 'qa', group: 'Build' },
+    { id: 4, title: 'Project management', desc: 'Planning, weekly updates, calls and coordination throughout the project.', qty: 20, unit: 'hrs', rate: 10, phase: 'content', group: 'Management' },
+  ];
+  const LIBRARY = [
+    { title: 'Klaviyo email setup', qty: 8, desc: 'Sign-up forms, welcome flow and abandoned cart.' },
+    { title: 'Speed optimisation', qty: 12, desc: 'Audit, image and script fixes, Core Web Vitals.' },
+    { title: 'Product data import', qty: 10, desc: 'Products, variants and images moved in and checked.' },
+    { title: 'Redirects & SEO migration', qty: 6, desc: 'Old links pointed to new pages so rankings carry over.' },
+    { title: 'Training session', qty: 2, desc: 'A recorded walkthrough of editing the store.' },
+  ];
+  const PROJECT_RATE = 10, HOURS_PER_WEEK = 30;
+  const money = (n: number) => `$${Math.round(n).toLocaleString('en-US')}`;
+  const amount = (l: Line) => (l.unit === 'fixed' ? l.qty * l.rate : l.unit === 'days' ? l.qty * 8 * l.rate : l.qty * l.rate);
+  const hours = (l: Line) => (l.unit === 'fixed' ? 0 : l.unit === 'days' ? l.qty * 8 : l.qty);
+  const esc = (t: string) => t.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
+  const num = (l: Line, key: 'qty' | 'rate', cls = '') => `<input class="li-num ${cls}" type="number" min="0" step="any" value="${l[key]}" data-id="${l.id}" data-key="${key}" aria-label="${key === 'qty' ? 'Quantity' : 'Rate'} for ${esc(l.title)}" />`;
+  const totals = (lines: Line[]) => { const inc = lines.filter((l) => !l.optional); const sub = inc.reduce((s, l) => s + amount(l), 0); const hrs = inc.reduce((s, l) => s + hours(l), 0); return { sub, hrs, weeks: Math.max(1, Math.round((hrs / HOURS_PER_WEEK) * 2) / 2), eff: hrs ? sub / hrs : 0, opt: lines.filter((l) => l.optional).reduce((s, l) => s + amount(l), 0) }; };
+
+  /** One editable table per idea: shared state, re-rendered on change. */
+  function mount(box: HTMLElement, render: (lines: Line[], api: { set: (fn: (l: Line[]) => void) => void }) => string, after?: (box: HTMLElement, lines: Line[], api: { set: (fn: (l: Line[]) => void) => void }) => void) {
+    let lines = base();
+    const api = { set: (fn: (l: Line[]) => void) => { fn(lines); draw(); } };
+    const draw = () => {
+      const focus = document.activeElement as HTMLInputElement | null;
+      const keep = focus && box.contains(focus) && focus.dataset.id ? { id: focus.dataset.id, key: focus.dataset.key, pos: focus.selectionStart } : null;
+      box.innerHTML = render(lines, api);
+      after?.(box, lines, api);
+      if (keep) { const el = box.querySelector<HTMLInputElement>(`[data-id="${keep.id}"][data-key="${keep.key}"]`); el?.focus(); }
+    };
+    box.addEventListener('input', (e) => {
+      const t = e.target as HTMLInputElement; if (!t.dataset.id || !t.dataset.key) return;
+      const l = lines.find((x) => x.id === Number(t.dataset.id)); if (!l) return;
+      const k = t.dataset.key;
+      if (k === 'qty') l.qty = Number(t.value) || 0;
+      else if (k === 'rate') { l.rate = Number(t.value) || 0; l.customRate = l.rate !== PROJECT_RATE; }
+      else if (k === 'amount') { l.qty = Math.round(((Number(t.value.replace(/[^0-9.]/g, '')) || 0) / l.rate) * 4) / 4; }
+      else if (k === 'desc') l.desc = t.value;
+      box.querySelectorAll<HTMLElement>('[data-live]').forEach((el) => { const id = el.dataset.live!; if (id === 'total') el.textContent = money(totals(lines).sub); else if (id === 'hrs') el.textContent = `${totals(lines).hrs} hrs`; else if (id === 'weeks') el.textContent = `${totals(lines).weeks} wk`; else { const x = lines.find((y) => y.id === Number(id)); if (x) el.textContent = el.dataset.kind === 'qty' ? `${x.qty} ${x.unit}` : money(amount(x)); } });
+      if (t.dataset.redraw !== undefined) draw();
+    });
+    box.addEventListener('change', (e) => { const t = e.target as HTMLInputElement; if (t.dataset.id) draw(); });
+    draw();
+    return api;
+  }
+  const foot = (lines: Line[]) => { const t = totals(lines); return `<div class="li-foot"><span>Subtotal</span><b data-live="total">${money(t.sub)}</b><span class="li-foot-total">Total</span><b class="li-foot-total" data-live="total">${money(t.sub)}</b></div>`; };
+  const ledgerRow = (l: Line, extra = '') => `<div class="li-row" data-row="${l.id}"><div class="li-main"><strong>${esc(l.title)}</strong><p>${esc(l.desc)}</p>${extra}</div><span class="li-c">${num(l, 'qty')}<em>${l.unit}</em></span><span class="li-c">${num(l, 'rate')}</span><b class="li-amt" data-live="${l.id}">${money(amount(l))}</b></div>`;
+  const header = (cols = ['Item', 'Qty', 'Rate', 'Amount']) => `<div class="li-hrow">${cols.map((c) => `<span>${c}</span>`).join('')}</div>`;
+
+  const builders: Record<number, (box: HTMLElement) => void> = {
+    1: (box) => mount(box, (L) => `${header()}${L.map((l) => ledgerRow(l)).join('')}${foot(L)}`),
+    2: (box) => mount(box, (L) => `${header(['', 'Item', 'Qty', 'Rate', 'Amount'])}${L.map((l) => `<div class="li-row li-drag" draggable="true" data-row="${l.id}"><span class="li-grip" aria-hidden="true">⋮⋮</span><div class="li-main"><strong>${esc(l.title)}</strong><p>${esc(l.desc)}</p></div><span class="li-c">${num(l, 'qty')}<em>${l.unit}</em></span><span class="li-c">${num(l, 'rate')}</span><b class="li-amt" data-live="${l.id}">${money(amount(l))}</b></div>`).join('')}${foot(L)}`, (box, L, api) => {
+      let dragId = 0;
+      box.querySelectorAll<HTMLElement>('.li-drag').forEach((row) => {
+        row.addEventListener('dragstart', () => { dragId = Number(row.dataset.row); row.classList.add('is-dragging'); });
+        row.addEventListener('dragend', () => row.classList.remove('is-dragging'));
+        row.addEventListener('dragover', (e) => { e.preventDefault(); row.classList.add('is-over'); });
+        row.addEventListener('dragleave', () => row.classList.remove('is-over'));
+        row.addEventListener('drop', (e) => { e.preventDefault(); const to = Number(row.dataset.row); api.set((ls) => { const from = ls.findIndex((x) => x.id === dragId), at = ls.findIndex((x) => x.id === to); const [m] = ls.splice(from, 1); ls.splice(at, 0, m); }); });
+      });
+    }),
+    3: (box) => mount(box, (L) => `${header()}${L.map((l) => ledgerRow(l)).join('')}${foot(L)}`),
+    4: (box) => mount(box, (L) => `${header()}${L.map((l) => `<div class="li-row" data-row="${l.id}"><div class="li-main"><strong>${esc(l.title)}</strong><p>${esc(l.desc)}</p></div><span class="li-c">${num(l, 'qty')}<em>${l.unit}</em></span><span class="li-c">${num(l, 'rate')}</span><span class="li-amt-wrap"><b class="li-amt" data-live="${l.id}">${money(amount(l))}</b><small>${l.qty} ${l.unit} × ${money(l.rate)}</small></span></div>`).join('')}${foot(L)}`),
+    5: (box) => mount(box, (L) => { const t = totals(L).sub || 1; return `${header()}${L.map((l) => ledgerRow(l, `<span class="li-share"><i style="width:${((amount(l) / t) * 100).toFixed(1)}%"></i><small>${Math.round((amount(l) / t) * 100)}% of the total</small></span>`)).join('')}${foot(L)}`; }),
+    6: (box) => mount(box, (L) => `${header()}${L.map((l) => `<div class="li-row li-phase" data-row="${l.id}" style="--c:var(--ph-${l.phase})"><div class="li-main"><span class="li-phase-tag phase-${l.phase}">${({ discovery: 'Discovery', build: 'Build', qa: 'QA & launch', content: 'Management' } as Record<string, string>)[l.phase]}</span><strong>${esc(l.title)}</strong><p>${esc(l.desc)}</p></div><span class="li-c">${num(l, 'qty')}<em>${l.unit}</em></span><span class="li-c">${num(l, 'rate')}</span><b class="li-amt" data-live="${l.id}">${money(amount(l))}</b></div>`).join('')}${foot(L)}`),
+    7: (box) => { const open = new Set<number>([2]); mount(box, (L) => `${header()}${L.map((l) => `<div class="li-row" data-row="${l.id}"><div class="li-main"><button type="button" class="li-fold" data-fold="${l.id}" aria-expanded="${open.has(l.id)}"><span>${open.has(l.id) ? '▾' : '▸'}</span><strong>${esc(l.title)}</strong></button>${open.has(l.id) ? `<textarea class="li-desc" rows="2" data-id="${l.id}" data-key="desc">${esc(l.desc)}</textarea>` : ''}</div><span class="li-c">${num(l, 'qty')}<em>${l.unit}</em></span><span class="li-c">${num(l, 'rate')}</span><b class="li-amt" data-live="${l.id}">${money(amount(l))}</b></div>`).join('')}${foot(L)}`, (b, _L, api) => b.querySelectorAll<HTMLElement>('[data-fold]').forEach((f) => f.addEventListener('click', () => { const id = Number(f.dataset.fold); open.has(id) ? open.delete(id) : open.add(id); api.set(() => {}); }))); },
+    8: (box) => mount(box, (L) => `${header()}${L.map((l) => ledgerRow(l, l.revisions !== undefined ? `<span class="li-stepper"><button type="button" data-rev="${l.id}" data-d="-1" aria-label="Fewer revisions">−</button><b>${l.revisions}</b><button type="button" data-rev="${l.id}" data-d="1" aria-label="More revisions">+</button><small>revision round${l.revisions === 1 ? '' : 's'}</small></span>` : '')).join('')}${foot(L)}`, (b, _L, api) => b.querySelectorAll<HTMLElement>('[data-rev]').forEach((x) => x.addEventListener('click', () => api.set((ls) => { const l = ls.find((y) => y.id === Number(x.dataset.rev))!; l.revisions = Math.max(0, Math.min(9, (l.revisions ?? 0) + Number(x.dataset.d))); })))),
+    9: (box) => mount(box, (L) => `${header(['Item', 'Qty', 'Unit', 'Rate', 'Amount'])}${L.map((l) => `<div class="li-row li-row-5" data-row="${l.id}"><div class="li-main"><strong>${esc(l.title)}</strong><p>${esc(l.desc)}</p></div><span class="li-c">${num(l, 'qty')}</span><span class="li-units" role="group">${(['hrs', 'days', 'fixed'] as const).map((u) => `<button type="button" data-unit="${l.id}" data-u="${u}" aria-pressed="${l.unit === u}">${u}</button>`).join('')}</span><span class="li-c">${num(l, 'rate')}</span><b class="li-amt" data-live="${l.id}">${money(amount(l))}</b></div>`).join('')}${foot(L)}`, (b, _L, api) => b.querySelectorAll<HTMLElement>('[data-unit]').forEach((x) => x.addEventListener('click', () => api.set((ls) => { const l = ls.find((y) => y.id === Number(x.dataset.unit))!; const u = x.dataset.u as Line['unit']; if (u === l.unit) return; const h = hours(l); l.unit = u; if (u === 'days') { l.qty = Math.round((h / 8) * 2) / 2; } else if (u === 'hrs') { l.qty = h || l.qty; } else { l.rate = amount({ ...l, unit: 'hrs', qty: h || l.qty }); l.qty = 1; } })))),
+    10: (box) => { let removed: { line: Line; at: number } | null = null; mount(box, (L) => `${header(['Item', 'Qty', 'Rate', 'Amount', ''])}${L.map((l) => `<div class="li-row li-row-act" data-row="${l.id}"><div class="li-main"><strong>${l.fav ? '★ ' : ''}${esc(l.title)}</strong><p>${esc(l.desc)}</p></div><span class="li-c">${num(l, 'qty')}<em>${l.unit}</em></span><span class="li-c">${num(l, 'rate')}</span><b class="li-amt" data-live="${l.id}">${money(amount(l))}</b><span class="li-menu"><button type="button" class="li-menu-btn" aria-label="More for ${esc(l.title)}">⋯</button><span class="li-menu-pop"><button type="button" data-act="fav" data-id2="${l.id}">${l.fav ? 'Remove from favourites' : 'Save to favourites'}</button><button type="button" data-act="dup" data-id2="${l.id}">Duplicate</button><button type="button" data-act="del" data-id2="${l.id}" class="is-danger">Delete</button></span></span></div>`).join('')}${foot(L)}${removed ? `<div class="li-toast">Deleted “${esc(removed.line.title)}” <button type="button" data-act="undo">Undo</button></div>` : ''}`, (b, _L, api) => {
+      b.querySelectorAll<HTMLElement>('.li-menu-btn').forEach((m) => m.addEventListener('click', (e) => { e.stopPropagation(); const menu = m.parentElement!; const was = menu.classList.contains('is-open'); b.querySelectorAll('.li-menu').forEach((x) => x.classList.remove('is-open')); menu.classList.toggle('is-open', !was); }));
+      b.querySelectorAll<HTMLElement>('[data-act]').forEach((x) => x.addEventListener('click', () => api.set((ls) => { const act = x.dataset.act; if (act === 'undo' && removed) { ls.splice(removed.at, 0, removed.line); removed = null; return; } const i = ls.findIndex((y) => y.id === Number(x.dataset.id2)); if (i < 0) return; if (act === 'fav') ls[i].fav = !ls[i].fav; if (act === 'dup') ls.splice(i + 1, 0, { ...ls[i], id: Date.now(), title: `${ls[i].title} (copy)` }); if (act === 'del') { removed = { line: ls[i], at: i }; ls.splice(i, 1); } })));
+    }); },
+    11: (box) => mount(box, (L) => `${header()}${L.map((l) => `<div class="li-row" data-row="${l.id}"><div class="li-main"><strong>${esc(l.title)}</strong><p>${esc(l.desc)}</p></div><span class="li-c">${num(l, 'qty')}<em>${l.unit}</em></span><span class="li-c li-rate-cell">${num(l, 'rate', '', )}${l.rate === PROJECT_RATE ? `<small class="li-rate-tag">🔒 project rate</small>` : `<button type="button" class="li-rate-tag is-custom" data-reset="${l.id}">custom · reset</button>`}</span><b class="li-amt" data-live="${l.id}">${money(amount(l))}</b></div>`).join('')}${foot(L)}`, (b, _L, api) => { b.querySelectorAll<HTMLInputElement>('input[data-key="rate"]').forEach((i) => { i.dataset.redraw = ''; }); b.querySelectorAll<HTMLElement>('[data-reset]').forEach((x) => x.addEventListener('click', () => api.set((ls) => { ls.find((y) => y.id === Number(x.dataset.reset))!.rate = PROJECT_RATE; }))); }),
+    12: (box) => mount(box, (L) => { const t = totals(L); return `<div class="li-scroll">${header()}${[...L, ...L.map((l) => ({ ...l, id: l.id + 10, title: `${l.title} · phase 2` }))].map((l) => ledgerRow(l)).join('')}<div class="li-sticky"><span><small>Hours</small><b data-live="hrs">${t.hrs} hrs</b></span><span><small>About</small><b data-live="weeks">${t.weeks} wk</b></span><span class="li-sticky-total"><small>Total</small><b data-live="total">${money(t.sub)}</b></span></div></div>`; }),
+    13: (box) => mount(box, (L) => { const groups = [...new Set(L.map((l) => l.group))]; return `${header()}${groups.map((g) => { const gl = L.filter((l) => l.group === g); return `<div class="li-group"><div class="li-group-head"><strong>${g}</strong><span>${gl.length} line${gl.length > 1 ? 's' : ''}</span></div>${gl.map((l) => ledgerRow(l)).join('')}<div class="li-group-sub"><span>${g} subtotal</span><b>${money(gl.reduce((s, l) => s + amount(l), 0))}</b></div></div>`; }).join('')}${foot(L)}`; }),
+    14: (box) => { const api = mount(box, (L) => { const t = totals(L); return `${header(['Item', 'Qty', 'Rate', 'Amount', 'Optional'])}${L.map((l) => `<div class="li-row li-row-act${l.optional ? ' is-optional' : ''}" data-row="${l.id}"><div class="li-main">${l.optional ? '<span class="li-opt-tag">Optional add-on</span>' : ''}<strong>${esc(l.title)}</strong><p>${esc(l.desc)}</p></div><span class="li-c">${num(l, 'qty')}<em>${l.unit}</em></span><span class="li-c">${num(l, 'rate')}</span><b class="li-amt" data-live="${l.id}">${money(amount(l))}</b><label class="li-switch"><input type="checkbox" data-opt="${l.id}" ${l.optional ? 'checked' : ''} /><i></i></label></div>`).join('')}<div class="li-foot"><span>Total</span><b data-live="total">${money(t.sub)}</b>${t.opt ? `<span class="li-foot-opt">Optional add-ons</span><b class="li-foot-opt">+ ${money(t.opt)}</b>` : ''}</div>`; }, (b, _L, api2) => b.querySelectorAll<HTMLInputElement>('[data-opt]').forEach((x) => x.addEventListener('change', () => api2.set((ls) => { ls.find((y) => y.id === Number(x.dataset.opt))!.optional = x.checked; })))); api.set((ls) => { ls.push({ id: 5, title: 'Klaviyo email setup', desc: 'Sign-up forms, welcome flow and abandoned cart.', qty: 8, unit: 'hrs', rate: 10, phase: 'build', group: 'Build', optional: true }); }); },
+    15: (box) => mount(box, (L) => `<div class="li-phone"><div class="li-phone-screen">${L.map((l) => `<div class="li-card"><strong>${esc(l.title)}</strong><p>${esc(l.desc)}</p><div class="li-card-nums"><label><small>Qty</small>${num(l, 'qty')}</label><label><small>Rate</small>${num(l, 'rate')}</label><span><small>Amount</small><b data-live="${l.id}">${money(amount(l))}</b></span></div></div>`).join('')}<div class="li-card li-card-total"><span>Total</span><b data-live="total">${money(totals(L).sub)}</b></div></div></div>`),
+    16: (box) => mount(box, (L) => `${header()}${L.map((l) => ledgerRow(l)).join('')}<div class="li-add"><input class="li-add-in" placeholder="+ Add a line… (try “sp” or “kl”)" aria-label="Add a line" /><div class="li-suggest" hidden></div></div>${foot(L)}`, (b, _L, api) => {
+      const input = b.querySelector<HTMLInputElement>('.li-add-in')!, list = b.querySelector<HTMLElement>('.li-suggest')!;
+      input.addEventListener('input', () => { const q = input.value.trim().toLowerCase(); const hits = q ? LIBRARY.filter((x) => x.title.toLowerCase().includes(q)) : LIBRARY; list.hidden = !hits.length; list.innerHTML = hits.map((x, i) => `<button type="button" data-lib="${LIBRARY.indexOf(x)}" class="${i === 0 ? 'is-first' : ''}"><strong>${esc(x.title)}</strong><small>${x.qty} hrs · ${money(x.qty * PROJECT_RATE)}</small></button>`).join(''); });
+      input.addEventListener('focus', () => input.dispatchEvent(new Event('input')));
+      list.addEventListener('mousedown', (e) => { const btn = (e.target as HTMLElement).closest<HTMLElement>('[data-lib]'); if (!btn) return; const x = LIBRARY[Number(btn.dataset.lib)]; api.set((ls) => ls.push({ id: Date.now(), title: x.title, desc: x.desc, qty: x.qty, unit: 'hrs', rate: PROJECT_RATE, phase: 'build', group: 'Build' })); });
+    }),
+    17: (box) => mount(box, (L) => `${header(['Item', 'Hours', 'Rate', 'Amount (type it)'])}${L.map((l) => `<div class="li-row" data-row="${l.id}"><div class="li-main"><strong>${esc(l.title)}</strong><p>${esc(l.desc)}</p></div><span class="li-c"><b class="li-derived" data-live="${l.id}" data-kind="qty">${l.qty} ${l.unit}</b></span><span class="li-c">${num(l, 'rate')}</span><span class="li-c"><input class="li-num li-amt-in" value="${money(amount(l))}" data-id="${l.id}" data-key="amount" aria-label="Amount for ${esc(l.title)}" /></span></div>`).join('')}${foot(L)}`),
+    18: (box) => { let client = false; mount(box, (L) => `<div class="li-flip"><button type="button" aria-pressed="${!client}" data-mode="edit">Editing</button><button type="button" aria-pressed="${client}" data-mode="client">As the client sees it</button></div>${client ? `<div class="li-doc"><div class="li-doc-head"><span>Item</span><span>Hours</span><span>Amount</span></div>${L.map((l) => `<div class="li-doc-row"><div><strong>${esc(l.title)}</strong><p>${esc(l.desc)}</p></div><span>${l.qty}</span><b>${money(amount(l))}</b></div>`).join('')}<div class="li-doc-total"><span>Total (USD)</span><b>${money(totals(L).sub)}</b></div></div>` : `${header()}${L.map((l) => ledgerRow(l)).join('')}${foot(L)}`}`, (b, _L, api) => b.querySelectorAll<HTMLElement>('[data-mode]').forEach((x) => x.addEventListener('click', () => { client = x.dataset.mode === 'client'; api.set(() => {}); }))); },
+    19: (box) => mount(box, (L) => `${header()}${L.map((l) => ledgerRow(l)).join('')}${foot(L)}<p class="li-keys"><kbd>↑</kbd><kbd>↓</kbd><kbd>←</kbd><kbd>→</kbd> move · <kbd>Enter</kbd> new line below · <kbd>Esc</kbd> leave</p>`, (b, _L, api) => {
+      b.addEventListener('keydown', (e) => {
+        const t = e.target as HTMLInputElement; if (!t.classList.contains('li-num')) return;
+        const cells = [...b.querySelectorAll<HTMLInputElement>('.li-num')]; const i = cells.indexOf(t); const cols = 2;
+        const go = (j: number) => { const c = cells[j]; if (c) { e.preventDefault(); c.focus(); c.select(); } };
+        if (e.key === 'ArrowDown') go(i + cols); if (e.key === 'ArrowUp') go(i - cols);
+        if (e.key === 'ArrowRight' && t.selectionStart === t.value.length) go(i + 1); if (e.key === 'ArrowLeft' && t.selectionStart === 0) go(i - 1);
+        if (e.key === 'Escape') t.blur();
+        if (e.key === 'Enter') { e.preventDefault(); const row = Math.floor(i / cols); api.set((ls) => ls.splice(row + 1, 0, { id: Date.now(), title: 'New line', desc: 'Describe the work.', qty: 1, unit: 'hrs', rate: PROJECT_RATE, phase: 'build', group: 'Build' })); const nc = [...b.querySelectorAll<HTMLInputElement>('.li-num')]; nc[(row + 1) * cols]?.focus(); nc[(row + 1) * cols]?.select(); }
+      });
+      b.querySelectorAll<HTMLInputElement>('.li-num').forEach((x) => x.setAttribute('type', 'text'));
+    }),
+    20: (box) => mount(box, (L) => { const t = totals(L); return `<div class="li-hero"><span><small>Total</small><b data-live="total">${money(t.sub)}</b></span><span><small>Hours</small><b data-live="hrs">${t.hrs} hrs</b></span><span><small>At ${HOURS_PER_WEEK} hrs a week</small><b data-live="weeks">${t.weeks} wk</b></span><span><small>Effective rate</small><b>${money(t.eff)}/hr</b></span></div>${header()}${L.map((l) => ledgerRow(l)).join('')}`; }),
+  };
+  document.querySelectorAll<HTMLElement>('.li-demo').forEach((box) => builders[Number(box.dataset.v)]?.(box));
+  document.addEventListener('click', () => document.querySelectorAll('.li-menu.is-open').forEach((m) => m.classList.remove('is-open')));
+</script>
+
+<style is:global>
+  .li-page { padding-bottom: 160px; --ph-discovery: oklch(0.84 0.02 245); --ph-build: oklch(0.16 0 0); --ph-qa: oklch(0.79 0.025 105); --ph-content: oklch(0.87 0.02 60); }
+  .li-head { display: grid; gap: 18px; max-width: 820px; padding-block: 24px 40px; }
+  .li-head h1 { margin: 0; font-size: clamp(56px, 8vw, 130px); }
+  .li-head p { margin: 0; color: var(--muted); font-size: 17px; line-height: 1.5; }
+  .li { padding-block: 40px; border-top: 1px solid var(--line); }
+  .li-top { display: grid; gap: 4px; margin-bottom: 18px; }
+  .li-why { max-width: 720px; margin: 0; color: var(--muted); font-size: 15px; line-height: 1.5; }
+  .li-demo { position: relative; max-width: 1000px; font-size: 14px; }
+
+  /* The shared ledger */
+  .li-hrow, .li-row { display: grid; grid-template-columns: minmax(0, 1fr) 110px 90px 110px; gap: 16px; align-items: start; }
+  .li-hrow { padding: 0 0 10px; border-bottom: 1px solid var(--ink); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+  .li-hrow span:not(:first-child) { text-align: right; }
+  .li-row { padding: 16px 0; border-bottom: 1px solid var(--line); }
+  .li-main strong { display: block; font-size: 15px; font-weight: 600; } .li-main p { margin: 4px 0 0; font-size: 13px; line-height: 1.5; color: var(--muted); }
+  .li-c { display: flex; justify-content: flex-end; align-items: baseline; gap: 6px; } .li-c em { font-style: normal; font-size: 12px; color: var(--muted); }
+  .li-num { width: 64px; padding: 6px 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--ink); font: inherit; font-variant-numeric: tabular-nums; text-align: right; }
+  .li-num:focus { outline: 2px solid var(--ink); outline-offset: 1px; border-color: transparent; }
+  .li-amt { text-align: right; font-size: 15px; font-variant-numeric: tabular-nums; }
+  .li-foot { display: grid; grid-template-columns: 1fr auto; gap: 8px 24px; justify-items: end; padding: 16px 0 0; font-variant-numeric: tabular-nums; }
+  .li-foot span { color: var(--muted); } .li-foot .li-foot-total { font-size: 18px; color: var(--ink); } .li-foot b.li-foot-total { font-family: "Big Shoulders Display", Impact, sans-serif; font-size: 34px; line-height: 1; }
+
+  /* 2 drag */
+  .li-v2 .li-hrow, .li-v2 .li-row { grid-template-columns: 22px minmax(0, 1fr) 110px 90px 110px; }
+  .li-grip { cursor: grab; color: var(--muted); letter-spacing: -3px; padding-top: 2px; user-select: none; }
+  .li-drag.is-dragging { opacity: 0.4; } .li-drag.is-over { box-shadow: inset 0 2px 0 var(--ink); }
+  /* 3 text-like cells */
+  .li-v3 .li-num { border-color: transparent; background: transparent; } .li-v3 .li-row:hover .li-num { border-color: var(--line); background: var(--bg); }
+  /* 4 sum */
+  .li-amt-wrap { display: grid; justify-items: end; gap: 2px; } .li-amt-wrap small { font-size: 11.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  /* 5 share bars */
+  .li-share { display: grid; gap: 4px; margin-top: 10px; } .li-share i { display: block; height: 5px; border-radius: 3px; background: var(--ink); transition: width 0.4s var(--ease); } .li-share { background: linear-gradient(var(--surface), var(--surface)) 0 0 / 100% 5px no-repeat; } .li-share small { font-size: 11px; color: var(--muted); }
+  /* 6 phases */
+  .li-phase { position: relative; padding-left: 16px; } .li-phase::before { content: ""; position: absolute; left: 0; top: 16px; bottom: 16px; width: 4px; border-radius: 2px; background: var(--c); }
+  .li-phase-tag { display: inline-block; margin-bottom: 4px; padding: 2px 8px; border-radius: 999px; font-size: 10.5px; font-weight: 600; } .li-phase-tag.phase-build { color: #fff; }
+  /* 7 fold */
+  .li-fold { display: flex; gap: 8px; align-items: baseline; padding: 0; border: 0; background: none; color: inherit; font: inherit; cursor: pointer; text-align: left; } .li-fold span { width: 12px; color: var(--muted); }
+  .li-desc { width: 100%; margin-top: 8px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; font: inherit; font-size: 13px; color: var(--ink); background: var(--bg); resize: vertical; }
+  /* 8 stepper */
+  .li-stepper { display: inline-flex; align-items: center; gap: 6px; margin-top: 10px; padding: 3px; border-radius: 999px; background: var(--surface); }
+  .li-stepper button { width: 26px; height: 26px; border: 0; border-radius: 50%; background: var(--bg); color: var(--ink); font-size: 15px; cursor: pointer; box-shadow: 0 0 0 1px var(--line); } .li-stepper b { min-width: 14px; text-align: center; } .li-stepper small { padding-right: 8px; font-size: 12px; color: var(--muted); }
+  /* 9 units */
+  .li-v9 .li-hrow, .li-row-5 { grid-template-columns: minmax(0, 1fr) 76px 150px 80px 100px; }
+  .li-units { display: inline-flex; justify-self: end; padding: 3px; border-radius: 999px; background: var(--surface); } .li-units button { padding: 4px 9px; border: 0; border-radius: 999px; background: none; color: var(--muted); font-size: 12px; cursor: pointer; } .li-units button[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+  /* 10 menu */
+  .li-v10 .li-hrow, .li-row-act { grid-template-columns: minmax(0, 1fr) 110px 90px 100px 40px; }
+  .li-menu { position: relative; justify-self: end; } .li-menu-btn { width: 32px; height: 32px; border: 0; border-radius: 50%; background: none; color: var(--ink); font-size: 18px; cursor: pointer; } .li-menu-btn:hover { background: var(--surface); }
+  .li-menu-pop { position: absolute; right: 0; top: 36px; z-index: 5; display: none; min-width: 190px; padding: 6px; border-radius: 12px; background: var(--bg); box-shadow: 0 0 0 1px var(--line), 0 12px 28px oklch(0 0 0 / 0.14); }
+  .li-menu.is-open .li-menu-pop { display: grid; } .li-menu-pop button { padding: 9px 12px; border: 0; border-radius: 8px; background: none; color: var(--ink); font: inherit; font-size: 13px; text-align: left; cursor: pointer; } .li-menu-pop button:hover { background: var(--surface); } .li-menu-pop .is-danger { color: oklch(0.5 0.17 30); }
+  .li-toast { position: absolute; left: 0; bottom: -54px; display: flex; gap: 14px; align-items: center; padding: 10px 14px; border-radius: 12px; background: var(--ink); color: var(--bg); font-size: 13px; animation: contact-done-in 0.35s var(--ease) both; } .li-toast button { border: 0; background: none; color: oklch(0.8 0.12 80); font: inherit; font-weight: 600; cursor: pointer; }
+  .li-v10 { margin-bottom: 50px; }
+  /* 11 rate lock */
+  .li-rate-cell { flex-direction: column; align-items: flex-end; gap: 4px; } .li-rate-tag { font-size: 10.5px; color: var(--muted); white-space: nowrap; } .li-rate-tag.is-custom { padding: 2px 7px; border: 0; border-radius: 999px; background: oklch(0.94 0.06 80); color: oklch(0.45 0.1 70); cursor: pointer; }
+  /* 12 sticky */
+  .li-scroll { max-height: 380px; overflow: auto; padding-right: 6px; border-radius: 12px; }
+  .li-sticky { position: sticky; bottom: 0; display: flex; justify-content: flex-end; gap: 28px; padding: 14px 16px; margin-top: 8px; border-radius: 14px; background: var(--ink); color: var(--bg); } .li-sticky span { display: grid; justify-items: end; } .li-sticky small { font-size: 11px; opacity: 0.7; } .li-sticky b { font-size: 16px; } .li-sticky-total b { font-family: "Big Shoulders Display", Impact, sans-serif; font-size: 28px; line-height: 1; }
+  /* 13 groups */
+  .li-group { margin-top: 14px; } .li-group-head { display: flex; gap: 10px; align-items: baseline; padding: 8px 0; } .li-group-head strong { font-size: 13px; text-transform: uppercase; letter-spacing: 0.08em; } .li-group-head span { font-size: 12px; color: var(--muted); }
+  .li-group-sub { display: flex; justify-content: flex-end; gap: 20px; padding: 10px 0; font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; } .li-group-sub b { color: var(--ink); }
+  /* 14 optional */
+  .li-v14 .li-hrow { grid-template-columns: minmax(0, 1fr) 110px 90px 100px 64px; }
+  .li-v14 .li-row-act { grid-template-columns: minmax(0, 1fr) 110px 90px 100px 64px; }
+  .li-row.is-optional { margin-top: 8px; padding-inline: 12px; border: 1.5px dashed var(--line); border-radius: 12px; } .li-row.is-optional .li-amt { color: var(--muted); }
+  .li-opt-tag { display: inline-block; margin-bottom: 4px; padding: 2px 8px; border-radius: 999px; background: oklch(0.94 0.06 80); color: oklch(0.45 0.1 70); font-size: 10.5px; font-weight: 600; }
+  .li-switch { justify-self: end; position: relative; width: 38px; height: 22px; cursor: pointer; } .li-switch input { position: absolute; opacity: 0; } .li-switch i { position: absolute; inset: 0; border-radius: 999px; background: var(--line); transition: background 0.2s; } .li-switch i::after { content: ""; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: #fff; transition: transform 0.25s var(--ease); } .li-switch input:checked + i { background: oklch(0.62 0.15 80); } .li-switch input:checked + i::after { transform: translateX(16px); }
+  .li-foot-opt { color: var(--muted) !important; }
+  /* 15 phone cards */
+  .li-phone { width: 360px; max-width: 100%; padding: 12px; border: 9px solid #111; border-radius: 40px; background: var(--surface); }
+  .li-phone-screen { display: grid; gap: 10px; max-height: 520px; overflow: auto; padding: 8px; }
+  .li-card { display: grid; gap: 6px; padding: 14px; border-radius: 16px; background: var(--bg); box-shadow: 0 0 0 1px var(--line); } .li-card strong { font-size: 15px; } .li-card p { margin: 0; font-size: 12.5px; color: var(--muted); }
+  .li-card-nums { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-top: 6px; padding-top: 10px; border-top: 1px solid var(--line); } .li-card-nums label, .li-card-nums span { display: grid; gap: 2px; } .li-card-nums small { font-size: 10.5px; color: var(--muted); } .li-card-nums .li-num { width: 100%; } .li-card-nums b { padding-top: 6px; font-size: 15px; }
+  .li-card-total { display: flex; justify-content: space-between; align-items: baseline; background: var(--ink); color: var(--bg); } .li-card-total b { font-family: "Big Shoulders Display", Impact, sans-serif; font-size: 30px; }
+  /* 16 add */
+  .li-add { position: relative; padding: 14px 0; border-bottom: 1px solid var(--line); } .li-add-in { width: 100%; padding: 10px 12px; border: 1.5px dashed var(--line); border-radius: 10px; background: none; color: var(--ink); font: inherit; } .li-add-in:focus { outline: none; border-style: solid; border-color: var(--ink); }
+  .li-suggest { position: absolute; left: 0; right: 0; top: 60px; z-index: 5; display: grid; padding: 6px; border-radius: 12px; background: var(--bg); box-shadow: 0 0 0 1px var(--line), 0 12px 28px oklch(0 0 0 / 0.14); } .li-suggest[hidden] { display: none; }
+  .li-suggest button { display: flex; justify-content: space-between; padding: 10px 12px; border: 0; border-radius: 8px; background: none; color: var(--ink); font: inherit; cursor: pointer; } .li-suggest button:hover, .li-suggest .is-first { background: var(--surface); } .li-suggest small { color: var(--muted); }
+  .li-v16 { margin-bottom: 120px; }
+  /* 17 amount-first */
+  .li-amt-in { width: 96px; font-weight: 600; } .li-derived { font-weight: 500; font-variant-numeric: tabular-nums; }
+  /* 18 client view */
+  .li-flip { display: inline-flex; margin-bottom: 14px; padding: 4px; border-radius: 999px; background: var(--surface); } .li-flip button { padding: 8px 16px; border: 0; border-radius: 999px; background: none; color: var(--ink); font-size: 13px; cursor: pointer; } .li-flip button[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+  .li-doc { padding: 30px; border-radius: 6px; background: #fff; color: #161616; box-shadow: 0 12px 34px oklch(0 0 0 / 0.12); font-size: 13px; }
+  .li-doc-head, .li-doc-row { display: grid; grid-template-columns: 1fr 70px 100px; gap: 14px; } .li-doc-head { padding: 8px 10px; background: #f1f1f1; font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; } .li-doc-head span:not(:first-child), .li-doc-row > span, .li-doc-row > b { text-align: right; }
+  .li-doc-row { padding: 12px 10px; border-bottom: 1px solid #eee; } .li-doc-row p { margin: 3px 0 0; color: #666; font-size: 12px; }
+  .li-doc-total { display: flex; justify-content: space-between; margin-top: 12px; padding: 12px 10px; background: #161616; color: #fff; } .li-doc-total b { font-size: 18px; }
+  /* 19 keys */
+  .li-v19 .li-num:focus { outline: 3px solid oklch(0.62 0.17 35); }
+  .li-keys { margin: 14px 0 0; font-size: 12.5px; color: var(--muted); } .li-keys kbd { padding: 2px 6px; margin-right: 3px; border-radius: 5px; box-shadow: 0 0 0 1px var(--line); background: var(--bg); font: 11px ui-monospace, monospace; }
+  /* 20 hero numbers */
+  .li-hero { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-bottom: 20px; } .li-hero span { display: grid; gap: 2px; padding: 16px; border-radius: 16px; background: var(--surface); } .li-hero span:first-child { background: var(--ink); color: var(--bg); } .li-hero small { font-size: 11.5px; opacity: 0.7; } .li-hero b { font-family: "Big Shoulders Display", Impact, sans-serif; font-size: 36px; line-height: 1; font-variant-numeric: tabular-nums; }
+
+  @media (max-width: 760px) {
+    .li-hrow { display: none; }
+    .li-row, .li-v2 .li-row, .li-row-5, .li-row-act, .li-v14 .li-row-act { grid-template-columns: 1fr 1fr 1fr; }
+    .li-row > .li-main, .li-row > .li-grip { grid-column: 1 / -1; } .li-row > .li-menu, .li-row > .li-switch { grid-column: 3; }
+    .li-c { justify-content: flex-start; } .li-amt, .li-amt-wrap { justify-items: end; text-align: right; }
+    .li-hero { grid-template-columns: 1fr 1fr; }
+    .li-sticky { gap: 16px; }
+  }
+</style>
