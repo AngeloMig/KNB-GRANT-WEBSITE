@@ -34,3 +34,8 @@ export function sourceFields(): Record<string, string> {
     sent_from: location.pathname,
   };
 }
+
+/** The visitor's own timezone (e.g. "Australia/Sydney"), so a reply can land in their morning. */
+export function visitorTimeZone(): string | undefined {
+  try { return Intl.DateTimeFormat().resolvedOptions().timeZone || undefined; } catch { return undefined; }
+}

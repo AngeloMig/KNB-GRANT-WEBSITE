@@ -52,8 +52,9 @@ const faqSchema = { '@context': 'https://schema.org', '@type': 'FAQPage', mainEn
         <p class="contact-card-text">Send your website and Grant will review it personally: speed, mobile, SEO basics and checkout. You get the quick wins by email. Free, no obligation.</p>
         <ul class="contact-audit-list"><li>Page speed and Core Web Vitals</li><li>Mobile layout and usability</li><li>SEO basics and broken links</li><li>Checkout and conversion</li></ul>
         <div class="contact-fields">
+          <label><span>Your first name</span><input name="name" autocomplete="given-name" /></label>
           <label><span>Company name <i aria-hidden="true">*</i></span><input name="company" autocomplete="organization" required /></label>
-          <label><span>Email <i aria-hidden="true">*</i></span><input type="email" name="email" autocomplete="email" required /></label>
+          <label class="contact-span"><span>Email <i aria-hidden="true">*</i></span><input type="email" name="email" autocomplete="email" required /></label>
           <label class="contact-span"><span>Current website <i aria-hidden="true">*</i></span><input name="website" autocomplete="url" inputmode="url" placeholder="yourstore.com" required /></label>
         </div>
         <button type="button" class="speed-run" hidden>Check my scores now <small>Free · about 20 seconds</small></button>
@@ -146,7 +147,7 @@ const faqSchema = { '@context': 'https://schema.org', '@type': 'FAQPage', mainEn
 </BaseLayout>
 <script>
   import { formEndpoint } from '../data/forms';
-  import { sourceFields } from '../scripts/lead-source';
+  import { sourceFields, visitorTimeZone } from '../scripts/lead-source';
   import { sendLead } from '../scripts/leads';
   import { humanCheck } from '../scripts/turnstile';
 
@@ -344,13 +345,13 @@ const faqSchema = { '@context': 'https://schema.org', '@type': 'FAQPage', mainEn
       submit.textContent = 'Sending…';
       say('');
       const fields = kind === 'audit'
-        ? { company: value('company'), email: value('email'), website: value('website'), ...(speed.result && speed.site === value('website') ? { scores: speed.result } : {}) }
+        ? { ...(value('name') ? { name: value('name') } : {}), company: value('company'), email: value('email'), website: value('website'), ...(speed.result && speed.site === value('website') ? { scores: speed.result } : {}) }
         : { name: value('name'), email: value('email'), company: value('company') || '—', website: value('website') || '—', need: needOf(form) || '—',
             ...(form.querySelector<HTMLElement>('.contact-move')!.hidden ? {} : { moving_from: value('from'), moving_to: value('to') }),
             budget: value('budget'), timing: value('timing'), message: value('message') };
       const subject = kind === 'audit' ? `Free audit request: ${value('company')} (${value('website')})` : `New enquiry: ${value('name')}${value('company') ? `, ${value('company')}` : ''}`;
       // Also into the tracker's Inquiries inbox, in parallel; email below stays the backup either way.
-      void human.token().then((turnstile_token) => { void sendLead({ kind, _honey: value('_honey'), turnstile_token, ...fields, ...sourceFields() }); human.reset(); });
+      void human.token().then((turnstile_token) => { void sendLead({ kind, _honey: value('_honey'), turnstile_token, timezone: visitorTimeZone(), ...fields, ...sourceFields() }); human.reset(); });
       try {
         const response = await fetch(formEndpoint(form.dataset.email!), {
           method: 'POST',

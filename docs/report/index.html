@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<meta name="theme-color" content="#ffffff">
+<title>Your website audit | Grant Dev14</title>
+<link rel="icon" type="image/svg+xml" href="../favicon.svg">
+<!--
+  The "View your report" page linked from the free-audit email.
+  The link looks like  …/report/#<token>. The token stays in the #fragment,
+  which browsers never send to this site's server. The button opens the
+  tracker's /a/<token> link, which counts the open and serves the PDF.
+  Static file: copied as-is into docs/ by `npm run build:github`.
+-->
+<style>
+@font-face{font-family:Archivo;src:url("../fonts/archivo-latin-variable.woff2") format("woff2");font-weight:100 900;font-display:swap}
+@font-face{font-family:"Big Shoulders Display";src:url("../fonts/big-shoulders-display-latin-800.woff2") format("woff2");font-weight:800;font-display:swap}
+:root{--bg:oklch(1 0 0);--ink:oklch(0.16 0 0);--muted:oklch(0.47 0 0);--line:oklch(0.83 0 0);--surface:oklch(0.96 0 0);--gutter:clamp(24px,4.7vw,76px);--ease:cubic-bezier(0.22,1,0.36,1)}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink)}
+body{font-family:Archivo,Arial,sans-serif;font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;flex-direction:column}
+a{color:inherit}
+:focus-visible{outline:2px solid var(--ink);outline-offset:3px}
+header,main,footer{width:100%;max-width:1600px;margin-inline:auto;padding-inline:var(--gutter)}
+header{display:flex;align-items:center;justify-content:space-between;padding-block:28px;border-bottom:1px solid var(--line)}
+.brand{font-weight:700;font-size:14px;letter-spacing:.14em;text-decoration:none}
+.home{font-size:13px;text-decoration:none;border-bottom:1px solid var(--ink);padding-bottom:3px}
+main{flex:1;padding-block:clamp(56px,12vh,140px)}
+.eyebrow{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--muted);margin:0 0 22px}
+.eyebrow::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--ink)}
+h1{font-family:"Big Shoulders Display",Impact,sans-serif;font-weight:800;line-height:.95;letter-spacing:-0.025em;text-transform:uppercase;font-size:clamp(56px,11vw,150px);margin:0 0 28px;max-width:12ch}
+.lead{font-size:clamp(17px,1.6vw,20px);max-width:36ch;margin:0 0 36px}
+.open{display:inline-flex;align-items:center;gap:14px;background:var(--ink);color:var(--bg);text-decoration:none;font-weight:600;font-size:16px;padding:16px 28px;border-radius:999px;transition:transform .35s var(--ease)}
+.open:hover{transform:translateY(-2px)}
+.open svg{transform:rotate(-45deg);transition:transform .35s var(--ease)}
+.open:hover svg{transform:rotate(-45deg) translateX(3px)}
+.note{font-size:13px;color:var(--muted);margin:16px 0 0}
+.next{margin-top:clamp(48px,9vh,96px);padding-top:22px;border-top:1px solid var(--ink);display:grid;grid-template-columns:minmax(0,1fr) auto;gap:20px;align-items:end;max-width:760px}
+.next p{margin:0;max-width:44ch}
+.pill{display:inline-flex;border:1px solid var(--ink);padding:13px 22px;border-radius:999px;text-decoration:none;font-size:14px;white-space:nowrap}
+.pill:hover{background:var(--ink);color:var(--bg)}
+footer{padding-block:24px;font-size:13px;color:var(--muted);border-top:1px solid var(--line)}
+.calc{margin-top:clamp(48px,9vh,96px);padding-top:22px;border-top:1px solid var(--ink);max-width:760px}
+.calc h2{font-size:clamp(22px,2.4vw,28px);line-height:1.15;margin:0 0 10px;font-weight:700}
+.calc .intro{margin:0 0 24px;max-width:52ch;color:var(--muted)}
+.fields{display:grid;grid-template-columns:minmax(0,1fr) 120px;gap:12px;max-width:520px}
+.fields label{display:flex;flex-direction:column;gap:6px;font-size:13px;color:var(--muted)}
+.fields input,.fields select{font:inherit;font-size:18px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:12px 14px;width:100%;min-width:0}
+.fields input:focus,.fields select:focus{outline:2px solid var(--ink);outline-offset:1px;border-color:var(--ink)}
+.error{color:oklch(0.5 0.17 27);font-size:13px;margin:8px 0 0}
+.rows{list-style:none;margin:24px 0 0;padding:0;border-top:1px solid var(--line)}
+.rows li{display:grid;grid-template-columns:72px minmax(0,1fr) auto;gap:4px 16px;align-items:baseline;padding:16px 0;border-bottom:1px solid var(--line)}
+.rows .pct{font-family:"Big Shoulders Display",Impact,sans-serif;font-weight:800;font-size:30px;line-height:1}
+.rows .what{font-size:14px;color:var(--muted)}
+.rows .money{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.rows .money strong{display:block;font-size:18px}
+.rows .money span{font-size:13px;color:var(--muted)}
+.fine{font-size:13px;color:var(--muted);margin:16px 0 0;max-width:60ch}
+@media (max-width:640px){.rows li{grid-template-columns:56px minmax(0,1fr)}.rows .money{grid-column:2;text-align:left}.rows .pct{font-size:26px}}
+[hidden]{display:none!important}
+@media (max-width:640px){.next{grid-template-columns:1fr}}
+@media (prefers-reduced-motion:reduce){.open,.open svg{transition:none}.open:hover{transform:none}}
+</style>
+</head>
+<body>
+<header>
+  <a class="brand" href="../">GRANT DEV14</a>
+  <a class="home" href="../work/">Selected work</a>
+</header>
+<main>
+  <section id="ready" hidden>
+    <p class="eyebrow">Free website audit</p>
+    <h1>Your report is ready</h1>
+    <p class="lead" id="lead">Your scores and every finding, ranked by impact, with a rough idea of how long each fix would take.</p>
+    <a class="open" id="open" href="#" target="_blank" rel="noopener noreferrer">
+      Open your report
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 12h15M13 6l6 6-6 6"/></svg>
+    </a>
+    <p class="note">It opens as a PDF. The same file is attached to the email.</p>
+  </section>
+  <section id="missing" hidden>
+    <p class="eyebrow">Free website audit</p>
+    <h1>This link is incomplete</h1>
+    <p class="lead">Use the “View your report” button in your email, or reply to it and Grant will send the report again.</p>
+  </section>
+  <section class="calc" id="calc" hidden aria-labelledby="calc-title">
+    <h2 id="calc-title">What a small lift could mean for you</h2>
+    <p class="intro">Type in what your store sells online in a typical month to see what a lift in sales would be worth. It's simple arithmetic on your own number.</p>
+    <div class="fields">
+      <label>Online sales in a typical month
+        <input id="sales" type="text" inputmode="decimal" autocomplete="off" placeholder="e.g. 20,000" aria-describedby="sales-error">
+      </label>
+      <label>Currency
+        <select id="currency">
+          <option value="USD">USD $</option>
+          <option value="AUD">AUD $</option>
+          <option value="GBP">GBP £</option>
+          <option value="CAD">CAD $</option>
+          <option value="EUR">EUR €</option>
+        </select>
+      </label>
+    </div>
+    <p class="error" id="sales-error" role="alert" hidden>Enter an amount in numbers, like 20000.</p>
+    <ul class="rows" aria-live="polite">
+      <li><span class="pct">1%</span><span class="what">A small lift</span><span class="money" data-lift="0.01"><strong>–</strong><span>a month</span></span></li>
+      <li><span class="pct">3%</span><span class="what">A moderate lift</span><span class="money" data-lift="0.03"><strong>–</strong><span>a month</span></span></li>
+      <li><span class="pct">8.4%</span><span class="what">What Deloitte measured for retail sites that got 0.1 seconds faster on a phone</span><span class="money" data-lift="0.084"><strong>–</strong><span>a month</span></span></li>
+    </ul>
+    <p class="fine">Source for 8.4%: Deloitte for Google, Milliseconds Make Millions: retail sites 0.1 s faster saw 8.4% more sales. An example, not a forecast for your store. What you type stays on this page: it isn't sent or saved anywhere.</p>
+  </section>
+  <div class="next">
+    <p>Want a hand fixing what the audit found? Reply to the email, or get in touch for a fixed-price quote.</p>
+    <a class="pill" href="../contact/">Get in touch</a>
+  </div>
+</main>
+<footer>Grant Dev14 · Shopify, Webflow &amp; WordPress developer</footer>
+<noscript><style>#missing{display:block!important}</style></noscript>
+<script>
+(function () {
+  // Where the tracker lives. Only this origin is ever linked: the address
+  // bar can't send a visitor anywhere else.
+  var TRACKER = "https://knb-attendance-tracker.vercel.app";
+  function show() {
+    var token = (location.hash || "").replace(/^#/, "").replace(/^t=/, "");
+    var ok = /^[A-Za-z0-9_-]{43}$/.test(token);
+    document.getElementById("ready").hidden = !ok;
+    document.getElementById("missing").hidden = ok;
+    document.getElementById("open").href = ok ? TRACKER + "/a/" + token : "#";
+    document.getElementById("calc").hidden = !ok;
+  }
+  show();
+  window.addEventListener("hashchange", show);
+
+  // The sales calculator: arithmetic on the visitor's own number, in this
+  // page only. Nothing is sent, stored or logged.
+  var sales = document.getElementById("sales"),
+    currency = document.getElementById("currency"),
+    error = document.getElementById("sales-error"),
+    cells = document.querySelectorAll(".rows .money");
+  // A starting currency from the browser's region; they can change it.
+  var region = ((navigator.language || "").split("-")[1] || "").toUpperCase();
+  var byRegion = { AU: "AUD", GB: "GBP", UK: "GBP", CA: "CAD", IE: "EUR", DE: "EUR", FR: "EUR", NL: "EUR", ES: "EUR", IT: "EUR", BE: "EUR", AT: "EUR", FI: "EUR", PT: "EUR" };
+  if (byRegion[region]) currency.value = byRegion[region];
+  function amount() {
+    var raw = sales.value.replace(/[\s,]/g, "").replace(/^[$£€]|^(USD|AUD|GBP|CAD|EUR)/i, "");
+    if (!raw) return null;
+    var n = Number(raw);
+    return isFinite(n) && n > 0 && n < 1e10 ? n : NaN;
+  }
+  function money(n) {
+    try {
+      return new Intl.NumberFormat(undefined, { style: "currency", currency: currency.value, maximumFractionDigits: 0 }).format(n);
+    } catch (e) {
+      return currency.value + " " + Math.round(n).toLocaleString();
+    }
+  }
+  function update() {
+    var n = amount();
+    var bad = typeof n === "number" && isNaN(n);
+    error.hidden = !bad;
+    sales.setAttribute("aria-invalid", bad ? "true" : "false");
+    for (var i = 0; i < cells.length; i++) {
+      var lift = Number(cells[i].getAttribute("data-lift"));
+      var ok = typeof n === "number" && !isNaN(n);
+      cells[i].firstChild.textContent = ok ? "+" + money(n * lift) : "–";
+      cells[i].lastChild.textContent = ok ? "a month · +" + money(n * lift * 12) + " a year" : "a month";
+    }
+  }
+  sales.addEventListener("input", update);
+  currency.addEventListener("change", update);
+})();
+</script>
+</body>
+</html>
