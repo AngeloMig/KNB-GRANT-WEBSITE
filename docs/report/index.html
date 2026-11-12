@@ -13,142 +13,441 @@
   The link looks like  …/report/#<token>. The token stays in the #fragment,
   which browsers never send to this site's server. The button opens the
   tracker's /a/<token> link, which counts the open and serves the PDF.
+  Three parts, each reachable from the first screen and the sticky bar:
+  the report, what a faster site could be worth (a calculator on the
+  visitor's own numbers, never sent anywhere) and the monthly plans.
   Static file: copied as-is into docs/ by `npm run build:github`.
 -->
 <style>
 @font-face{font-family:Archivo;src:url("../fonts/archivo-latin-variable.woff2") format("woff2");font-weight:100 900;font-display:swap}
 @font-face{font-family:"Big Shoulders Display";src:url("../fonts/big-shoulders-display-latin-800.woff2") format("woff2");font-weight:800;font-display:swap}
-:root{--bg:oklch(1 0 0);--ink:oklch(0.16 0 0);--muted:oklch(0.47 0 0);--line:oklch(0.83 0 0);--surface:oklch(0.96 0 0);--gutter:clamp(24px,4.7vw,76px);--ease:cubic-bezier(0.22,1,0.36,1)}
+:root{--bg:oklch(1 0 0);--ink:oklch(0.16 0 0);--muted:oklch(0.47 0 0);--faint:oklch(0.62 0 0);--line:oklch(0.86 0 0);--surface:oklch(0.965 0 0);--good:oklch(0.52 0.13 150);--gutter:clamp(20px,4.7vw,76px);--ease:cubic-bezier(0.22,1,0.36,1);--display:"Big Shoulders Display",Impact,sans-serif}
 *{box-sizing:border-box}
+html{scroll-behavior:smooth}
 html,body{margin:0;background:var(--bg);color:var(--ink)}
 body{font-family:Archivo,Arial,sans-serif;font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;flex-direction:column}
 a{color:inherit}
+button,input,select{font:inherit;color:inherit}
 :focus-visible{outline:2px solid var(--ink);outline-offset:3px}
-header,main,footer{width:100%;max-width:1600px;margin-inline:auto;padding-inline:var(--gutter)}
-header{display:flex;align-items:center;justify-content:space-between;padding-block:28px;border-bottom:1px solid var(--line)}
-.brand{font-weight:700;font-size:14px;letter-spacing:.14em;text-decoration:none}
-.home{font-size:13px;text-decoration:none;border-bottom:1px solid var(--ink);padding-bottom:3px}
-main{flex:1;padding-block:clamp(56px,12vh,140px)}
-.eyebrow{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--muted);margin:0 0 22px}
-.eyebrow::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--ink)}
-h1{font-family:"Big Shoulders Display",Impact,sans-serif;font-weight:800;line-height:.95;letter-spacing:-0.025em;text-transform:uppercase;font-size:clamp(56px,11vw,150px);margin:0 0 28px;max-width:12ch}
-.lead{font-size:clamp(17px,1.6vw,20px);max-width:36ch;margin:0 0 36px}
-.open{display:inline-flex;align-items:center;gap:14px;background:var(--ink);color:var(--bg);text-decoration:none;font-weight:600;font-size:16px;padding:16px 28px;border-radius:999px;transition:transform .35s var(--ease)}
-.open:hover{transform:translateY(-2px)}
-.open svg{transform:rotate(-45deg);transition:transform .35s var(--ease)}
-.open:hover svg{transform:rotate(-45deg) translateX(3px)}
-.note{font-size:13px;color:var(--muted);margin:16px 0 0}
-.next{margin-top:clamp(48px,9vh,96px);padding-top:22px;border-top:1px solid var(--ink);display:grid;grid-template-columns:minmax(0,1fr) auto;gap:20px;align-items:end;max-width:760px}
-.next p{margin:0;max-width:44ch}
-.pill{display:inline-flex;border:1px solid var(--ink);padding:13px 22px;border-radius:999px;text-decoration:none;font-size:14px;white-space:nowrap}
-.pill:hover{background:var(--ink);color:var(--bg)}
-footer{padding-block:24px;font-size:13px;color:var(--muted);border-top:1px solid var(--line)}
-.calc{margin-top:clamp(48px,9vh,96px);padding-top:22px;border-top:1px solid var(--ink);max-width:760px}
-.calc h2{font-size:clamp(22px,2.4vw,28px);line-height:1.15;margin:0 0 10px;font-weight:700}
-.calc .intro{margin:0 0 24px;max-width:52ch;color:var(--muted)}
-.fields{display:grid;grid-template-columns:minmax(0,1fr) 120px;gap:12px;max-width:520px}
-.fields label{display:flex;flex-direction:column;gap:6px;font-size:13px;color:var(--muted)}
-.fields input,.fields select{font:inherit;font-size:18px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:12px 14px;width:100%;min-width:0}
-.fields input:focus,.fields select:focus{outline:2px solid var(--ink);outline-offset:1px;border-color:var(--ink)}
-.error{color:oklch(0.5 0.17 27);font-size:13px;margin:8px 0 0}
-.rows{list-style:none;margin:24px 0 0;padding:0;border-top:1px solid var(--line)}
-.rows li{display:grid;grid-template-columns:72px minmax(0,1fr) auto;gap:4px 16px;align-items:baseline;padding:16px 0;border-bottom:1px solid var(--line)}
-.rows .pct{font-family:"Big Shoulders Display",Impact,sans-serif;font-weight:800;font-size:30px;line-height:1}
-.rows .what{font-size:14px;color:var(--muted)}
-.rows .money{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
-.rows .money strong{display:block;font-size:18px}
-.rows .money span{font-size:13px;color:var(--muted)}
-.fine{font-size:13px;color:var(--muted);margin:16px 0 0;max-width:60ch}
-@media (max-width:640px){.rows li{grid-template-columns:56px minmax(0,1fr)}.rows .money{grid-column:2;text-align:left}.rows .pct{font-size:26px}}
 [hidden]{display:none!important}
-@media (max-width:640px){.next{grid-template-columns:1fr}}
-@media (prefers-reduced-motion:reduce){.open,.open svg{transition:none}.open:hover{transform:none}}
+.wrap{width:100%;max-width:1280px;margin-inline:auto;padding-inline:var(--gutter)}
+header.top{border-bottom:1px solid var(--line)}
+header.top .wrap{display:flex;align-items:center;justify-content:space-between;padding-block:24px}
+.brand{font-weight:700;font-size:14px;letter-spacing:.14em;text-decoration:none}
+.toplinks{display:flex;gap:22px;font-size:13px}
+.toplinks a{text-decoration:none;border-bottom:1px solid transparent;padding-bottom:2px}
+.toplinks a:hover{border-color:var(--ink)}
+main{flex:1}
+.kicker{display:flex;align-items:center;gap:10px;font-size:12px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:0 0 16px}
+.kicker::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--ink)}
+h1{font-family:var(--display);font-weight:800;line-height:.92;letter-spacing:-0.02em;text-transform:uppercase;font-size:clamp(54px,9.5vw,136px);margin:0 0 24px}
+h2{font-family:var(--display);font-weight:800;text-transform:uppercase;letter-spacing:-0.01em;line-height:.95;font-size:clamp(38px,5.4vw,72px);margin:0 0 14px}
+.lead{font-size:clamp(17px,1.5vw,20px);max-width:38ch;margin:0 0 30px}
+.btn{display:inline-flex;align-items:center;gap:12px;border-radius:999px;text-decoration:none;font-weight:600;font-size:15px;padding:15px 26px;border:1px solid var(--ink);cursor:pointer;transition:transform .3s var(--ease),background .2s,color .2s;white-space:nowrap}
+.btn svg{transform:rotate(-45deg);transition:transform .3s var(--ease)}
+.btn:hover svg{transform:rotate(-45deg) translateX(3px)}
+.btn-dark{background:var(--ink);color:var(--bg)}
+.btn-dark:hover{transform:translateY(-2px)}
+.btn-light{background:var(--bg);color:var(--ink)}
+.btn-light:hover{background:var(--ink);color:var(--bg)}
+.btn-down svg{transform:rotate(90deg)}
+.btn-down:hover svg{transform:rotate(90deg) translateX(3px)}
+.note{font-size:13px;color:var(--muted);margin:14px 0 0}
+
+/* 01 hero: the report, with the rest of the page visible from the first screen */
+.hero{padding-block:clamp(48px,9vh,110px) clamp(40px,7vh,80px)}
+.hero .wrap{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(300px,.9fr);gap:clamp(28px,5vw,72px);align-items:end}
+.contents{border:1px solid var(--ink);border-radius:20px;overflow:hidden}
+.contents p{margin:0;padding:16px 22px;font-size:12px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--line)}
+.contents a{display:grid;grid-template-columns:34px minmax(0,1fr) auto;gap:12px;align-items:center;padding:18px 22px;text-decoration:none;border-bottom:1px solid var(--line);transition:background .2s}
+.contents a:last-child{border-bottom:0}
+.contents a:hover{background:var(--surface)}
+.contents .n{font-family:var(--display);font-weight:800;font-size:26px;line-height:1}
+.contents strong{display:block;font-size:16px}
+.contents small{display:block;color:var(--muted);font-size:13px}
+.contents .go{font-size:20px;transition:transform .3s var(--ease)}
+.contents a:hover .go{transform:translateX(4px)}
+.contents a.feature{background:var(--ink);color:var(--bg)}
+.contents a.feature small{color:oklch(0.8 0 0)}
+.contents a.feature:hover{background:oklch(0.24 0 0)}
+
+/* 02 what faster could be worth */
+section.worth{padding-block:clamp(56px,9vh,110px);border-top:1px solid var(--ink)}
+.sec-head{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,.8fr);gap:20px 48px;align-items:end;margin-bottom:34px}
+.sec-head p.intro{margin:0;color:var(--muted);max-width:52ch}
+.calc{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;align-items:stretch}
+.panel{border:1px solid var(--line);border-radius:20px;padding:24px}
+.tabs{display:inline-flex;background:var(--surface);border-radius:999px;padding:4px;margin-bottom:22px;flex-wrap:wrap}
+.tabs button{border:0;background:none;border-radius:999px;padding:9px 16px;font-size:14px;font-weight:600;cursor:pointer;color:var(--muted)}
+.tabs button[aria-pressed="true"]{background:var(--bg);color:var(--ink);box-shadow:0 1px 3px oklch(0 0 0 / .12)}
+.field{display:flex;flex-direction:column;gap:6px;font-size:13px;color:var(--muted)}
+.field input,.field select{font-size:18px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:12px 14px;width:100%;min-width:0}
+.field input:focus,.field select:focus{outline:2px solid var(--ink);outline-offset:1px;border-color:var(--ink)}
+.money-in{position:relative}
+.money-in span{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--faint);font-size:18px;pointer-events:none}
+.money-in input{padding-left:30px}
+.row2{display:grid;grid-template-columns:minmax(0,1fr) 110px;gap:12px}
+.row3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:12px 0 0}
+.chip{border:1px solid var(--line);background:var(--bg);border-radius:999px;padding:6px 12px;font-size:13px;cursor:pointer}
+.chip:hover,.chip[aria-pressed="true"]{border-color:var(--ink);background:var(--ink);color:var(--bg)}
+.derived{margin:12px 0 0;font-size:14px;color:var(--muted)}
+.derived strong{color:var(--ink)}
+.slider{margin-top:26px;padding-top:22px;border-top:1px solid var(--line)}
+.slider-top{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+.slider-top label{font-size:14px;font-weight:600}
+.slider-top output{font-family:var(--display);font-weight:800;font-size:34px;line-height:1}
+input[type=range]{width:100%;margin:14px 0 6px;accent-color:var(--ink);height:28px}
+.marks{display:flex;gap:6px;flex-wrap:wrap}
+.error{color:oklch(0.5 0.17 27);font-size:13px;margin:8px 0 0}
+.result{background:var(--ink);color:var(--bg);border-radius:20px;padding:26px;display:flex;flex-direction:column}
+.result .label{font-size:12px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:oklch(0.75 0 0);margin:0}
+.result .big{font-family:var(--display);font-weight:800;font-size:clamp(56px,7vw,96px);line-height:.95;margin:10px 0 4px;letter-spacing:-0.01em;word-break:break-word}
+.result .year{margin:0;font-size:17px;color:oklch(0.85 0 0)}
+.result .facts{list-style:none;margin:22px 0 0;padding:0;border-top:1px solid oklch(0.35 0 0)}
+.result .facts li{display:flex;justify-content:space-between;gap:16px;padding:12px 0;border-bottom:1px solid oklch(0.35 0 0);font-size:14px}
+.result .facts li span:first-child{color:oklch(0.78 0 0)}
+.result .facts strong{font-variant-numeric:tabular-nums;text-align:right}
+.result .empty{margin:16px 0 0;color:oklch(0.78 0 0);font-size:15px;max-width:34ch}
+.result .cta{margin-top:auto;padding-top:24px;display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px}
+.result .cta .btn{background:var(--bg);color:var(--ink);border-color:var(--bg)}
+.result .cta small{color:oklch(0.75 0 0);font-size:13px}
+.fine{font-size:12px;color:var(--muted);margin:16px 0 0;max-width:80ch}
+
+/* 03 plans: a band of its own so it reads as the next step */
+section.plans{background:var(--surface);padding-block:clamp(56px,9vh,110px);border-top:1px solid var(--ink)}
+.plan-grid{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;align-items:stretch}
+.plan{background:var(--bg);border:1px solid var(--line);border-radius:22px;padding:26px;display:flex;flex-direction:column;transition:transform .3s var(--ease),box-shadow .3s}
+.plan:hover{transform:translateY(-3px);box-shadow:0 14px 32px oklch(0 0 0 / .08)}
+.plan.pop{background:var(--ink);color:var(--bg);border-color:var(--ink);position:relative}
+.plan.pop .muted,.plan.pop .reply{color:oklch(0.78 0 0)}
+.tag{align-self:flex-start;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:4px 10px;border-radius:999px;background:var(--bg);color:var(--ink);margin:0 0 14px}
+.plan .name{font-family:var(--display);font-weight:800;font-size:44px;line-height:.9;text-transform:uppercase;margin:0}
+.plan .hours{display:flex;align-items:baseline;gap:6px;margin:12px 0 0}
+.plan .hours b{font-family:var(--display);font-weight:800;font-size:30px;line-height:1}
+.plan .hours span{font-size:14px}
+.muted{color:var(--muted)}
+.plan .best{margin:10px 0 0;font-size:14px}
+.plan ul{list-style:none;margin:18px 0 0;padding:18px 0 0;border-top:1px solid var(--line);display:grid;gap:10px;font-size:14px;flex:1}
+.plan.pop ul{border-color:oklch(0.35 0 0)}
+.plan li{display:grid;grid-template-columns:18px minmax(0,1fr);gap:8px}
+.plan li::before{content:"✓";font-weight:700}
+.plan .reply{margin:18px 0 0;font-size:13px;color:var(--muted)}
+.plan .btn{margin-top:18px;justify-content:center}
+.plan.pop .btn{background:var(--bg);color:var(--ink);border-color:var(--bg)}
+.all-plans{display:flex;flex-wrap:wrap;gap:10px 28px;margin:24px 0 0;padding:0;list-style:none;font-size:14px;color:var(--muted)}
+.all-plans li::before{content:"✓ ";color:var(--ink);font-weight:700}
+.vip{margin-top:28px;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:14px 24px;border:1px solid var(--ink);border-radius:20px;padding:20px 24px;background:var(--bg)}
+.vip p{margin:0;max-width:62ch}
+.bigger{margin-top:36px;display:flex;flex-wrap:wrap;align-items:center;gap:12px 20px}
+.bigger p{margin:0;font-weight:600}
+.pills{display:flex;flex-wrap:wrap;gap:8px}
+.pill{display:inline-flex;border:1px solid var(--ink);padding:11px 18px;border-radius:999px;text-decoration:none;font-size:14px;white-space:nowrap;background:var(--bg)}
+.pill:hover{background:var(--ink);color:var(--bg)}
+
+/* 04 talk */
+section.talk{padding-block:clamp(48px,8vh,90px);border-top:1px solid var(--ink)}
+section.talk .wrap{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:20px}
+section.talk p{margin:0;font-size:clamp(18px,1.8vw,22px);max-width:44ch}
+
+footer{border-top:1px solid var(--line);font-size:13px;color:var(--muted)}
+footer .wrap{padding-block:24px}
+
+/* Sticky bar: the report, plans and a way to talk, always one tap away */
+.dock{position:fixed;left:50%;bottom:16px;transform:translate(-50%,140%);z-index:20;display:flex;align-items:center;gap:6px;background:var(--ink);color:var(--bg);border-radius:999px;padding:6px;box-shadow:0 14px 40px oklch(0 0 0 / .25);transition:transform .45s var(--ease);max-width:calc(100% - 24px)}
+.dock.show{transform:translate(-50%,0)}
+.dock a{text-decoration:none;border-radius:999px;padding:10px 16px;font-size:14px;font-weight:600;white-space:nowrap}
+.dock a:hover{background:oklch(0.26 0 0)}
+.dock a.primary{background:var(--bg);color:var(--ink)}
+.dock a.primary:hover{background:oklch(0.9 0 0)}
+body{padding-bottom:84px}
+
+/* the "link is incomplete" state */
+.missing{padding-block:clamp(56px,12vh,140px)}
+
+@media (max-width:980px){
+  .hero .wrap,.sec-head,.calc{grid-template-columns:1fr}
+  .plan-grid{grid-template-columns:1fr}
+  .plan.pop{order:-1}
+}
+@media (max-width:560px){
+  .toplinks a:not(:last-child){display:none}
+  .row3{grid-template-columns:1fr 1fr}
+  .row3 .field:last-child{grid-column:span 2}
+  .dock{gap:2px;padding:5px}
+  .dock a{padding:10px 12px;font-size:13px}
+  .result{padding:22px}
+  .panel{padding:20px}
+}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}.btn,.btn svg,.plan,.dock,.contents .go{transition:none}.plan:hover,.btn-dark:hover{transform:none}}
 </style>
 </head>
 <body>
-<header>
+<header class="top"><div class="wrap">
   <a class="brand" href="../">GRANT DEV14</a>
-  <a class="home" href="../work/">Selected work</a>
-</header>
+  <nav class="toplinks" aria-label="On this page"><a href="#worth" data-ready>What it's worth</a><a href="#plans" data-ready>Plans</a><a href="../work/">Selected work</a></nav>
+</div></header>
+
 <main>
-  <section id="ready" hidden>
-    <p class="eyebrow">Free website audit</p>
-    <h1>Your report is ready</h1>
-    <p class="lead" id="lead">Your scores and every finding, ranked by impact, with a rough idea of how long each fix would take.</p>
-    <a class="open" id="open" href="#" target="_blank" rel="noopener noreferrer">
-      Open your report
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 12h15M13 6l6 6-6 6"/></svg>
-    </a>
-    <p class="note">It opens as a PDF. The same file is attached to the email.</p>
-  </section>
-  <section id="missing" hidden>
-    <p class="eyebrow">Free website audit</p>
-    <h1>This link is incomplete</h1>
-    <p class="lead">Use the “View your report” button in your email, or reply to it and Grant will send the report again.</p>
-  </section>
-  <section class="calc" id="calc" hidden aria-labelledby="calc-title">
-    <h2 id="calc-title">What a small lift could mean for you</h2>
-    <p class="intro">Type in what your store sells online in a typical month to see what a lift in sales would be worth. It's simple arithmetic on your own number.</p>
-    <div class="fields">
-      <label>Online sales in a typical month
-        <input id="sales" type="text" inputmode="decimal" autocomplete="off" placeholder="e.g. 20,000" aria-describedby="sales-error">
-      </label>
-      <label>Currency
-        <select id="currency">
-          <option value="USD">USD $</option>
-          <option value="AUD">AUD $</option>
-          <option value="GBP">GBP £</option>
-          <option value="CAD">CAD $</option>
-          <option value="EUR">EUR €</option>
-        </select>
-      </label>
+  <!-- 01 · the report -->
+  <section class="hero" id="ready" hidden>
+    <div class="wrap">
+      <div>
+        <p class="kicker">Free website audit</p>
+        <h1>Your report is ready</h1>
+        <p class="lead">Your scores and every finding, ranked by impact, with a rough idea of how long each fix would take.</p>
+        <a class="btn btn-dark" id="open" href="#" target="_blank" rel="noopener noreferrer">Open your report
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 12h15M13 6l6 6-6 6"/></svg>
+        </a>
+        <p class="note">It opens as a PDF. The same file is attached to the email.</p>
+      </div>
+      <nav class="contents" aria-label="On this page">
+        <p>On this page</p>
+        <a href="#worth"><span class="n">02</span><span><strong>What faster could be worth</strong><small>Your own numbers: extra sales and orders</small></span><span class="go" aria-hidden="true">&rarr;</span></a>
+        <a href="#plans" class="feature"><span class="n">03</span><span><strong>Keep it fast after the fixes</strong><small>Monthly plans from 20 hours a month</small></span><span class="go" aria-hidden="true">&rarr;</span></a>
+        <a href="../contact/"><span class="n">04</span><span><strong>Talk it through</strong><small>A short call, no obligation</small></span><span class="go" aria-hidden="true">&rarr;</span></a>
+      </nav>
     </div>
-    <p class="error" id="sales-error" role="alert" hidden>Enter an amount in numbers, like 20000.</p>
-    <ul class="rows" aria-live="polite">
-      <li><span class="pct">1%</span><span class="what">A small lift</span><span class="money" data-lift="0.01"><strong>–</strong><span>a month</span></span></li>
-      <li><span class="pct">3%</span><span class="what">A moderate lift</span><span class="money" data-lift="0.03"><strong>–</strong><span>a month</span></span></li>
-      <li><span class="pct">8.4%</span><span class="what">What Deloitte measured for retail sites that got 0.1 seconds faster on a phone</span><span class="money" data-lift="0.084"><strong>–</strong><span>a month</span></span></li>
-    </ul>
-    <p class="fine">Source for 8.4%: Deloitte for Google, Milliseconds Make Millions: retail sites 0.1 s faster saw 8.4% more sales. An example, not a forecast for your store. What you type stays on this page: it isn't sent or saved anywhere.</p>
   </section>
-  <div class="next">
-    <p>Want a hand fixing what the audit found? Reply to the email, or get in touch for a fixed-price quote.</p>
-    <a class="pill" href="../contact/">Get in touch</a>
-  </div>
+
+  <section class="missing" id="missing" hidden>
+    <div class="wrap">
+      <p class="kicker">Free website audit</p>
+      <h1>This link is incomplete</h1>
+      <p class="lead">Use the “View your report” button in your email, or reply to it and Grant will send the report again.</p>
+    </div>
+  </section>
+
+  <!-- 02 · what a faster site could be worth, on their own numbers -->
+  <section class="worth" id="worth" hidden aria-labelledby="worth-title">
+    <div class="wrap">
+      <div class="sec-head">
+        <div><p class="kicker">02 · What it's worth</p><h2 id="worth-title">What would a faster site be worth?</h2></div>
+        <p class="intro">Put in your own numbers to see what a small lift in sales adds up to. It's simple arithmetic, and what you type stays on this page: nothing is sent or saved.</p>
+      </div>
+      <div class="calc">
+        <div class="panel">
+          <div class="tabs" role="group" aria-label="How to work it out">
+            <button type="button" data-mode="sales" aria-pressed="true">I know my monthly sales</button>
+            <button type="button" data-mode="visitors" aria-pressed="false">Work it out from visitors</button>
+          </div>
+
+          <div data-for="sales">
+            <div class="row2">
+              <label class="field">Online sales in a typical month
+                <span class="money-in"><span class="sym" aria-hidden="true">$</span><input id="sales" type="text" inputmode="decimal" autocomplete="off" placeholder="20,000" aria-describedby="sales-error"></span>
+              </label>
+              <label class="field">Currency
+                <select id="currency">
+                  <option value="USD">USD $</option><option value="AUD">AUD $</option><option value="GBP">GBP £</option>
+                  <option value="CAD">CAD $</option><option value="NZD">NZD $</option><option value="EUR">EUR €</option>
+                </select>
+              </label>
+            </div>
+            <div class="chips" aria-label="Quick amounts">
+              <button type="button" class="chip" data-sales="5000">5k</button>
+              <button type="button" class="chip" data-sales="20000">20k</button>
+              <button type="button" class="chip" data-sales="50000">50k</button>
+              <button type="button" class="chip" data-sales="100000">100k</button>
+              <button type="button" class="chip" data-sales="250000">250k</button>
+            </div>
+            <label class="field" style="margin-top:16px">Average order, optional (to count orders)
+              <span class="money-in"><span class="sym" aria-hidden="true">$</span><input id="aov-a" type="text" inputmode="decimal" autocomplete="off" placeholder="80"></span>
+            </label>
+          </div>
+
+          <div data-for="visitors" hidden>
+            <div class="row3">
+              <label class="field">Visitors a month<input id="visits" type="text" inputmode="numeric" autocomplete="off" placeholder="10,000"></label>
+              <label class="field">Conversion rate %<input id="conv" type="text" inputmode="decimal" autocomplete="off" placeholder="1.5"></label>
+              <label class="field">Average order<span class="money-in"><span class="sym" aria-hidden="true">$</span><input id="aov-b" type="text" inputmode="decimal" autocomplete="off" placeholder="80"></span></label>
+            </div>
+            <p class="derived" id="derived">Most online stores convert 1–3% of visitors. Your analytics or Shopify reports show yours.</p>
+          </div>
+          <p class="error" id="calc-error" role="alert" hidden>Use numbers only, like 20000.</p>
+
+          <div class="slider">
+            <div class="slider-top"><label for="lift">If faster pages lift your sales by</label><output id="lift-out" for="lift">3%</output></div>
+            <input id="lift" type="range" min="0.5" max="10" step="0.1" value="3" aria-describedby="lift-help">
+            <div class="marks" id="lift-help">
+              <button type="button" class="chip" data-lift="1">1% small</button>
+              <button type="button" class="chip" data-lift="3" aria-pressed="true">3% moderate</button>
+              <button type="button" class="chip" data-lift="8.4">8.4% Deloitte study</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="result" aria-live="polite">
+          <p class="label">Extra sales</p>
+          <p class="big" id="r-month">–</p>
+          <p class="year" id="r-year">Put in your numbers to see it.</p>
+          <ul class="facts" id="r-facts" hidden>
+            <li><span>Extra orders</span><strong id="r-orders">–</strong></li>
+            <li><span>Extra sales over a year</span><strong id="r-year2">–</strong></li>
+            <li><span>Over 3 years</span><strong id="r-3y">–</strong></li>
+          </ul>
+          <p class="empty" id="r-empty">Try one of the quick amounts, or work it out from your visitors.</p>
+          <div class="cta">
+            <a class="btn btn-down" href="#plans">Keep it fast: see plans
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 12h15M13 6l6 6-6 6"/></svg>
+            </a>
+            <small>Speed slips again as apps and products are added.</small>
+          </div>
+        </div>
+      </div>
+      <p class="fine">The 8.4% comes from Deloitte for Google, “Milliseconds Make Millions”: retail sites that loaded 0.1 seconds faster on a phone saw 8.4% more sales. These are examples, not a forecast for your store.</p>
+    </div>
+  </section>
+
+  <!-- 03 · monthly plans -->
+  <section class="plans" id="plans" hidden aria-labelledby="plans-title">
+    <div class="wrap">
+      <div class="sec-head">
+        <div><p class="kicker">03 · Keep it fast</p><h2 id="plans-title">Keep the speed you just gained</h2></div>
+        <p class="intro">Sites slow down again as apps, banners and products pile up. A monthly plan keeps yours healthy, with a developer on hand for whatever comes next.</p>
+      </div>
+      <ul class="plan-grid">
+        <li class="plan">
+          <p class="name">Basic</p>
+          <p class="hours"><b>20</b><span>hours a month</span></p>
+          <p class="best muted">Keep your website healthy and up to date.</p>
+          <ul>
+            <li>Content updates and small fixes</li>
+            <li>App and theme updates, checked afterwards</li>
+            <li>A monthly health check: speed, links, forms, checkout</li>
+            <li>A short monthly report</li>
+          </ul>
+          <p class="reply">Replies within 1 business day</p>
+          <a class="btn btn-light" href="../estimate/">Start with Basic</a>
+        </li>
+        <li class="plan pop">
+          <p class="tag">Most popular</p>
+          <p class="name">Medium</p>
+          <p class="hours"><b>40</b><span>hours a month</span></p>
+          <p class="best muted">Keep improving the website every month.</p>
+          <ul>
+            <li>Everything in Basic</li>
+            <li>New pages, sections and conversion improvements</li>
+            <li>SEO basics, analytics and tracking</li>
+            <li>A 30-minute planning call each month</li>
+          </ul>
+          <p class="reply">Replies the same business day</p>
+          <a class="btn" href="../estimate/">Choose Medium</a>
+        </li>
+        <li class="plan">
+          <p class="name">Large</p>
+          <p class="hours"><b>80</b><span>hours a month</span></p>
+          <p class="best muted">Ongoing projects with priority support.</p>
+          <ul>
+            <li>Everything in Medium, handled first</li>
+            <li>Speed projects (Core Web Vitals)</li>
+            <li>Larger features and integrations</li>
+            <li>A planning call every two weeks</li>
+          </ul>
+          <p class="reply">Replies within 4 business hours</p>
+          <a class="btn btn-light" href="../estimate/">Go Large</a>
+        </li>
+      </ul>
+      <ul class="all-plans">
+        <li>A short report every month</li>
+        <li>Move up or down a plan with a month's notice</li>
+        <li>Work on a copy first, live only when you're happy</li>
+      </ul>
+      <div class="vip">
+        <p><strong>Need a developer every working day?</strong> VIP gives you 8 hours a day, Monday to Friday, replies within an hour and weekend emergencies.</p>
+        <a class="pill" href="../contact/">Ask about VIP</a>
+      </div>
+      <div class="bigger">
+        <p>Thinking bigger than fixes?</p>
+        <div class="pills">
+          <a class="pill" href="../estimate/">Redesign my site</a>
+          <a class="pill" href="../estimate/">Build a new store</a>
+          <a class="pill" href="../estimate/">Move platforms</a>
+          <a class="pill" href="../work/">See recent work</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 04 · talk -->
+  <section class="talk" id="talk" hidden>
+    <div class="wrap">
+      <p>Want a hand fixing what the audit found? Reply to the email, or get in touch for a fixed-price quote.</p>
+      <a class="btn btn-dark" href="../contact/">Get in touch
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 12h15M13 6l6 6-6 6"/></svg>
+      </a>
+    </div>
+  </section>
 </main>
-<footer>Grant Dev14 · Shopify, Webflow &amp; WordPress developer</footer>
+<footer><div class="wrap">Grant Dev14 · Shopify, Webflow &amp; WordPress developer</div></footer>
+
+<nav class="dock" id="dock" aria-label="Quick links" hidden>
+  <a class="primary" id="dock-open" href="#" target="_blank" rel="noopener noreferrer">Open report</a>
+  <a href="#worth">What it's worth</a>
+  <a href="#plans">Plans</a>
+  <a href="../contact/">Talk</a>
+</nav>
 <noscript><style>#missing{display:block!important}</style></noscript>
+
 <script>
 (function () {
   // Where the tracker lives. Only this origin is ever linked: the address
   // bar can't send a visitor anywhere else.
   var TRACKER = "https://knb-attendance-tracker.vercel.app";
+  var $ = function (id) { return document.getElementById(id); };
+  var parts = ["ready", "worth", "plans", "talk", "dock"];
+
   function show() {
     var token = (location.hash || "").replace(/^#/, "").replace(/^t=/, "");
+    // In-page jumps (#worth, #plans) keep the report link they came with.
+    if (/^(worth|plans|talk)$/.test(token)) return;
     var ok = /^[A-Za-z0-9_-]{43}$/.test(token);
-    document.getElementById("ready").hidden = !ok;
-    document.getElementById("missing").hidden = ok;
-    document.getElementById("open").href = ok ? TRACKER + "/a/" + token : "#";
-    document.getElementById("calc").hidden = !ok;
+    if (ok) window.__reportToken = token;
+    ok = ok || Boolean(window.__reportToken);
+    parts.forEach(function (id) { $(id).hidden = !ok; });
+    $("missing").hidden = ok;
+    document.querySelectorAll("[data-ready]").forEach(function (a) { a.hidden = !ok; });
+    var link = ok ? TRACKER + "/a/" + window.__reportToken : "#";
+    $("open").href = link;
+    $("dock-open").href = link;
   }
   show();
   window.addEventListener("hashchange", show);
 
-  // The sales calculator: arithmetic on the visitor's own number, in this
-  // page only. Nothing is sent, stored or logged.
-  var sales = document.getElementById("sales"),
-    currency = document.getElementById("currency"),
-    error = document.getElementById("sales-error"),
-    cells = document.querySelectorAll(".rows .money");
-  // A starting currency from the browser's region; they can change it.
+  // Section links scroll without replacing the #token in the address bar,
+  // so the page still works if they reload or share it with a colleague.
+  document.addEventListener("click", function (e) {
+    var a = e.target.closest && e.target.closest('a[href^="#"]');
+    if (!a) return;
+    var target = document.getElementById(a.getAttribute("href").slice(1));
+    if (!target) return;
+    e.preventDefault();
+    target.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
+  });
+
+  // The quick-links dock appears once the first screen scrolls away.
+  var dock = $("dock");
+  if ("IntersectionObserver" in window) {
+    new IntersectionObserver(function (entries) {
+      dock.classList.toggle("show", !entries[0].isIntersecting);
+    }, { threshold: 0.05 }).observe($("ready"));
+  } else {
+    dock.classList.add("show");
+  }
+
+  // ─── What a faster site could be worth ─────────────────────────────
+  // Arithmetic on the visitor's own numbers, in this page only.
+  var mode = "sales";
+  var currency = $("currency");
   var region = ((navigator.language || "").split("-")[1] || "").toUpperCase();
-  var byRegion = { AU: "AUD", GB: "GBP", UK: "GBP", CA: "CAD", IE: "EUR", DE: "EUR", FR: "EUR", NL: "EUR", ES: "EUR", IT: "EUR", BE: "EUR", AT: "EUR", FI: "EUR", PT: "EUR" };
+  var byRegion = { AU: "AUD", GB: "GBP", UK: "GBP", CA: "CAD", NZ: "NZD", IE: "EUR", DE: "EUR", FR: "EUR", NL: "EUR", ES: "EUR", IT: "EUR", BE: "EUR", AT: "EUR", FI: "EUR", PT: "EUR" };
   if (byRegion[region]) currency.value = byRegion[region];
-  function amount() {
-    var raw = sales.value.replace(/[\s,]/g, "").replace(/^[$£€]|^(USD|AUD|GBP|CAD|EUR)/i, "");
+
+  function num(el) {
+    var raw = el.value.replace(/[\s,]/g, "").replace(/^[$£€]/, "").replace(/%$/, "");
     if (!raw) return null;
     var n = Number(raw);
-    return isFinite(n) && n > 0 && n < 1e10 ? n : NaN;
+    return isFinite(n) && n >= 0 && n < 1e10 ? n : NaN;
   }
   function money(n) {
     try {
@@ -157,20 +456,75 @@ footer{padding-block:24px;font-size:13px;color:var(--muted);border-top:1px solid
       return currency.value + " " + Math.round(n).toLocaleString();
     }
   }
-  function update() {
-    var n = amount();
-    var bad = typeof n === "number" && isNaN(n);
-    error.hidden = !bad;
-    sales.setAttribute("aria-invalid", bad ? "true" : "false");
-    for (var i = 0; i < cells.length; i++) {
-      var lift = Number(cells[i].getAttribute("data-lift"));
-      var ok = typeof n === "number" && !isNaN(n);
-      cells[i].firstChild.textContent = ok ? "+" + money(n * lift) : "–";
-      cells[i].lastChild.textContent = ok ? "a month · +" + money(n * lift * 12) + " a year" : "a month";
-    }
+  function symbol() {
+    try {
+      var p = new Intl.NumberFormat(undefined, { style: "currency", currency: currency.value }).formatToParts(0);
+      for (var i = 0; i < p.length; i++) if (p[i].type === "currency") return p[i].value;
+    } catch (e) {}
+    return "$";
   }
-  sales.addEventListener("input", update);
+  function setPressed(selector, match) {
+    document.querySelectorAll(selector).forEach(function (b) { b.setAttribute("aria-pressed", String(match(b))); });
+  }
+
+  function update() {
+    document.querySelectorAll(".sym").forEach(function (s) { s.textContent = symbol(); });
+    var lift = Number($("lift").value) / 100;
+    $("lift-out").textContent = (Math.round(lift * 1000) / 10) + "%";
+    setPressed("[data-lift]", function (b) { return Math.abs(Number(b.getAttribute("data-lift")) / 100 - lift) < 0.0005; });
+
+    var sales = null, aov = null, bad = false;
+    if (mode === "sales") {
+      sales = num($("sales"));
+      aov = num($("aov-a"));
+      setPressed("[data-sales]", function (b) { return Number(b.getAttribute("data-sales")) === sales; });
+    } else {
+      var v = num($("visits")), c = num($("conv")), a = num($("aov-b"));
+      bad = [v, c, a].some(function (x) { return typeof x === "number" && isNaN(x); });
+      aov = a;
+      if (!bad && v && c && a) {
+        sales = v * (c / 100) * a;
+        $("derived").innerHTML = "That's about <strong>" + money(sales) + "</strong> a month in sales, from <strong>" + Math.round(v * c / 100).toLocaleString() + "</strong> orders.";
+      } else {
+        $("derived").textContent = "Most online stores convert 1–3% of visitors. Your analytics or Shopify reports show yours.";
+      }
+    }
+    bad = bad || (typeof sales === "number" && isNaN(sales)) || (typeof aov === "number" && isNaN(aov));
+    $("calc-error").hidden = !bad;
+
+    var ok = !bad && typeof sales === "number" && sales > 0;
+    $("r-facts").hidden = !ok;
+    $("r-empty").hidden = ok;
+    if (!ok) {
+      $("r-month").textContent = "–";
+      $("r-year").textContent = "Put in your numbers to see it.";
+      return;
+    }
+    var extra = sales * lift;
+    $("r-month").textContent = "+" + money(extra);
+    $("r-year").textContent = "a month, from a " + (Math.round(lift * 1000) / 10) + "% lift on " + money(sales);
+    $("r-year2").textContent = "+" + money(extra * 12);
+    $("r-3y").textContent = "+" + money(extra * 36);
+    $("r-orders").textContent = aov && aov > 0 ? "≈ " + Math.max(1, Math.round(extra / aov)).toLocaleString() + " a month" : "add your average order";
+  }
+
+  document.querySelectorAll("[data-mode]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      mode = b.getAttribute("data-mode");
+      setPressed("[data-mode]", function (x) { return x === b; });
+      document.querySelectorAll("[data-for]").forEach(function (p) { p.hidden = p.getAttribute("data-for") !== mode; });
+      update();
+    });
+  });
+  document.querySelectorAll("[data-sales]").forEach(function (b) {
+    b.addEventListener("click", function () { $("sales").value = Number(b.getAttribute("data-sales")).toLocaleString(); update(); });
+  });
+  document.querySelectorAll("[data-lift]").forEach(function (b) {
+    b.addEventListener("click", function () { $("lift").value = b.getAttribute("data-lift"); update(); });
+  });
+  ["sales", "aov-a", "visits", "conv", "aov-b", "lift"].forEach(function (id) { $(id).addEventListener("input", update); });
   currency.addEventListener("change", update);
+  update();
 })();
 </script>
 </body>
