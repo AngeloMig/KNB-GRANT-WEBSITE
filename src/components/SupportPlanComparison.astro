@@ -1,0 +1,63 @@
+---
+import { supportPlans, vipSupport } from '../data/support-plans';
+import { withBase } from '../utils/paths';
+import Arrow from './Arrow.astro';
+const plans = [
+  ...supportPlans.map(plan => ({...plan, amount:plan.hours, unit:'hours a month', emergency:''})),
+  {id:'vip',name:'VIP',value:'vip',amount:8,unit:'hours a day · Mon–Fri',best:vipSupport.purpose,items:vipSupport.items,reply:vipSupport.reply,emergency:vipSupport.emergency},
+];
+---
+<div class="support-comparison">
+  <p class="comparison-note">Pick the time your business needs. Planning, the work, checks and reporting all fit within those hours.</p>
+  <div class="comparison-grid">
+    {plans.map(plan => <article class="support-mini" data-compact-plan={plan.value}>
+      <header><h3>{plan.name}</h3><span class="mini-selected" hidden>Selected</span></header>
+      <p class="mini-capacity"><strong class="display">{plan.amount}</strong><span>{plan.unit}</span></p>
+      <p class="mini-purpose">{plan.best}</p>
+      <div class="mini-services"><ul>{plan.items.slice(0,5).map(item => <li>{item}</li>)}</ul><details class="mini-more"><summary>{plan.items.length - 5} more services</summary><ul>{plan.items.slice(5).map(item => <li>{item}</li>)}</ul></details></div>
+      <dl class="mini-reply"><dt>Reply window</dt><dd>{plan.reply}</dd>{plan.emergency && <><dt>Emergency reply target</dt><dd>{plan.emergency}</dd></>}</dl>
+      <button type="button" class="mini-select" data-support-plan={plan.value} data-plan-name={plan.name} aria-pressed="false"><span data-select-label>Select {plan.name}</span><Arrow diagonal /></button>
+    </article>)}
+  </div>
+  <div class="comparison-foot"><p>Reply time means a first response. Grant confirms the work and timing with you.</p><a href={withBase('/plans/#compare')} target="_blank" rel="noopener">Full plans and monthly examples <Arrow diagonal /><span class="sr-only"> (opens a new tab)</span></a></div>
+  <p class="sr-only" id="support-comparison-status" role="status" aria-live="polite"></p>
+</div>
+<style>
+  .support-comparison { margin-top:16px; }
+  .comparison-note { margin:0 0 16px; color:var(--muted); font-size:13px; line-height:1.5; max-width:72ch; }
+  .comparison-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); border:1px solid var(--line); border-radius:12px; overflow:clip; }
+  .support-mini { display:flex; flex-direction:column; gap:16px; padding:24px; min-width:0; }
+  .support-mini:nth-child(2n) { border-left:1px solid var(--line); }
+  .support-mini:nth-child(n+3) { border-top:1px solid var(--line); }
+  .support-mini header { display:flex; gap:12px; align-items:center; justify-content:space-between; min-height:28px; }
+  .support-mini h3 { font-size:20px; font-weight:500; letter-spacing:-.02em; margin:0; }
+  .mini-selected { font-size:11px; border:1px solid currentColor; border-radius:999px; padding:3px 8px; }
+  .mini-capacity { display:flex; align-items:center; gap:12px; margin:0; }
+  .mini-capacity strong { font-size:48px; line-height:1; }
+  .mini-capacity > span { font-size:12px; max-width:12ch; line-height:1.4; }
+  .mini-purpose { margin:0; font-size:13px; line-height:1.5; }
+  .mini-services { flex:1; }
+  .support-mini ul { margin:0; padding-left:16px; display:grid; align-content:start; gap:6px; font-size:13px; line-height:1.5; }
+  .mini-more { margin-top:8px; }
+  .mini-more summary { display:flex; align-items:center; justify-content:space-between; gap:12px; min-height:44px; font-size:12px; cursor:pointer; list-style:none; }
+  .mini-more summary::-webkit-details-marker { display:none; }
+  .mini-more summary::after { content:'+'; font-size:18px; }
+  .mini-more[open] summary::after { content:'−'; }
+  .mini-more ul { padding-bottom:8px; }
+  .mini-reply { display:grid; gap:4px; padding-top:16px; border-top:1px solid var(--line); margin:0; font-size:12px; }
+  .mini-reply dt { color:var(--muted); }
+  .mini-reply dt:not(:first-child) { margin-top:8px; }
+  .mini-reply dd { margin:0; font-weight:500; line-height:1.5; }
+  .mini-select { display:flex; align-items:center; justify-content:space-between; gap:16px; min-height:44px; padding:10px 16px; border:1px solid currentColor; border-radius:999px; background:none; color:inherit; font-size:13px; font-weight:600; cursor:pointer; }
+  .mini-select .arrow-icon { width:16px; height:16px; }
+  .support-mini.is-selected { background:var(--ink); color:var(--bg); }
+  .is-selected .mini-reply dt { color:oklch(.8 0 0); }
+  .is-selected .mini-select { background:var(--bg); color:var(--ink); border-color:var(--bg); }
+  .is-selected .mini-select:focus-visible { outline-color:var(--bg); outline-offset:4px; }
+  .mini-select:hover { text-decoration:underline; text-underline-offset:4px; }
+  .comparison-foot { display:flex; flex-wrap:wrap; justify-content:space-between; gap:8px 24px; padding-top:16px; }
+  .comparison-foot p { font-size:12px; line-height:1.5; color:var(--muted); margin:0; max-width:48ch; }
+  .comparison-foot a { display:inline-flex; align-items:center; gap:12px; font-size:12px; min-height:44px; text-decoration:underline; text-underline-offset:4px; }
+  .comparison-foot .arrow-icon { width:16px; height:16px; }
+  @media(max-width:760px) { .comparison-grid{grid-template-columns:1fr} .support-mini{padding:20px;gap:16px} .support-mini:nth-child(2n){border-left:0} .support-mini+.support-mini{border-top:1px solid var(--line)} }
+</style>

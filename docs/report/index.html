@@ -154,13 +154,26 @@ footer{border-top:1px solid var(--line);font-size:13px;color:var(--muted)}
 footer .wrap{padding-block:24px}
 
 /* Sticky bar: the report, plans and a way to talk, always one tap away */
-.dock{position:fixed;left:50%;bottom:16px;transform:translate(-50%,140%);z-index:20;display:flex;align-items:center;gap:6px;background:var(--ink);color:var(--bg);border-radius:999px;padding:6px;box-shadow:0 14px 40px oklch(0 0 0 / .25);transition:transform .45s var(--ease);max-width:calc(100% - 24px)}
-.dock.show{transform:translate(-50%,0)}
-.dock a{text-decoration:none;border-radius:999px;padding:10px 16px;font-size:14px;font-weight:600;white-space:nowrap}
-.dock a:hover{background:oklch(0.26 0 0)}
-.dock a.primary{background:var(--bg);color:var(--ink)}
-.dock a.primary:hover{background:oklch(0.9 0 0)}
+/* Centred with auto margins, not translate(-50%): a half-pixel offset is
+   what made the text soft. It only ever moves up and down, in whole pixels. */
+.dock{position:fixed;left:0;right:0;margin-inline:auto;width:max-content;bottom:16px;transform:translateY(calc(100% + 32px));z-index:20;display:flex;align-items:center;gap:4px;background:var(--ink);color:var(--bg);border-radius:999px;padding:6px;box-shadow:0 1px 0 oklch(1 0 0 / .08) inset,0 14px 40px oklch(0 0 0 / .25);transition:transform .55s var(--ease);max-width:calc(100% - 24px);isolation:isolate}
+/* Shown: no transform at all, so the browser draws the text on whole pixels. */
+.dock.show{transform:none}
+.dock a{position:relative;text-decoration:none;border-radius:999px;padding:10px 16px;font-size:14px;font-weight:600;white-space:nowrap;color:oklch(0.86 0 0);transition:color .35s var(--ease)}
+.dock a:hover,.dock a:focus-visible{color:var(--bg)}
+.dock a:focus-visible{outline:none}
+/* Without the script: the report button keeps its own white fill. */
+.dock:not(.live) a.primary{background:var(--bg);color:var(--ink)}
+/* With it: one white pill glides under whatever you point at, and the label
+   it lands on turns dark as it arrives. At rest it sits on Open report. */
+.dock-thumb{position:absolute;z-index:-1;top:6px;bottom:6px;left:0;width:0;border-radius:999px;background:var(--bg);box-shadow:0 2px 10px oklch(0 0 0 / .18);transition:transform .5s var(--ease),width .5s var(--ease)}
+.dock.live a.on{color:var(--ink)}
+/* The section you're reading: a small dot under its name. */
+.dock a[aria-current="true"]::after{content:"";position:absolute;left:50%;bottom:4px;width:4px;height:4px;margin-left:-2px;border-radius:50%;background:currentColor;opacity:.75}
 body{padding-bottom:84px}
+
+.plans-more{margin:18px 0 0;font-size:15px}
+.plans-more a{color:var(--ink);text-underline-offset:4px}
 
 /* the "link is incomplete" state */
 .missing{padding-block:clamp(56px,12vh,140px)}
@@ -179,7 +192,7 @@ body{padding-bottom:84px}
   .result{padding:22px}
   .panel{padding:20px}
 }
-@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}.btn,.btn svg,.plan,.dock,.contents .go{transition:none}.plan:hover,.btn-dark:hover{transform:none}}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}.btn,.btn svg,.plan,.dock,.dock a,.dock-thumb,.contents .go{transition:none}.plan:hover,.btn-dark:hover{transform:none}}
 </style>
 </head>
 <body>
@@ -318,7 +331,7 @@ body{padding-bottom:84px}
             <li>A short monthly report</li>
           </ul>
           <p class="reply">Replies within 1 business day</p>
-          <a class="btn btn-light" href="../estimate/">Start with Basic</a>
+          <a class="btn btn-light" href="../estimate/?plan=20">Start with Basic</a>
         </li>
         <li class="plan pop">
           <p class="tag">Most popular</p>
@@ -332,7 +345,7 @@ body{padding-bottom:84px}
             <li>A 30-minute planning call each month</li>
           </ul>
           <p class="reply">Replies the same business day</p>
-          <a class="btn" href="../estimate/">Choose Medium</a>
+          <a class="btn" href="../estimate/?plan=40">Choose Medium</a>
         </li>
         <li class="plan">
           <p class="name">Large</p>
@@ -345,9 +358,10 @@ body{padding-bottom:84px}
             <li>A planning call every two weeks</li>
           </ul>
           <p class="reply">Replies within 4 business hours</p>
-          <a class="btn btn-light" href="../estimate/">Go Large</a>
+          <a class="btn btn-light" href="../estimate/?plan=80">Go Large</a>
         </li>
       </ul>
+      <p class="plans-more"><a href="../plans/">See full plan details and which one fits &rarr;</a></p>
       <ul class="all-plans">
         <li>A short report every month</li>
         <li>Move up or down a plan with a month's notice</li>
@@ -355,7 +369,7 @@ body{padding-bottom:84px}
       </ul>
       <div class="vip">
         <p><strong>Need a developer every working day?</strong> VIP gives you 8 hours a day, Monday to Friday, replies within an hour and weekend emergencies.</p>
-        <a class="pill" href="../contact/">Ask about VIP</a>
+        <a class="pill" href="../estimate/?plan=vip">Ask about VIP</a>
       </div>
       <div class="bigger">
         <p>Thinking bigger than fixes?</p>
@@ -433,6 +447,57 @@ body{padding-bottom:84px}
     }, { threshold: 0.05 }).observe($("ready"));
   } else {
     dock.classList.add("show");
+  }
+
+  // The gliding pill: it follows the pointer or keyboard focus across the
+  // dock and settles back on Open report when you move away.
+  var links = Array.prototype.slice.call(dock.querySelectorAll("a"));
+  var home = links[0];
+  var thumb = document.createElement("span");
+  thumb.className = "dock-thumb";
+  thumb.setAttribute("aria-hidden", "true");
+  dock.insertBefore(thumb, dock.firstChild);
+  dock.classList.add("live");
+  var at = home;
+  function glide(a, instant) {
+    if (!a || dock.hidden) return;
+    at = a;
+    if (instant) thumb.style.transition = "none";
+    // offsetLeft and offsetWidth are whole pixels, so the pill stays crisp.
+    thumb.style.width = a.offsetWidth + "px";
+    thumb.style.transform = "translateX(" + a.offsetLeft + "px)";
+    links.forEach(function (l) { l.classList.toggle("on", l === a); });
+    if (instant) { void thumb.offsetWidth; thumb.style.transition = ""; }
+  }
+  links.forEach(function (a) {
+    a.addEventListener("pointerenter", function () { glide(a); });
+    a.addEventListener("focus", function () { glide(a); });
+  });
+  dock.addEventListener("pointerleave", function () { glide(home); });
+  dock.addEventListener("focusout", function (e) {
+    if (!dock.contains(e.relatedTarget)) glide(home);
+  });
+  // Place it before the dock first slides in, and again if the layout changes.
+  requestAnimationFrame(function () { glide(at, true); });
+  window.addEventListener("hashchange", function () { requestAnimationFrame(function () { glide(at, true); }); });
+  if ("ResizeObserver" in window) new ResizeObserver(function () { glide(at, true); }).observe(dock);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(function () { glide(at, true); });
+
+  // Which section you're reading gets a dot in the dock.
+  if ("IntersectionObserver" in window) {
+    var spy = {};
+    links.forEach(function (a) {
+      var id = (a.getAttribute("href") || "").replace(/^#/, "");
+      if (/^(worth|plans)$/.test(id)) spy[id] = a;
+    });
+    // A section counts as "reading" while it crosses the middle of the screen.
+    var watch = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        var a = spy[entry.target.id];
+        if (a) a.setAttribute("aria-current", entry.isIntersecting ? "true" : "false");
+      });
+    }, { rootMargin: "-45% 0px -45% 0px" });
+    Object.keys(spy).forEach(function (id) { if ($(id)) watch.observe($(id)); });
   }
 
   // ─── What a faster site could be worth ─────────────────────────────

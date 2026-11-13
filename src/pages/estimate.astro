@@ -1,14 +1,13 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import SectionTitle from '../components/SectionTitle.astro';
+import SupportPlanComparison from '../components/SupportPlanComparison.astro';
 import Arrow from '../components/Arrow.astro';
 import { profile } from '../data/profile';
 import { steps } from '../data/estimator';
-import { PACKAGES, packageOf } from '../data/quote-model';
 import { FORM_CC, FORM_INBOX } from '../data/forms';
 import { projects } from '../data/projects';
 import { withBase } from '../utils/paths';
-const plans = PACKAGES.filter((p) => p.id !== 'custom');
 // Real projects, shown as examples once a platform is picked.
 const examples = projects.map((p) => ({ name: p.name, platform: p.platform, category: p.category, href: withBase(`/work/${p.slug}/`), img: withBase(`/images/projects/${p.slug}-480.webp`) }));
 ---
@@ -67,16 +66,7 @@ const examples = projects.map((p) => ({ name: p.name, platform: p.platform, cate
               {step.id === 'hours' && (
                 <details class="wiz-plans">
                   <summary>Compare what each plan includes</summary>
-                  <div class="wiz-plans-grid">
-                    {plans.map((plan) => (
-                      <div class="wiz-plan">
-                        <strong>{plan.name}{plan.popular && <span> · Most popular</span>}</strong>
-                        <small>{plan.daily ? `${plan.daily} hours a day, Mon–Fri` : `${plan.hours} hours a month`}</small>
-                        {plan.builds && <p>Everything in {packageOf(plan.builds).name}, plus:</p>}
-                        <ul>{plan.can.map((item) => <li>{item}</li>)}</ul>
-                      </div>
-                    ))}
-                  </div>
+                  <SupportPlanComparison />
                 </details>
               )}
               {step.kind === 'range' && step.range && (
@@ -195,6 +185,7 @@ const examples = projects.map((p) => ({ name: p.name, platform: p.platform, cate
 </BaseLayout>
 <script>
   import { steps, estimate, planFor, type Answers, type Estimate, type Phase } from '../data/estimator';
+  import { supportInquiryNotes, vipSupport } from '../data/support-plans';
   import { formEndpoint } from '../data/forms';
   import { sourceFields } from '../scripts/lead-source';
   import { sendLead } from '../scripts/leads';
@@ -619,6 +610,14 @@ const examples = projects.map((p) => ({ name: p.name, platform: p.platform, cate
     };
 
     const renderSummary = () => {
+      form.querySelectorAll<HTMLElement>('[data-compact-plan]').forEach(card => {
+        const selected = answers.type === 'support' && card.dataset.compactPlan === String(answers.hours);
+        card.classList.toggle('is-selected', selected);
+        card.querySelector<HTMLElement>('.mini-selected')!.hidden = !selected;
+        const button = card.querySelector<HTMLButtonElement>('[data-support-plan]')!;
+        button.setAttribute('aria-pressed', String(selected));
+        button.querySelector('[data-select-label]')!.textContent = `${selected ? 'Selected' : 'Select'} ${button.dataset.planName}`;
+      });
       const live = effective();
       const result: Estimate = estimate(live);
       lastResult = result;
@@ -636,7 +635,8 @@ const examples = projects.map((p) => ({ name: p.name, platform: p.platform, cate
       } else if (result.mode === 'monthly') {
         const plan = result.support!;
         num.textContent = `${plan.daily || result.hours}`; unit.textContent = plan.daily ? 'hrs / day' : 'hrs / month'; shown = { low: 0, high: 0 };
-        caption.textContent = `${plan.name} plan${plan.recommended ? ', a good place to start' : ''}${plan.daily ? ', Monday to Friday' : ''}. ${plan.reply}. Move up or down with a month’s notice.`;
+        const reply = plan.id === 'vip' ? `${vipSupport.reply}. ${vipSupport.emergency.replace(/\.$/, '')}` : plan.reply;
+        caption.textContent = `${plan.name} plan${plan.recommended ? ', a good place to start' : ''}${plan.daily ? ', Monday to Friday' : ''}. ${reply}. Move up or down with a month’s notice.`;
       } else {
         animateNumbers(low, high);
         unit.textContent = 'weeks';
@@ -772,9 +772,16 @@ const examples = projects.map((p) => ({ name: p.name, platform: p.platform, cate
       if (top < 60 || top > innerHeight * 0.55) wizard.querySelector('.wiz-main')!.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
     };
     let switching = false;
+    // Set when a plan button on /plans/ opened the estimator (?plan=40):
+    // after name and email, skip the questions the plan already answered.
+    let fromPlan = false;
     const step = (delta: number) => {
       const ids = order();
-      const index = ids.indexOf(at) + delta;
+      let index = ids.indexOf(at) + delta;
+      if (fromPlan && at === 'contact' && delta > 0) {
+        const open = ids.findIndex((id) => id !== 'contact' && !answered(id));
+        index = open === -1 ? ids.indexOf('review') : open;
+      }
       if (index < 0 || index >= ids.length || switching) return;
       if (at === 'contact' && delta > 0) captureLead();
       if (reduce) { go(ids[index], delta); return; }
@@ -791,6 +798,15 @@ const examples = projects.map((p) => ({ name: p.name, platform: p.platform, cate
     };
 
     let autoTimer = 0;
+    form.querySelectorAll<HTMLButtonElement>('[data-support-plan]').forEach(button => button.addEventListener('click', () => {
+      if (at !== 'hours') return;
+      const input = [...section('hours').querySelectorAll<HTMLInputElement>('input[name="hours"]')].find(input => input.value === button.dataset.supportPlan);
+      if (!input) return;
+      clearTimeout(autoTimer);
+      input.checked = true;
+      read('hours'); render(0);
+      document.getElementById('support-comparison-status')!.textContent = `${button.dataset.planName} selected. Use Continue when you’re ready.`;
+    }));
     form.addEventListener('change', (event) => {
       const input = event.target as HTMLInputElement;
       const id = input.closest<HTMLElement>('.wiz-step')?.dataset.step;
@@ -844,7 +860,7 @@ const examples = projects.map((p) => ({ name: p.name, platform: p.platform, cate
         const input = options[Number(event.key) - 1]?.querySelector('input');
         if (input) { input.click(); event.preventDefault(); }
       }
-      if (event.key === 'Enter' && !typing && !(event.target as HTMLElement).closest('button, a') && !next.disabled && !next.hidden) {
+      if (event.key === 'Enter' && !typing && !(event.target as HTMLElement).closest('button, a, summary') && !next.disabled && !next.hidden) {
         event.preventDefault();
         step(1);
       }
@@ -1065,7 +1081,7 @@ const examples = projects.map((p) => ({ name: p.name, platform: p.platform, cate
     /* ---------- Saved progress and share links ---------- */
     const STORE = 'estimate-progress-v1';
     const saveProgress = () => {
-      try { localStorage.setItem(STORE, JSON.stringify({ answers: effective(), at, furthest, preferred, nextChoice, contact, captured, ref, savedAt: Date.now() })); } catch { /* storage unavailable */ }
+      try { localStorage.setItem(STORE, JSON.stringify({ answers: effective(), at, furthest, preferred, nextChoice, contact, captured, ref, fromPlan, savedAt: Date.now() })); } catch { /* storage unavailable */ }
     };
     /** Puts saved answers back into the form. */
     const applyAnswers = (saved: Answers) => {
@@ -1101,6 +1117,7 @@ const examples = projects.map((p) => ({ name: p.name, platform: p.platform, cate
       ['c-name', 'c-email', 'c-company', 'c-website'].forEach((n) => { field(n).value = ''; });
       field('c-nosite').checked = false; syncNoSite();
       answers = {};
+      fromPlan = false;
       furthest = 'contact'; preferred = ''; previewRoute = '';
       contact = { name: '', email: '', company: '', website: '' };
       captured = '';
@@ -1111,11 +1128,15 @@ const examples = projects.map((p) => ({ name: p.name, platform: p.platform, cate
       history.replaceState(null, '', location.pathname);
       go('contact', -1);
     });
+    /** The plan names, by the hours ids the support question uses. */
+    const PLAN_NAMES: Record<string, string> = { '20': 'Basic', '40': 'Medium', '80': 'Large', vip: 'VIP' };
     /** A shared link wins; otherwise answers saved on this device. */
     const restore = () => {
+      const plan = new URLSearchParams(location.search).get('plan') ?? '';
+      if (PLAN_NAMES[plan]) return restorePlan(plan);
       const shared = new URLSearchParams(location.search).get('brief');
       const fromLink = shared ? decodeShare(shared) : null;
-      let saved: { answers?: Answers; at?: string; furthest?: string; preferred?: string; nextChoice?: typeof nextChoice; contact?: typeof contact; captured?: string; ref?: string } | null = null;
+      let saved: { answers?: Answers; at?: string; furthest?: string; preferred?: string; nextChoice?: typeof nextChoice; contact?: typeof contact; captured?: string; ref?: string; fromPlan?: boolean } | null = null;
       try { saved = JSON.parse(localStorage.getItem(STORE) || 'null'); } catch { saved = null; }
       // Name and email come back even before any answer, so the first step is already filled in.
       if (saved?.contact) {
@@ -1133,7 +1154,7 @@ const examples = projects.map((p) => ({ name: p.name, platform: p.platform, cate
         return;
       }
       applyAnswers(data.answers);
-      if (!fromLink && saved) { furthest = saved.furthest ?? furthest; preferred = saved.preferred ?? ''; if (saved.nextChoice) nextChoice = saved.nextChoice; }
+      if (!fromLink && saved) { furthest = saved.furthest ?? furthest; preferred = saved.preferred ?? ''; if (saved.nextChoice) nextChoice = saved.nextChoice; fromPlan = saved.fromPlan === true && answers.type === 'support' && Boolean(PLAN_NAMES[String(answers.hours)]); }
       syncOptions();
       const ids = order();
       at = data.at && ids.includes(data.at) ? data.at : ids.find((id) => !answered(id)) ?? 'review';
@@ -1142,6 +1163,40 @@ const examples = projects.map((p) => ({ name: p.name, platform: p.platform, cate
       lastShownStep = at;
       restored.querySelector('span')!.textContent = fromLink ? 'You opened a shared estimate. Change anything you like.' : 'Welcome back: your answers were saved on this device.';
       restored.hidden = false;
+    };
+
+    /**
+     * Opened from a plan button: start a support estimate with that plan
+     * chosen, keep any name and email saved on this device, and bring the
+     * name and email into view. The link is tidied so a reload doesn't redo it.
+     */
+    const restorePlan = (plan: string) => {
+      let saved: { contact?: typeof contact; captured?: string; ref?: string } | null = null;
+      try { saved = JSON.parse(localStorage.getItem(STORE) || 'null'); } catch { saved = null; }
+      if (saved?.contact) {
+        contact = { ...contact, ...saved.contact };
+        captured = saved.captured ?? '';
+        if (saved.ref && /^EST-\d{8}-[A-Z0-9]{4}$/.test(saved.ref)) ref = saved.ref;
+        field('c-name').value = contact.name; field('c-email').value = contact.email; field('c-company').value = contact.company;
+        field('c-nosite').checked = contact.website === NO_SITE;
+        field('c-website').value = contact.website === NO_SITE ? '' : contact.website;
+        syncNoSite();
+      }
+      const supportNotes = supportInquiryNotes(new URLSearchParams(location.search));
+      applyAnswers({ type: 'support', hours: plan, ...(supportNotes ? { notes: supportNotes } : {}) });
+      syncOptions();
+      fromPlan = true;
+      at = answered('contact') ? order().find((id) => id !== 'contact' && !answered(id)) ?? 'review' : 'contact';
+      lastShownStep = at;
+      restored.querySelector('span')!.textContent = at === 'contact'
+        ? `You picked the ${PLAN_NAMES[plan]} plan. Add your name and email, then a couple of quick questions.`
+        : `You picked the ${PLAN_NAMES[plan]} plan. Just a couple of quick questions.`;
+      restored.hidden = false;
+      history.replaceState(null, '', location.pathname);
+      requestAnimationFrame(() => {
+        wizard.querySelector('.wiz-main')!.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
+        if (at === 'contact') focusContact();
+      });
     };
 
     // Initial range fill + first render.

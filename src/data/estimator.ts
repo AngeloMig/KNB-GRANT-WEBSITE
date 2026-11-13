@@ -180,7 +180,7 @@ export const steps: Step[] = [
     // Option ids are the plan's monthly hours (VIP is daily), matching the plans in the quote builder.
     options: [
       { id: '20', label: 'Basic · 20 hours a month', hint: 'Updates and small fixes' },
-      { id: '40', label: 'Medium · 40 hours a month', hint: 'Most popular · regular improvements' },
+      { id: '40', label: 'Medium · 40 hours a month', hint: 'Regular improvements' },
       { id: '80', label: 'Large · 80 hours a month', hint: 'Ongoing projects, priority replies' },
       { id: 'vip', label: 'VIP · 8 hours a day, Mon–Fri', hint: 'Dedicated developer, weekend emergencies' },
       { id: 'unsure', label: 'Not sure yet', hint: 'Grant will recommend one' },

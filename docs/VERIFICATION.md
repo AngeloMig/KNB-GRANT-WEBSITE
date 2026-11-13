@@ -233,3 +233,91 @@ Strengths to retain: monochrome tokens; native dialogs; invoice action grouping;
 The source detector returned two image warnings for hidden logo/signature previews. Both are intentional optional previews, populated only when an image exists; they are false positives, not shipped broken images. This audit did not inject overlays or change browser security settings.
 
 Recommended order: fix P1 keyboard/label/contrast issues, unify mobile controls and progression, improve focus/semantics, profile startup, then finish visual polish. Remaining findings are documented, not represented as fixed by this button change.
+
+
+## 13 November 2026 — public support plans and navigation redesign
+
+Scope: `/plans/`, shared menu and finder context passed to the estimator. Quote audit findings above remain separate. The orbital homepage was not redesigned.
+
+### Interaction and responsive verification
+
+- Browser checks: 1280×900, 768×1024, 390×844, 320×740 and menu at 320×568. No document horizontal overflow. Four primary destinations, three smaller actions and footer links remain reachable. Phone-to-tablet close-button placement corrected.
+- Empty Continue stays on the current step with an error and radio focus. Keyboard radio changes update completed recommendations. Weekly feature work gives Large; occasional maintenance gives Basic; same-day reply gives at least Medium; dedicated work gives VIP.
+- Known task IDs/ranges pass to inquiry notes. Actual VIP handoff and reload retained plan and notes. Reset/reload produced zero checked inputs, one visible first step and no ready recommendation. FAQ disclosure verified.
+- Narrow-phone completion reveals the result heading. The 49px result bar clears the navigation circle and hides while the result is visible. Native controls and keyboard focus retained.
+- No contact details entered, contact Continue or send activated, or external message sent. Existing estimator lead capture on contact Continue was not changed or audited.
+- Six logic tests pass, covering all 36 combinations, incomplete/unknown answers, unique jobs, response ordering, manual plan choice and repository-base handoff. Astro check: 0 errors, 0 warnings, 4 existing hints. GitHub build: 18 pages, encrypted quote; existing lazy-chunk advisory. No console errors in final plans browser session.
+
+### Final production-build lab audit
+
+Lighthouse 13.5, clean headless Chrome, local `dist-github` repository-base export, text gzip and 10-minute cache, default simulated mobile/desktop presets. Final runs were serial. Initial page only; not the deployed GitHub URL or every interaction state.
+
+| Preset | Performance | Accessibility | Best practices | SEO | LCP | TBT | CLS |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Mobile | 99 | 100 | 100 | 100 | 1.7s | 30ms | 0.016 |
+| Desktop | 100 | 100 | 100 | 100 | 0.4s | 0ms | 0.009 |
+
+Reports: ignored `output/support-plans-{mobile,desktop}-final-2026-11-13.report.{html,json}`. Proofs: `output/support-finder-desktop-final.png`, `support-finder-mobile-final.png`, `support-navigation-desktop-final.png`, `support-navigation-mobile-final.png`. Automated accessibility scoring is not a complete manual certification. Inherited unscored label/content-name advisories concern the shared wordmark/footer name and are not reported as fixed here.
+
+Updated source and GitHub Pages `docs/` export are ready locally. No commit, push or live deployment performed. Dev server restarted on 4321 after checks/build.
+
+
+### 13 November 2026 — plain-language monthly plan examples
+
+Owner requested concrete descriptions for 20/40/80 hours, then shorter copy aimed at CEOs and nontechnical readers. Updated `src/data/support-plans.ts` and `src/pages/plans.astro`: everyday care for Basic; campaign/pages and shopping improvements for Medium; larger features, business-tool connections and slow pages for Large. Each has four short points and an illustrative example month. Planning, work, checking and reporting are included in hours; examples are flexible priorities, not fixed deliverable guarantees. No exact task-hour promises, prices or sales/ranking claims added. Reply windows, planning calls and recommender behavior retained.
+
+Desktop comparison uses a seven-row CSS subgrid to align descriptions, examples, reply windows and CTAs. Tablet uses the existing two-column card layout and phones stack content. Verified at 1440, 768 and 320px with no horizontal overflow; examples and buttons align on desktop. Proofs in ignored `output/support-plan-descriptions-{desktop,mobile}.png`. Astro check: 0 errors, 0 warnings, 4 existing hints; six existing recommendation tests passed. GitHub export regenerated locally; not published. Previous Lighthouse scores above predate this copy/layout change; no fresh score is claimed.
+
+
+Follow-up: the owner asked for more common services in shorter business language. Each public plan now lists ten short service points, with the heading “Your month could include” and a routine-care/campaign/larger-project example. These remain possible priorities within the purchased hours, not ten guaranteed monthly deliverables. VIP reply policy was explicitly updated by the owner: 15–60 minutes during agreed working hours; emergency reply target of 2–4 hours outside working hours on weekdays and weekends. `vipSupport` in `src/data/support-plans.ts` supplies both the public VIP block and finder recommendation, avoiding conflicting reply copy. Reply time is distinguished from time to fix. Normal Basic/Medium/Large reply windows are unchanged. Latest export includes these changes; six logic tests still pass. Earlier four-point screenshots and audits predate this wording revision.
+
+Final VIP display verified at 1280px and 320px: no document/card horizontal overflow, all reply wording fits, ten service bullets per plan. Proofs: ignored `output/support-vip-reply-times-desktop.png` and `output/support-vip-reply-times-mobile.png`. Final 18-page export succeeded and dev server restarted on 4321.
+
+
+### 13 November 2026 — compact comparison, dotted title and email previews
+
+- Public support page now uses the existing `SectionTitle` dotted `SUPPORT PLANS` H1 with a compact local size override. Intro copy is smaller; phone detail caption sits on one line below the heading. Support navigation restores `data-title` for the existing dot transition. Existing dot renderer reused, not duplicated. Verified desktop and 320px: readable H1, rendered canvas, no horizontal overflow. Proofs: `output/support-dotted-heading-{desktop,mobile}.png`.
+- New `src/components/SupportPlanComparison.astro` replaces the estimator's old gray comparison panels. Same public service data as `/plans/`; compact hour treatment, thin shared rules and actual selected plan in black. Five services visible per card, remaining services in native disclosures; full comparison opens public monthly examples in a new tab. Selected buttons update the existing hours radio and summary, save progress, and stay on the Support step until Continue. Keyboard Enter on summary no longer advances the wizard. The unsupported Most popular hint was removed from `src/data/estimator.ts`. Quote model/prices/contracts were not edited.
+- `vipSupport` in shared public data now includes its existing dedicated-developer services, translated into short language, and supplies the public comparison plus estimator caption. This keeps the owner-approved 15–60 minute working-hours reply and 2–4 hour out-of-hours emergency target consistent. Tested Basic/VIP selection, native and nested disclosures via keyboard, restored plan and 320px overflow. No contact details entered, no Contact Continue/send action or external inquiry sent. Proofs: `output/support-comparison-{desktop,mobile}.png`.
+- Two isolated parallel read-only reviews covered layout and mechanical spacing; final scoped layout detector returned `[]`. Astro check on 99 files: 0 errors, 0 warnings, 4 existing hints. Six support logic tests pass. Latest GitHub export has 18 pages, encrypted quote; existing lazy chunk advisory. Source/export local, not pushed.
+- New DEV-only, noindex route `/ideas/email/` (`src/pages/[preview]/email.astro`) has ten functioning alternatives for the contact email control. Every copy button wrote the correct public email in browser testing; keyboard activation, expandable copy/email tray, copy/email mode switch and 320px layout verified. Browser clipboard restored afterwards. No email app opened or message sent. The live contact control has not been replaced. This route is absent from the static export.
+- Owner picked option 9 and requested more creativity, then exact centering and a different smoother animation. Option 9 now centers the address, button and Copy/Copied text independently on the same axis. A small paper slip drops into the stationary button, the clipboard becomes a drawn check, and an outline briefly expands. Motion lasts at most 480ms, uses finite Web Animations and small transform/opacity/SVG updates; no animation loop or added library. Success feedback follows the real clipboard result. Reduced motion skips these animations and retains plain confirmation. Manual address selection, contextual shortcut hint and error fallback retained. Copying again replays the slip. Successful button copying clears the old text selection. Demo only; no live contact change.
+- Exact centers measured in browser: all at x187.5 on a 390px viewport and x152.5 on a 320px viewport (15px browser scrollbar); desktop offsets also zero. Actual keyboard and pointer copy passed; selection covers the address, then collapses after successful button copy. No document overflow or preview console errors. Reduced-motion branch inspected in source; no real iPhone or frame-rate benchmark claimed. Proofs: `output/email-idea-9-refined-{desktop,mobile}.png`, `email-idea-9-centered-preview.png`; earlier ten-idea overview `email-ideas-{desktop,mobile}.png`.
+- Local preview remains at `http://127.0.0.1:4321/ideas/email/#idea-9`; dev server running on 4321. The marked preview tab is the user's deliverable; other test tabs closed. Preserve all unrelated report/Footer/HomeSections changes.
+
+
+Email preview follow-up: option 5 now has a bounded ink sweep on hover and keyboard focus, arrow-to-copy icon transition, drawn success check and a 360ms confirmation bubble after real clipboard success. The pill stays in place. Re-copying replays the bubble. The toast selects above/below placement based on available viewport space, and all visuals retain an instant reduced-motion alternative. Fixed hover/selected icon specificity so the copy/check do not overlap; the idle reduced-motion pill keeps readable contrast. Tested actual copying, keyboard-focus feedback and 320px geometry: pill and active toast fit, no horizontal overflow or console errors. Clipboard restored. Proofs `output/email-idea-5-animated-{desktop,mobile}.png`. Current marked local preview opens `/ideas/email/#idea-5`. Option 9 remains centered with its paper-slip animation. No live contact-page replacement or publication.
+
+
+### 13 November 2026 — approved option 5 applied to contact
+
+Owner selected option 5 for the actual website. New `src/components/CopyEmail.astro` is now used by both the contact intro and email preview option 5, so approved visuals and behavior share one implementation. Includes ink sweep on hover/focus, arrow/copy/check icons, real clipboard-success confirmation, replayable 360ms toast, viewport-aware above/below placement, reduced-motion alternative and keyboard/status support. Native mailto link is the SSR default, enhanced to Copy only when secure clipboard access exists. If a supported clipboard write fails, a selectable address and email link are revealed. No global animation loop or added dependency.
+
+Removed the old contact letter-pour handler and obsolete `.copy-email`/copy-pour/copy-fade/copy-stamp styles. Contact intro retains a 32px gap before the new control. Existing audit/enquiry form code and data were not changed or submitted. Preview option 5 now imports the same component; the other nine variants remain alternatives.
+
+Verification: Astro check 100 files, 0 errors, 0 warnings, 4 existing hints. GitHub build 18 pages, encrypted quote, existing large lazy-chunk advisory. Static contact HTML includes a native email link and a copy button hidden until enhancement. Real desktop copying and keyboard focus passed; repeated mouse/Enter copies passed at 390px and 320px, no horizontal overflow or console errors. Contact inputs remained blank; no inquiry, audit request or email sent. Browser clipboard restored. Proofs: ignored `output/contact-option-5-{desktop,mobile}.png`. Reduced-motion and clipboard-denial branches inspected in source, not runtime-emulated. Source and `docs/` export ready locally; no commit, push or live deployment. Local contact page shown at `http://127.0.0.1:4321/contact/`; server running on 4321.
+
+
+### 13 November 2026 — continued Claude’s ten Services previews
+
+Owner asked to find and finish Claude’s interrupted Services design exploration. Found the existing untracked `src/pages/[preview]/services.astro`; retained all ten concepts and five service groups. Original snapshot is in ignored `tmp/services-claude-before.astro.txt`. Preview remains DEV-only/noindex at `/ideas/services/`; no homepage service variation has been selected or applied.
+
+Completed work in `src/pages/[preview]/services.astro` and new `src/scripts/services-preview.ts`:
+- Fixed wrapping row arrows and two additional phone overflows (laptop base and phone/tab panel). Inactive image-letter headings stay readable; selected letters have a dark outline. Touch spotlight uses a faint unmasked background and a separate action under the selected service.
+- Native accordion/column/spotlight buttons, expanded/hidden/inert states, keyboard tab navigation (arrows/Home/End), correct Support and audit destinations, explicit autoplay controls and a global Pause animations checkbox. Manual tab choices persist instead of immediately advancing. Accordion can close completely. Marquee explains first-tap preview behavior on phones.
+- Removed perpetual cursor animation loops: pointer updates run only while moving/settling, visible, foreground and motion-enabled. CSS effects pause offscreen; reduced motion and short landscape views disable sticky/scaling motion. Stack updates batch position reads before writes. No new dependency.
+
+Verification: Astro check 102 files, 0 errors, 0 warnings, 4 existing unrelated hints; scoped layout scan `[]`; diff whitespace check passed. Browser viewport checks at 320, 390, 768, 844 landscape, 1280 and 1440px found no document/demo horizontal overflow. Tested accordion, all five column selections/content fit, keyboard tabs, automatic tab advancement and pause, readable lettering, touch spotlight selection and Support destination, and marquee first tap. Fresh preview console had no errors. Reduced-motion branch inspected in source; no real-device frame-rate or fresh Lighthouse score is claimed. GitHub export built successfully (18 pages, quote encrypted, existing lazy-chunk advisory); the Services preview route is absent from it. Later changes were preview-only. No push or deployment.
+
+Proofs in ignored `output/services-desktop-tabs-final.png`, `services-mobile-letters.png`, `services-mobile-spotlight.png`. Other existing support/email/quote/report/orbital changes are preserved. Next design decision: owner picks a service concept before homepage integration.
+
+
+### 13 November 2026 — Find my plan popup only
+
+Owner clarified that only the finder should become a popup. Full Basic/Medium/Large comparison and VIP remain inline, immediately after the intro once enhancement moves the finder into its dialog. No small comparison, summary strip, comparison popup, or automatic load popup is present. The estimator’s existing compact comparison component is unchanged.
+
+`src/pages/plans.astro` adds the native dialog and the Find my plan trigger. `src/scripts/support-modal.ts` moves the existing finder into it without duplicating IDs or rebuilding its state. Native Escape/close, backdrop dismissal, page scroll lock, focus return and a fixed header/close control are retained. The Compare link in the result dismisses the dialog and jumps to the full on-page comparison. Existing #fit/#fit-result links and the mobile View result bar open the same dialog, including repeat clicks. Without JavaScript the original finder remains inline. `revealSupportTarget` in `src/scripts/support-finder.ts` scrolls only the modal content when it is present, preventing result/step focus from scrolling the close button away.
+
+Browser checked at 320px, 768px and 1280px: no horizontal overflow; blank-step validation, three-question Medium result, correct estimator plan/answer URL, reset, reopening retained answers, result bar reopening, Escape and focus return, and the on-page comparison link. Normal Tab from the close button advances into the finder. Mobile result keeps the header/close control visible. No inquiries sent or contact details entered. Temporary browser timeouts were resolved with a fresh QA tab. Proofs: ignored `output/plan-finder-popup-{desktop,mobile}.png` and `output/plan-comparison-on-page.png`. No new library or animation loop.
+
+Final checks: Astro 103 files, 0 errors, 0 warnings, 4 existing hints; six support logic tests pass; scoped layout scan `[]`; 18-page GitHub export rebuilt with encrypted quote (existing lazy-chunk advisory). Source and export are local, not pushed or deployed. Dev server restarted on 4321.

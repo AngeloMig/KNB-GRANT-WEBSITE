@@ -1,0 +1,305 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Arrow from '../components/Arrow.astro';
+import SectionTitle from '../components/SectionTitle.astro';
+import { withBase } from '../utils/paths';
+import { supportPlans, supportJobs, supportQuestions, vipSupport } from '../data/support-plans';
+const groups = [...new Set(supportJobs.map(job => job.group))];
+const faqs = [
+  { q: 'Can I choose a plan without using the finder?', a: 'Yes. Compare the plans and continue with the one that feels right. Grant will confirm the scope and pricing before work starts.' },
+  { q: 'Can I change plans later?', a: 'Yes. Move up or down a plan with a month’s notice.' },
+  { q: 'Does the reply window mean the work will be finished by then?', a: 'The reply window is when you’ll hear back during business hours. Grant will agree on completion dates after reviewing the work.' },
+  { q: 'Will you change my live store?', a: 'Changes are prepared on a copy first and go live when you’re happy with them.' },
+  { q: 'How accurate are the task times?', a: 'They’re a rough guide for common jobs. The size of your site, its current setup and the work involved can change the time needed. Grant will review your list before confirming it.' },
+];
+---
+<BaseLayout title="Monthly Website Support Plans | Grant Dev14" description="Compare 20, 40 and 80-hour monthly website support plans for Shopify, Webflow and WordPress. Find a starting point for updates, improvements and ongoing development.">
+  <div class="wrap support-page">
+    <div class="support-page-title"><SectionTitle title="SUPPORT PLANS" detail="Monthly website support" as="h1" id="support-title" /></div>
+    <section class="support-intro" aria-labelledby="support-title">
+      <div><p class="support-label">Shopify · Webflow · WordPress</p><p class="support-intro-lead">Monthly support.<br />Ongoing progress.</p></div>
+      <div class="support-intro-copy">
+        <p>A developer to keep your website fast, fixed and moving forward.</p>
+        <p>Choose 20, 40 or 80 hours a month, or find a starting point in three quick steps.</p>
+        <div class="support-actions"><a class="support-primary" href="#fit" data-support-open="finder">Find my plan <Arrow diagonal /></a><a class="support-text-link" href="#compare">Compare plans <Arrow /></a></div>
+      </div>
+    </section>
+    <div id="fit-inline">
+    <section class="fit" id="fit" aria-labelledby="fit-title" data-base={import.meta.env.BASE_URL}>
+      <header class="fit-heading"><div><h2 id="fit-title">Let’s find your fit.</h2><p>Three questions. A clear starting point.</p></div><button type="button" class="fit-reset" id="fit-reset" hidden>Reset answers</button></header>
+      <div class="fit-grid">
+        <form id="fit-form" class="fit-form" novalidate>
+          <nav class="fit-progress" aria-label="Plan finder steps" hidden>
+            {supportQuestions.map((question, index) => <button type="button" data-step-go={index} aria-current={index === 0 ? 'step' : undefined}><span>{index + 1}</span>{question.short}</button>)}
+          </nav>
+          {supportQuestions.map((question, index) => (
+            <fieldset class="fit-step" data-step={index} data-choice={question.id} aria-describedby={`fit-help-${question.id}`}>
+              <legend>{question.title}</legend>
+              <p class="fit-help" id={`fit-help-${question.id}`}>{question.help}</p>
+              <div class="fit-options">
+                {question.options.map(option => <label class="fit-option"><input type="radio" name={question.id} value={option.id} /><span><strong>{option.label}</strong><span>{option.detail}</span></span><Arrow /></label>)}
+              </div>
+              {question.id === 'focus' && <details class="fit-jobs"><summary>Add specific jobs <span>Optional · <span id="fit-task-count">none selected</span></span></summary><p class="fit-help">Have a list already? Add the work you want Grant to review. These rough task times help check the plan’s capacity.</p><div class="fit-job-groups">{groups.map(group => <div><h3>{group}</h3>{supportJobs.filter(job => job.group === group).map(job => <label class="fit-job"><input type="checkbox" name="job" value={job.id} /><span>{job.label}</span><small>{job.low}–{job.high} h</small></label>)}</div>)}</div></details>}
+            </fieldset>
+          ))}
+          <p class="fit-error" id="fit-error" role="alert" hidden></p>
+          <div class="fit-controls" hidden><button class="fit-back" type="button" id="fit-back">← Back</button><button class="support-primary" type="submit" id="fit-next">Continue <Arrow /></button></div>
+          <p class="fit-private">Your finder answers stay in this browser. Continue to the estimator to prepare your support brief.</p>
+          <noscript><p class="fit-help">You can choose any plan in the comparison below, or contact Grant for help.</p></noscript>
+        </form>
+
+        <aside class="fit-result" id="fit-result" aria-label="Support plan recommendation" data-ready="false">
+          <div id="fit-pending"><p class="fit-result-label">A little clarity first</p><h3 id="fit-pending-title">Find the support<br />your site needs.</h3><p>Tell us about your workload, priorities and reply preferences. We’ll suggest a plan and explain why.</p><ol class="fit-answer-preview">{supportQuestions.map(question => <li><span>{question.short}</span><strong data-answer-preview={question.id}>Choose an answer</strong></li>)}</ol></div>
+          <div id="fit-match" hidden>
+            <p class="fit-result-label">Your suggested starting point</p><h3 id="fit-result-title" tabindex="-1">Your plan</h3><p class="fit-capacity" id="fit-capacity"></p>
+            <p class="fit-response">Reply window <strong id="fit-reply"></strong></p><ul class="fit-reasons" id="fit-reasons"></ul>
+            <p class="fit-job-total" id="fit-job-total" hidden></p>
+            <a class="fit-cta" id="fit-cta" href={withBase('/estimate/')}><span id="fit-cta-label">Continue with this plan</span><Arrow diagonal /></a>
+            <p class="fit-result-note">A guide, not a time quote. Scope and pricing are confirmed with Grant before work starts.</p><a class="fit-result-compare" href="#compare" data-dismiss-finder>Compare the plans below ↓</a>
+          </div>
+        </aside>
+      </div>
+      <p class="sr-only" id="fit-live" role="status" aria-live="polite" aria-atomic="true"></p>
+    </section>
+    </div>
+
+    <section class="support-compare" id="compare" aria-labelledby="compare-title">
+      <header class="support-section-heading"><h2 id="compare-title">The right amount of help.</h2><p>From everyday updates to bigger changes. Choose the time your business needs each month.</p></header>
+      <p class="plan-scope-note">We agree on the most important jobs first. Your hours include planning, doing the work, checking it and reporting back. These examples are a guide; what fits depends on the work involved.</p>
+      <div class="plan-list">{supportPlans.map(plan => <article class="plan-card" data-plan={plan.id}>
+        <header><h3>{plan.name}</h3><span class="plan-pick" hidden>Suggested for you</span></header><p class="plan-hours"><strong class="display">{plan.hours}</strong><span>hours<br />a month</span></p><p class="plan-best">{plan.best}</p>
+        <ul>{plan.items.map(item => <li>{item}</li>)}</ul>
+        <div class="plan-example"><h4>Your month could include</h4><p>{plan.example}</p></div>
+        <dl class="plan-response"><dt>Reply window</dt><dd>{plan.reply}</dd></dl><a class="plan-cta" href={withBase(`/estimate/?plan=${plan.value}`)}>Choose {plan.name}<Arrow diagonal /></a>
+      </article>)}</div>
+      <aside class="support-vip" id="support-vip"><div><h3>Need a dedicated developer?</h3><p>VIP gives you {vipSupport.capacity}.</p><dl class="vip-reply-times"><div><dt>During working hours</dt><dd>{vipSupport.reply}</dd></div><div><dt>Emergencies outside working hours</dt><dd>{vipSupport.emergency}</dd></div></dl></div><a class="support-text-link" href={withBase('/estimate/?plan=vip')}>Discuss VIP <Arrow diagonal /></a></aside>
+      <p class="plan-comparison-note">Reply times describe when you’ll hear back, not when a fix will be finished. Working hours and emergency arrangements are agreed before work starts.</p>
+    </section>
+
+    <section class="support-included" aria-labelledby="included-title"><h2 id="included-title">Included, whichever plan fits.</h2><dl><div><dt>A monthly health check</dt><dd>Speed, links, forms and checkout, checked regularly.</dd></div><div><dt>Changes reviewed before launch</dt><dd>Work is prepared on a copy first, then goes live with your approval.</dd></div><div><dt>A clear monthly summary</dt><dd>What was done and what’s next, in a short report.</dd></div></dl></section>
+    <section class="support-faq" aria-labelledby="faq-title"><h2 id="faq-title">A few useful answers.</h2><div>{faqs.map(faq => <details><summary>{faq.q}<span aria-hidden="true">+</span></summary><p>{faq.a}</p></details>)}</div></section>
+    <section class="support-next" aria-labelledby="support-next-title"><div><h2 id="support-next-title">Still working out what you need?</h2><p>Start with a free website audit. For a new website, redesign or migration, use the project estimator.</p></div><div class="support-actions"><a class="support-primary" href={withBase('/contact/#audit')}>Get a free audit <Arrow diagonal /></a><a class="support-text-link" href={withBase('/estimate/')}>Estimate a project <Arrow /></a></div></section>
+  </div>
+  <dialog class="support-modal" id="support-modal" aria-labelledby="support-modal-title">
+    <header class="support-modal-header"><div><h2 id="support-modal-title" tabindex="-1">Let’s find your fit.</h2><p>Three questions. A clear starting point.</p></div><button type="button" class="support-modal-close" aria-label="Close plan finder">×</button></header>
+    <div class="support-modal-body" id="support-finder-slot"></div>
+  </dialog>
+  <a class="fit-bar" id="fit-bar" href="#fit-result" hidden><span><strong id="fit-bar-plan"></strong><span id="fit-bar-capacity"></span></span><span class="fit-bar-action">View result <Arrow /></span></a>
+</BaseLayout>
+<script>
+  import { mountSupportFinder } from '../scripts/support-finder';
+  import { mountSupportModal } from '../scripts/support-modal';
+  const finder = document.querySelector<HTMLElement>('#fit');
+  if (finder) mountSupportFinder(finder);
+  mountSupportModal();
+</script>
+<style>
+  .support-page { padding-bottom: 80px; }
+  .support-page-title :global(.section-title) { padding-block:20px 24px; }
+  .support-page-title :global(.section-title .display) { font-size:clamp(48px,7vw,96px); letter-spacing:-.02em; }
+  .support-page-title :global(.section-detail) { max-width:140px; }
+  .support-intro { display: grid; grid-template-columns: 1.2fr 1fr; gap: clamp(32px,5vw,80px); align-items: start; border-bottom: 1px solid var(--ink); padding: 32px 0 40px; }
+  .support-label { font-size: 13px; color: var(--muted); margin: 0 0 24px; }
+  .support-intro-lead { font-size:clamp(26px,3vw,40px); font-weight:500; line-height:1.1; letter-spacing:-.03em; margin:0; }
+  .support-intro-copy > p:first-child { font-size: clamp(22px,2.2vw,30px); line-height: 1.3; max-width: 26ch; margin: 0 0 16px; }
+  .support-intro-copy > p:nth-child(2) { color: var(--muted); max-width: 44ch; margin: 0 0 26px; }
+  .support-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 14px 24px; }
+  .support-modal { width:min(1240px,calc(100% - 40px)); max-height:calc(100dvh - 40px); padding:0; border:0; border-radius:16px; background:var(--bg); color:var(--ink); overflow:hidden; }
+  .support-modal[open] { display:flex; flex-direction:column; }
+  .support-modal::backdrop { background:oklch(0 0 0 / .5); }
+  .support-modal-header { display:flex; align-items:start; justify-content:space-between; gap:24px; padding:28px 32px 0; flex:none; }
+  .support-modal-header h2 { font-size:28px; font-weight:500; line-height:1.2; letter-spacing:-.02em; margin:0; }
+  .support-modal-header p { color:var(--muted); font-size:13px; margin:8px 0 0; }
+  .support-modal-header h2:focus { outline:none; }
+  .support-modal-close { display:grid; place-items:center; flex:none; width:44px; height:44px; border:1px solid var(--line); border-radius:50%; background:none; color:inherit; font-size:28px; line-height:1; cursor:pointer; }
+  .support-modal-close:hover { background:var(--surface); }
+  .support-modal-body { padding:0 32px 32px; overflow:auto; overscroll-behavior:contain; min-height:0; }
+  .support-modal .fit { padding:0; }
+  .support-modal .fit-heading > div { display:none; }
+  .support-modal .fit-heading { justify-content:flex-end; margin-bottom:12px; }
+  .support-modal .fit-grid { gap:32px; }
+  .support-modal .fit-result { top:0; }
+  .support-modal .fit-result-compare { display:inline-flex; gap:12px; align-items:center; }
+  .support-modal .fit-result-compare .arrow-icon { width:16px; height:16px; }
+  :global(body:has(.support-modal[open])) { overflow:hidden; }
+  :global(body:has(.support-modal[open]) .fit-bar) { display:none; }
+  @media(max-width:640px) {
+    .support-modal { width:calc(100% - 16px); max-width:calc(100% - 16px); max-height:calc(100dvh - 16px); border-radius:12px; }
+    .support-modal-header { padding:20px 16px 8px; gap:12px; }
+    .support-modal-header h2 { font-size:23px; }
+    .support-modal-header p { font-size:12px; }
+    .support-modal-body { padding:0 16px max(20px,env(safe-area-inset-bottom)); }
+    .support-modal .fit-result { padding:24px 20px; }
+  }
+  .support-primary,.plan-cta,.fit-cta { display: inline-flex; align-items: center; justify-content: space-between; gap: 20px; min-height: 48px; padding: 12px 20px; border: 1px solid var(--ink); border-radius: 999px; background: var(--ink); color: var(--bg); font-size: 14px; font-weight: 600; text-decoration: none; }
+  .support-primary .arrow-icon,.plan-cta .arrow-icon,.fit-cta .arrow-icon,.support-text-link .arrow-icon { width: 18px; height: 18px; flex: none; }
+  .support-primary:hover,.plan-cta:hover { background: oklch(.3 0 0); }
+  .support-text-link { display: inline-flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 44px; font-size: 14px; text-decoration: underline; text-underline-offset: 5px; }
+  .support-page h2 { font-size: clamp(26px,2.5vw,36px); font-weight: 500; letter-spacing: -.03em; line-height: 1.15; margin: 0; }
+  .fit { padding-block: clamp(48px,6vw,80px); scroll-margin-top: 28px; }
+  .fit-heading { display: flex; justify-content: space-between; align-items: end; gap: 20px; margin-bottom: 28px; }
+  .fit-heading p,.support-section-heading p { color: var(--muted); margin: 10px 0 0; }
+  .fit-reset,.fit-back { border: 0; background: none; min-height: 44px; padding: 10px 0; font-size: 13px; text-decoration: underline; text-underline-offset: 4px; }
+  .fit-grid { display: grid; grid-template-columns: minmax(0,1.2fr) minmax(300px,.85fr); gap: clamp(32px,5vw,80px); align-items: start; }
+  .fit-progress { display: flex; gap: 4px; border-bottom: 1px solid var(--line); margin-bottom: 28px; }
+  .fit-progress button { flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; padding: 8px 4px 12px; border: 0; border-bottom: 2px solid transparent; background: none; color: var(--muted); font-size: 13px; }
+  .fit-progress button[aria-current] { border-bottom-color: var(--ink); color: var(--ink); font-weight: 600; }
+  .fit-progress button:disabled { cursor: default; }
+  .fit-progress button span { font-variant-numeric: tabular-nums; }
+  .fit-step { border: 0; margin: 0 0 28px; padding: 0; min-width: 0; }
+  .fit-step legend { padding: 0; margin-bottom: 8px; font-size: 22px; font-weight: 500; line-height: 1.3; letter-spacing: -.02em; }
+  .fit-help { font-size: 14px; line-height: 1.5; color: var(--muted); margin: 0 0 20px; }
+  .fit-options { display: grid; gap: 8px; }
+  .fit-option { display: flex; align-items: center; gap: 14px; min-height: 76px; padding: 14px 16px; border: 1px solid oklch(.68 0 0); border-radius: 10px; cursor: pointer; transition: background .2s, border-color .2s; }
+  .fit-option:hover { border-color: var(--ink); }
+  .fit-option:has(input:checked) { background: var(--surface); border-color: var(--ink); }
+  .fit-option input,.fit-job input { flex: none; width: 18px; height: 18px; margin: 0; accent-color: var(--ink); }
+  .fit-option > span { display: grid; gap: 4px; flex: 1; min-width: 0; }
+  .fit-option strong { font-size: 15px; font-weight: 600; }
+  .fit-option > span > span { font-size: 13px; color: var(--muted); line-height: 1.4; }
+  .fit-option > .arrow-icon { width: 17px; height: 17px; opacity: 0; flex: none; }
+  .fit-option:has(input:checked) > .arrow-icon { opacity: 1; }
+  .fit-option:has(input:focus-visible),.fit-job:has(input:focus-visible) { outline: 2px solid var(--ink); outline-offset: 3px; }
+  .fit-jobs { margin-top: 24px; border-block: 1px solid var(--line); }
+  .fit-jobs summary { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 4px 16px; min-height: 58px; padding: 12px 0; cursor: pointer; font-size: 15px; font-weight: 600; }
+  .fit-jobs summary > span { color: var(--muted); font-size: 12px; font-weight: 400; }
+  .fit-jobs summary::after { content: '+'; font-size: 20px; }
+  .fit-jobs[open] summary::after { content: '−'; }
+  .fit-jobs > .fit-help { margin-top: 8px; }
+  .fit-job-groups { display: grid; gap: 24px; padding-bottom: 20px; }
+  .fit-job-groups h3 { font-size: 13px; font-weight: 600; margin: 0 0 6px; }
+  .fit-job { display: flex; align-items: center; gap: 12px; min-height: 48px; padding-block: 10px; cursor: pointer; border-bottom: 1px solid var(--line); }
+  .fit-job > span { flex: 1; font-size: 14px; line-height: 1.4; }
+  .fit-job small { flex: none; font-size: 12px; color: var(--muted); }
+  .fit-controls { display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+  .fit-controls .support-primary { margin-left: auto; }
+  .fit-back:disabled { visibility: hidden; }
+  .fit-private { color: var(--muted); font-size: 12px; line-height: 1.5; max-width: 52ch; margin: 20px 0 0; }
+  .fit-error { font-size: 14px; color: var(--warn-ink); margin: 0 0 16px; }
+  .fit-result { position: sticky; top: 24px; border-radius: 12px; background: var(--surface); padding: clamp(24px,3vw,40px); scroll-margin-top: 24px; }
+  .fit-result[data-ready="true"] { background: var(--ink); color: var(--bg); }
+  .fit-result-label { font-size: 12px; margin: 0 0 18px; }
+  .fit-result h3 { font-size: clamp(28px,3vw,40px); font-weight: 500; letter-spacing: -.03em; line-height: 1.1; margin: 0 0 16px; }
+  #fit-pending > p:not(.fit-result-label) { font-size: 14px; color: var(--muted); max-width: 38ch; }
+  .fit-answer-preview { list-style: none; padding: 12px 0 0; margin: 24px 0 0; display: grid; }
+  .fit-answer-preview li { display: grid; gap: 6px; padding: 14px 0; border-top: 1px solid var(--line); font-size: 13px; }
+  .fit-answer-preview li > span { color: var(--muted); }
+  .fit-answer-preview strong { font-weight: 500; }
+  #fit-result-title { font-size: clamp(42px,4vw,64px); }
+  #fit-result-title:focus-visible { outline: 2px solid currentColor; outline-offset: 5px; }
+  .fit-capacity { font-size: 20px; margin: -6px 0 26px; }
+  .fit-response { display: grid; gap: 6px; font-size: 13px; color: oklch(.8 0 0); margin: 0; padding-block: 18px; border-block: 1px solid oklch(1 0 0 / .25); }
+  .fit-response strong { color: var(--bg); font-weight: 500; font-size: 15px; }
+  .fit-reasons { display: grid; gap: 10px; padding-left: 18px; margin: 24px 0; font-size: 14px; line-height: 1.5; }
+  .fit-job-total { font-size: 13px; margin: 0 0 20px; color: oklch(.85 0 0); }
+  .fit-cta { display: flex; color: var(--ink); background: var(--bg); border-color: var(--bg); }
+  .fit-cta:hover { background: oklch(.9 0 0); }
+  .fit-result[data-ready="true"] a:focus-visible,.plan-card.is-pick a:focus-visible { outline-color: var(--bg); outline-offset: 4px; }
+  .fit-result-note { font-size: 12px; color: oklch(.8 0 0); margin: 16px 0 8px; line-height: 1.5; }
+  .fit-result-compare { display: inline-flex; align-items: center; min-height: 44px; font-size: 13px; text-decoration: underline; text-underline-offset: 4px; }
+  .support-section-heading { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 12px 32px; margin-bottom: 32px; }
+  .support-section-heading p { max-width: 38ch; font-size: 14px; margin: 0; }
+  .support-compare { border-top: 1px solid var(--ink); padding-top: 32px; scroll-margin-top: 24px; }
+  .plan-scope-note { font-size: 14px; line-height: 1.6; color: var(--muted); max-width: 80ch; margin: -12px 0 28px; }
+  .plan-list { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); border: 1px solid var(--line); border-radius: 12px; overflow: clip; }
+  .plan-card { display: flex; flex-direction: column; gap: 20px; padding: clamp(20px,2.5vw,36px); border-left: 1px solid var(--line); }
+  .plan-card:first-child { border-left: 0; }
+  .plan-card.is-pick { background: var(--ink); color: var(--bg); }
+  .plan-card header { display: flex; align-items: center; gap: 12px; justify-content: space-between; min-height: 46px; flex-wrap: wrap; }
+  .plan-card h3 { margin: 0; font-size: 24px; font-weight: 500; letter-spacing: -.02em; }
+  .plan-pick { font-size: 11px; color: inherit; border: 1px solid currentColor; border-radius: 999px; padding: 4px 8px; }
+  .plan-hours { display: flex; align-items: center; gap: 14px; margin: 4px 0 0; }
+  .plan-hours strong { font-size: 80px; line-height: .9; }
+  .plan-hours > span { font-size: 14px; line-height: 1.4; }
+  .plan-best { font-size: 15px; line-height: 1.5; margin: 0; min-height: 3em; }
+  .plan-card ul { padding-left: 18px; margin: 0; display: grid; gap: 12px; font-size: 14px; line-height: 1.45; flex: 1; align-content: start; }
+  .plan-example { border-top: 1px solid var(--line); padding-top: 20px; }
+  .plan-example h4 { font-size: 14px; font-weight: 600; margin: 0 0 10px; }
+  .plan-example p { font-size: 14px; line-height: 1.6; color: var(--muted); margin: 0; }
+  .plan-card.is-pick .plan-example p { color: oklch(.85 0 0); }
+  .plan-response { padding-top: 18px; border-top: 1px solid var(--line); margin: 8px 0 0; display: grid; gap: 6px; font-size: 13px; }
+  .plan-response dt { color: var(--muted); }
+  .plan-response dd { margin: 0; font-weight: 600; }
+  .plan-cta { margin-top: 4px; background: none; color: inherit; border-color: currentColor; }
+  .plan-card.is-pick .plan-response dt { color: oklch(.8 0 0); }
+  .plan-card.is-pick .plan-cta { background: var(--bg); color: var(--ink); }
+  .plan-card:not(.is-pick) .plan-cta:hover { color: var(--bg); }
+  .support-vip { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 24px; padding-block: 28px; border-bottom: 1px solid var(--line); }
+  .support-vip h3 { font-size: 20px; font-weight: 500; margin: 0 0 8px; }
+  .support-vip p { max-width: 65ch; margin: 0; font-size: 14px; color: var(--muted); }
+  .support-vip > div { flex: 1 1 600px; }
+  .vip-reply-times { display: flex; flex-wrap: wrap; gap: 20px 40px; margin: 20px 0 0; }
+  .vip-reply-times > div { flex: 1 1 240px; max-width: 42ch; }
+  .vip-reply-times dt { color: var(--muted); font-size: 13px; }
+  .vip-reply-times dd { margin: 6px 0 0; font-size: 15px; line-height: 1.5; font-weight: 500; }
+  .support-vip.is-pick h3::after { content: ' · Suggested for you'; font-size: 13px; }
+  .plan-comparison-note { font-size: 12px; color: var(--muted); max-width: 75ch; margin: 18px 0 0; }
+  .support-included { padding-block: clamp(56px,7vw,96px); }
+  .support-included dl { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 36px; margin: 32px 0 0; }
+  .support-included dt { font-size: 17px; font-weight: 500; margin-bottom: 10px; }
+  .support-included dd { margin: 0; font-size: 14px; color: var(--muted); max-width: 36ch; }
+  .support-faq { display: grid; grid-template-columns: .8fr 1.2fr; gap: 48px; border-top: 1px solid var(--ink); padding-top: 32px; }
+  .support-faq details { border-bottom: 1px solid var(--line); }
+  .support-faq summary { display: flex; justify-content: space-between; align-items: center; gap: 20px; min-height: 64px; padding-block: 18px; font-size: 16px; cursor: pointer; list-style: none; }
+  .support-faq summary::-webkit-details-marker { display: none; }
+  .support-faq summary span { flex: none; font-size: 22px; }
+  .support-faq details[open] summary span { transform: rotate(45deg); }
+  .support-faq details p { color: var(--muted); font-size: 14px; line-height: 1.6; margin: 0 0 22px; max-width: 65ch; }
+  .support-next { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 24px 48px; margin-top: 80px; border-top: 1px solid var(--ink); padding-top: 32px; align-items: start; }
+  .support-next h2 { font-size: 26px; }
+  .support-next p { color: var(--muted); font-size: 15px; max-width: 55ch; margin: 14px 0 0; }
+  .fit-bar { display: none; }
+  @media (min-width: 901px) {
+    .plan-list { row-gap: 20px; }
+    .plan-card { display: grid; grid-template-rows: subgrid; grid-row: span 7; }
+  }
+  @media (max-width: 900px) {
+    .support-intro { grid-template-columns: 1fr; gap: 28px; padding-top: 16px; }
+    .support-intro-copy > p:first-child { max-width: 35ch; }
+    .fit-grid { grid-template-columns: minmax(0,1fr) minmax(260px,.8fr); gap: 28px; }
+    .plan-list { grid-template-columns: 1fr; }
+    .plan-card { border-left: 0; border-top: 1px solid var(--line); display: grid; grid-template-columns: minmax(0,.8fr) minmax(0,1.2fr); gap: 20px 32px; }
+    .plan-card:first-child { border-top: 0; }
+    .plan-card ul { grid-column: 2; grid-row: 1 / span 3; }
+    .plan-example { grid-column: 1 / -1; }
+    .plan-response { grid-column: 1; }
+    .plan-card .plan-cta { grid-column: 2; align-self: end; }
+    .support-faq { grid-template-columns: 1fr; gap: 24px; }
+  }
+  @media (max-width: 640px) {
+    .support-page { padding-bottom: 96px; }
+    .support-page-title :global(.section-title .display) { font-size:clamp(36px,10vw,56px); }
+    .support-page-title :global(.section-title) { flex-direction:column; align-items:flex-start; gap:12px; }
+    .support-page-title :global(.section-detail) { max-width:none; font-size:11px; text-align:left; padding-bottom:0; }
+    .support-intro { padding-bottom: 36px; }
+    .support-label { font-size: 12px; margin-bottom: 20px; }
+    .support-intro-copy > p:first-child { font-size: 23px; }
+    .fit-heading { align-items: start; gap: 12px; }
+    .fit-heading h2 { font-size: 27px; }
+    .fit-heading p { font-size: 13px; }
+    .fit-reset { font-size: 12px; flex: none; }
+    .fit-grid { grid-template-columns: 1fr; gap: 32px; }
+    .fit-result { position: static; }
+    .fit-result[data-ready="false"] { display: none; }
+    .fit-step legend { font-size: 22px; }
+    .fit-option { padding: 12px; gap: 12px; min-height: 76px; }
+    .fit-option strong { font-size: 14px; }
+    .fit-option > .arrow-icon { display: none; }
+    .fit-private { font-size: 12px; }
+    .fit-controls .support-primary { padding-inline: 18px; }
+    .plan-card { display: flex; padding: 24px; gap: 20px; }
+    .plan-card header { min-height: 30px; }
+    .plan-best { min-height: 0; }
+    .plan-response { margin-top: 4px; }
+    .support-included dl { grid-template-columns: 1fr; gap: 28px; }
+    .fit-bar:not([hidden]) { display: flex; position: fixed; z-index: 8; left: 12px; right: 77px; bottom: calc(14px + env(safe-area-inset-bottom,0px)); height: 49px; padding: 6px 14px; gap: 8px; align-items: center; justify-content: space-between; border-radius: 999px; background: var(--ink); color: var(--bg); text-decoration: none; }
+    .fit-bar > span:first-child { display: grid; gap: 1px; min-width: 0; }
+    .fit-bar strong { font-size: 13px; font-weight: 600; }
+    #fit-bar-capacity { font-size: 11px; color: oklch(.8 0 0); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .fit-bar-action { display: inline-flex; align-items: center; gap: 8px; flex: none; font-size: 12px; }
+    .fit-bar-action .arrow-icon { width: 17px; height: 17px; }
+    .fit-bar:focus-visible { outline: 2px solid var(--bg); outline-offset: -4px; }
+    .support-next { margin-top: 56px; }
+  }
+  @media (prefers-reduced-motion: reduce) { .fit-option { transition: none; } }
+</style>

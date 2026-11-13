@@ -22,18 +22,21 @@ const cta = path === withBase('/estimate/') || path === withBase('/contact/') ? 
     <div class="menu-preview-set">{['tero', 'road-armor', 'omenz'].map((slug) => <img src={withBase(`/images/projects/${slug}-480.webp`)} alt="" width="480" height="270" loading="lazy" decoding="async" />)}</div>
     <div class="menu-preview-set"><p class="menu-preview-text">Hello,<br />I’m Grant.</p></div>
     <div class="menu-preview-set">{['coptrz', 'skinistry', 'light-my-bricks'].map((slug) => <img src={withBase(`/images/projects/${slug}-480.webp`)} alt="" width="480" height="270" loading="lazy" decoding="async" />)}</div>
-    <div class="menu-preview-set"><p class="menu-preview-text">Plan<br />it.</p></div>
-    <div class="menu-preview-set"><p class="menu-preview-text">Let’s<br />talk.</p></div>
-    <div class="menu-preview-set"><p class="menu-preview-text">Free<br />audit.</p></div>
+    <div class="menu-preview-set"><p class="menu-preview-text">Monthly<br />care.</p></div>
   </div>
+  <div class="menu-content">
   <nav class="menu-links" aria-label="Main">
     <a style="--i:0" href={withBase('/')} aria-current={path === withBase('/') ? 'page' : undefined}>Selected work <Arrow /></a>
     <a style="--i:1" href={withBase('/about/')} aria-current={path === withBase('/about/') ? 'page' : undefined} data-title><span class="menu-text">About Grant</span> <Arrow /></a>
     <a style="--i:2" href={withBase('/#services')} data-title data-section="services"><span class="menu-text">Services</span> <Arrow /></a>
-    <a style="--i:3" href={withBase('/estimate/')} aria-current={path === withBase('/estimate/') ? 'page' : undefined} data-title><span class="menu-text">Estimate a project</span> <Arrow /></a>
-    <a style="--i:4" href={withBase('/contact/')} aria-current={path === withBase('/contact/') ? 'page' : undefined} data-title><span class="menu-text">Get in touch</span> <Arrow /></a>
-    <a style="--i:5" href={withBase('/contact/#audit')}>Free website audit <Arrow /></a>
+    <a style="--i:3" href={withBase('/plans/')} aria-current={path === withBase('/plans/') ? 'page' : undefined} data-title><span class="menu-text">Support plans</span> <Arrow /></a>
   </nav>
+  <nav class="menu-actions" aria-label="Work with Grant">
+    <a href={withBase('/estimate/')} aria-current={path === withBase('/estimate/') ? 'page' : undefined} data-title><span class="menu-text">Estimate a project</span><Arrow diagonal /></a>
+    <a href={withBase('/contact/#audit')}>Free website audit<Arrow diagonal /></a>
+    <a href={withBase('/contact/')} aria-current={path === withBase('/contact/') ? 'page' : undefined} data-title><span class="menu-text">Get in touch</span><Arrow diagonal /></a>
+  </nav>
+  </div>
   <div class="menu-bottom"><a href={`mailto:${profile.email}`}>{profile.email}</a><a href={profile.linkedin} target="_blank" rel="noopener noreferrer">LinkedIn ↗︎</a></div>
 </dialog>
 <script>
@@ -75,8 +78,8 @@ const cta = path === withBase('/estimate/') || path === withBase('/contact/') ? 
     const measure = () => { gutter = headerBar ? parseFloat(getComputedStyle(headerBar).paddingRight) || 24 : 24; size = toggle.offsetHeight || 49; safe = parseFloat(getComputedStyle(probe).paddingBottom) || 0; };
     const placeButton = () => {
       queued = false;
-      if (root.classList.contains('menu-open') || root.classList.contains('menu-closing') || shell?.classList.contains('is-frozen')) return;
       if (!phoneNav.matches) { toggle.style.transform = closeButton.style.transform = ''; return; }
+      if (root.classList.contains('menu-open') || root.classList.contains('menu-closing') || shell?.classList.contains('is-frozen')) return;
       const p = Math.min(1, Math.max(0, window.scrollY / (window.innerHeight * 0.5)));
       const e = p < 0.5 ? 2 * p * p : 1 - (-2 * p + 2) ** 2 / 2;
       // From the header's corner (in line with the page edge) down to the bottom-right corner.
@@ -92,6 +95,7 @@ const cta = path === withBase('/estimate/') || path === withBase('/contact/') ? 
     toggle.addEventListener('click', () => {
       clearTimeout(closingTimer);
       root.classList.remove('menu-closing');
+      placeButton();
       freeze();
       dialog.showModal();
       root.classList.add('menu-open');
@@ -123,6 +127,10 @@ const cta = path === withBase('/estimate/') || path === withBase('/contact/') ? 
       link.addEventListener('focus', () => showPreview(index));
     });
     dialog.querySelector('.menu-links')?.addEventListener('pointerleave', () => showPreview(-1));
+    dialog.querySelectorAll('.menu-actions a').forEach(link => {
+      link.addEventListener('focus', () => showPreview(-1));
+      link.addEventListener('pointerenter', () => showPreview(-1));
+    });
     dialog.addEventListener('close', () => showPreview(-1));
     dialog.addEventListener('close', () => {
       root.classList.remove('menu-open');
@@ -138,7 +146,11 @@ const cta = path === withBase('/estimate/') || path === withBase('/contact/') ? 
     // the swipe is short. (Touch events: the browser would take a pointer over for scrolling.)
     const phone = matchMedia('(max-width: 640px)');
     let startY = -1;
-    dialog.addEventListener('touchstart', (e) => { if (phone.matches && e.touches.length === 1) { startY = e.touches[0].clientY; dialog.style.transition = 'none'; } }, { passive: true });
+    dialog.addEventListener('touchstart', (e) => {
+      // The handle/background can dismiss the sheet; scrolling its links cannot.
+      const target = e.target as HTMLElement;
+      if (phone.matches && e.touches.length === 1 && (target === dialog || target.closest('.menu-handle, .menu-top'))) { startY = e.touches[0].clientY; dialog.style.transition = 'none'; }
+    }, { passive: true });
     dialog.addEventListener('touchmove', (e) => {
       if (startY < 0) return;
       const dy = Math.max(0, e.touches[0].clientY - startY);

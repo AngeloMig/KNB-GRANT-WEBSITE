@@ -3,6 +3,7 @@ import { withBase } from '../utils/paths';
 import BaseLayout from '../layouts/BaseLayout.astro';
 import SectionTitle from '../components/SectionTitle.astro';
 import Arrow from '../components/Arrow.astro';
+import CopyEmail from '../components/CopyEmail.astro';
 import { profile } from '../data/profile';
 // Both forms go to Grant's inbox through FormSubmit, with a copy to the second address (as the estimator does).
 import { FORM_CC, FORM_INBOX } from '../data/forms';
@@ -44,7 +45,7 @@ const faqSchema = { '@context': 'https://schema.org', '@type': 'FAQPage', mainEn
 <BaseLayout title="Contact Grant Dev14 — Let’s Build Your Website" description="Contact Grant Dev14 about Shopify, Webflow, WordPress, website migrations, and development collaboration. Get in touch by email or connect on LinkedIn.">
   <div class="wrap">
     <SectionTitle title="LET’S TALK" detail="Every good website starts with a conversation" as="h1" />
-    <section class="intro-split contact-intro"><div class="intro-aside"><span class="tiny-heading">GET IN TOUCH</span><p>Based in the Philippines.<br />Working across time zones.</p><button type="button" class="copy-email" data-email={profile.email}><span class="copy-email-label">Tap to copy</span><span class="copy-email-text">{profile.email}</span><span class="copy-email-done" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12.5 10 17 19 7" /></svg>Copied</span></button><span class="sr-only" id="copy-status" aria-live="polite"></span></div><div><p class="lead">A new website?<br />A better online store?<br />Let’s make it happen.</p><p class="intro-support">Tell me a little about your project, the platform you’re using, and what you have in mind.</p></div></section>
+    <section class="intro-split contact-intro"><div class="intro-aside"><span class="tiny-heading">GET IN TOUCH</span><p>Based in the Philippines.<br />Working across time zones.</p><CopyEmail email={profile.email} class="contact-copy" /></div><div><p class="lead">A new website?<br />A better online store?<br />Let’s make it happen.</p><p class="intro-support">Tell me a little about your project, the platform you’re using, and what you have in mind.</p></div></section>
     <section class="contact-forms" aria-label="Contact forms">
       <form class="contact-card contact-audit" id="audit" data-form="audit" data-reply={profile.email} data-email={FORM_INBOX} data-cc={FORM_CC} novalidate>
         <p class="contact-eyebrow">Free website audit</p>
@@ -138,7 +139,7 @@ const faqSchema = { '@context': 'https://schema.org', '@type': 'FAQPage', mainEn
     </section>
     <script type="application/ld+json" set:html={JSON.stringify(faqSchema).replace(/</g, '\\u003c')} />
 
-    <noscript><style>.copy-email, .speed-run { display: none; }</style></noscript>
+    <noscript><style>.speed-run { display: none; }</style></noscript>
     <h2 class="contact-more-title">Other ways to reach me</h2>
     <div class="contact-options"><a href={`mailto:${profile.email}?subject=Website%20project%20inquiry`}><span>Email</span><strong>{profile.email}</strong><Arrow diagonal /></a>{profile.whatsapp
       ? <a href={`https://wa.me/${profile.whatsapp}?text=${whatsappText}`} target="_blank" rel="noopener noreferrer"><span>WhatsApp</span><strong>Message me on WhatsApp</strong><Arrow diagonal /></a>
@@ -370,29 +371,5 @@ const faqSchema = { '@context': 'https://schema.org', '@type': 'FAQPage', mainEn
     });
   });
 
-  // Copy the email: the address tips out letter by letter, as if poured into the clipboard, and a tick
-  // stamps in; then the address drops back into place.
-  const copyButton = document.querySelector<HTMLButtonElement>('.copy-email');
-  const copyStatus = document.querySelector('#copy-status');
-  if (copyButton && !navigator.clipboard) copyButton.hidden = true;
-  if (copyButton && navigator.clipboard) {
-    const text = copyButton.querySelector<HTMLElement>('.copy-email-text')!;
-    const address = text.textContent || '';
-    text.setAttribute('aria-label', address);
-    text.replaceChildren(...[...address].map((ch, i) => Object.assign(document.createElement('span'), { textContent: ch, ariaHidden: 'true', style: `--i:${i};--n:${address.length}` })));
-    let timer = 0;
-    copyButton.addEventListener('click', async () => {
-      try {
-        await navigator.clipboard.writeText(copyButton.dataset.email || '');
-        copyButton.classList.remove('is-copied'); void copyButton.offsetWidth; copyButton.classList.add('is-copied');
-        if (copyStatus) copyStatus.textContent = 'Email address copied to clipboard.';
-        clearTimeout(timer);
-        timer = window.setTimeout(() => copyButton.classList.remove('is-copied'), 2200);
-      } catch {
-        copyButton.querySelector('.copy-email-label')!.textContent = 'Couldn’t copy: select the address instead';
-        if (copyStatus) copyStatus.textContent = 'Copy failed. Please select the email address instead.';
-      }
-    });
-  }
 
 </script>

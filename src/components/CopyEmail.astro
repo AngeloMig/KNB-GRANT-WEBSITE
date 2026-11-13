@@ -1,0 +1,104 @@
+---
+interface Props { email: string; class?: string; }
+const { email, class: className } = Astro.props;
+---
+<div class:list={['email-copy',className]} data-email-copy data-email={email}>
+  <button type="button" class="email-copy__pill email-copy__button" data-copy-button aria-label={`Copy ${email}`} hidden>
+    <span class="email-copy__address">{email}</span>
+    <span class="email-copy__icon" aria-hidden="true">
+      <svg class="copy-arrow" viewBox="0 0 24 24"><path d="M6 18 18 6M6 6h12v12"/></svg>
+      <svg class="copy-pages" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/></svg>
+      <svg class="copy-check" viewBox="0 0 24 24"><path d="m5 12 4 4 10-10"/></svg>
+    </span>
+  </button>
+  <a class="email-copy__pill email-copy__direct" href={`mailto:${email}`} aria-label={`Email Grant at ${email}`} data-email-direct><span class="email-copy__address">{email}</span><span class="email-copy__icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 18 18 6M6 6h12v12"/></svg></span></a>
+  <span class="copy-toast" aria-hidden="true"><svg class="copy-toast__check" viewBox="0 0 24 24"><path d="m5 12 4 4 10-10"/></svg><span>Email copied. Ready to paste.</span></span>
+  <span class="sr-only" role="status" aria-live="polite" data-copy-status></span>
+  <div class="copy-fallback" hidden><label>Email address<input type="text" readonly value={email} spellcheck="false" /></label><p>Couldn’t copy automatically. Select the address to copy it, or <a href={`mailto:${email}`}>open your email app</a>.</p></div>
+</div>
+<script>
+  document.querySelectorAll<HTMLElement>('[data-email-copy]').forEach(root => {
+    if (root.dataset.copyReady) return;
+    root.dataset.copyReady = 'true';
+    const button = root.querySelector<HTMLButtonElement>('[data-copy-button]')!;
+    const direct = root.querySelector<HTMLAnchorElement>('[data-email-direct]')!;
+    const toast = root.querySelector<HTMLElement>('.copy-toast')!;
+    const status = root.querySelector<HTMLElement>('[data-copy-status]')!;
+    const fallback = root.querySelector<HTMLElement>('.copy-fallback')!;
+    // The native email link remains available without JavaScript or clipboard access.
+    if (typeof navigator.clipboard?.writeText !== 'function' || !window.isSecureContext) return;
+    button.hidden = false; direct.hidden = true;
+    let timer = 0, pending = false;
+    button.addEventListener('click', async () => {
+      if (pending) return;
+      pending = true; button.setAttribute('aria-busy','true');
+      try { await navigator.clipboard.writeText(root.dataset.email!); }
+      catch {
+        clearTimeout(timer); delete root.dataset.copied;
+        fallback.hidden = false;
+        const input = fallback.querySelector<HTMLInputElement>('input')!;
+        input.focus(); input.select();
+        status.textContent = 'Could not copy automatically. The email address is selected for manual copying.';
+        return;
+      } finally { pending = false; button.removeAttribute('aria-busy'); }
+      fallback.hidden = true;
+      root.dataset.copied = 'true';
+      root.dataset.toastSide = button.getBoundingClientRect().bottom + 64 > innerHeight ? 'above' : 'below';
+      status.textContent = 'Email address copied to clipboard. Ready to paste.';
+      if (!matchMedia('(prefers-reduced-motion: reduce)').matches && typeof toast.animate === 'function') {
+        try {
+          toast.getAnimations().forEach(animation => animation.cancel());
+          toast.animate([{opacity:0,transform:'translateY(10px) scale(.96)'},{opacity:1,transform:'translateY(0) scale(1)'}],{duration:360,easing:'cubic-bezier(.16,1,.3,1)'});
+        } catch { /* The CSS confirmation remains available without the animation API. */ }
+      }
+      clearTimeout(timer);
+      timer = window.setTimeout(() => { delete root.dataset.copied; },2400);
+    });
+  });
+</script>
+<style>
+  .email-copy { position:relative; display:inline-block; width:fit-content; max-width:100%; padding-bottom:48px; vertical-align:top; }
+  .email-copy [hidden] { display:none; }
+  .email-copy__pill { position:relative; isolation:isolate; overflow:hidden; display:flex; align-items:center; justify-content:center; gap:24px; min-height:52px; max-width:100%; padding:12px 20px; border:1px solid var(--ink); border-radius:999px; background:none; color:var(--ink); font-family:inherit; text-decoration:none; cursor:pointer; transition:color .2s; }
+  .email-copy__pill::before { content:''; position:absolute; inset:-1px; z-index:-1; background:var(--ink); border-radius:inherit; opacity:0; transform:scaleX(0); transform-origin:right; transition:opacity .2s,transform .32s cubic-bezier(.22,1,.36,1); }
+  .email-copy__address { display:block; font-size:16px; font-weight:500; letter-spacing:-.02em; overflow-wrap:anywhere; }
+  .email-copy__icon { position:relative; display:block; width:18px; height:18px; flex:none; }
+  .email-copy__icon svg { position:absolute; inset:0; width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:1.5; stroke-linecap:round; stroke-linejoin:round; transition:opacity .2s,transform .28s cubic-bezier(.22,1,.36,1); }
+  .copy-pages { opacity:0; transform:translate(-4px,4px); }
+  .copy-check { opacity:0; transform:scale(.75); }
+  .copy-check path,.copy-toast__check path { stroke-dasharray:22; stroke-dashoffset:22; transition:stroke-dashoffset .24s .08s cubic-bezier(.25,1,.5,1); }
+  .email-copy__pill:focus-visible,.email-copy__pill:active,[data-copied] .email-copy__pill { color:var(--bg); }
+  .email-copy__pill:focus-visible::before,.email-copy__pill:active::before,[data-copied] .email-copy__pill::before { opacity:1; transform:scaleX(1); }
+  .email-copy__button:focus-visible .copy-arrow,[data-copied] .copy-arrow { opacity:0; transform:translate(4px,-4px); }
+  .email-copy__button:focus-visible .copy-pages { opacity:1; transform:none; }
+  [data-copied] .email-copy__pill .copy-pages { opacity:0; transform:scale(.75); }
+  [data-copied] .copy-check { opacity:1; transform:none; }
+  [data-copied] .copy-check path,[data-copied] .copy-toast__check path { stroke-dashoffset:0; }
+  .copy-toast { position:absolute; top:calc(100% - 32px); left:50%; translate:-50% 0; display:flex; align-items:center; gap:8px; white-space:nowrap; padding:10px 12px; border-radius:8px; background:var(--ink); color:var(--bg); font-size:12px; line-height:1.4; font-weight:400; opacity:0; transform:translateY(8px) scale(.96); transition:opacity .2s,transform .32s cubic-bezier(.16,1,.3,1); pointer-events:none; }
+  .copy-toast::before { content:''; position:absolute; top:-3px; left:calc(50% - 3px); width:6px; height:6px; background:var(--ink); transform:rotate(45deg); }
+  [data-toast-side='above'] .copy-toast { top:auto; bottom:calc(100% + 12px); }
+  [data-toast-side='above'] .copy-toast::before { top:auto; bottom:-3px; }
+  .copy-toast__check { width:16px; height:16px; fill:none; stroke:currentColor; stroke-width:1.6; stroke-linecap:round; stroke-linejoin:round; flex:none; }
+  [data-copied] .copy-toast { opacity:1; transform:none; }
+  .copy-fallback { max-width:320px; margin-top:16px; font-size:12px; line-height:1.5; }
+  .copy-fallback label { display:block; }
+  .copy-fallback input { display:block; width:100%; margin-top:8px; padding:10px; border:1px solid var(--ink); border-radius:4px; background:var(--bg); color:var(--ink); font:inherit; font-size:16px; }
+  .copy-fallback p { margin:8px 0 0; font-size:12px; line-height:1.5; }
+  .copy-fallback a { text-decoration:underline; text-underline-offset:3px; }
+  @media(hover:hover) {
+    .email-copy__pill:hover { color:var(--bg); }
+    .email-copy__pill:hover::before { opacity:1; transform:scaleX(1); }
+    .email-copy__button:hover .copy-arrow { opacity:0; transform:translate(4px,-4px); }
+    .email-copy:not([data-copied]) .email-copy__button:hover .copy-pages { opacity:1; transform:none; }
+  }
+  @media(max-width:380px) {
+    .email-copy__pill { gap:12px; padding-inline:14px; }
+    .email-copy__address { font-size:14px; }
+    .copy-toast { gap:6px; padding:10px; font-size:11px; }
+  }
+  @media(prefers-reduced-motion:reduce) {
+    .email-copy *,.email-copy *::before { animation:none!important; transition:none!important; }
+    .email-copy__pill::before { transform:none; }
+    .email-copy__icon svg,.copy-toast { transform:none!important; }
+  }
+</style>

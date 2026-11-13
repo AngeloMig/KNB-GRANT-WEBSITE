@@ -1,0 +1,215 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import IdeaLegend from '../../components/IdeaLegend.astro';
+import Arrow from '../../components/Arrow.astro';
+import CopyEmail from '../../components/CopyEmail.astro';
+import { profile } from '../../data/profile';
+export function getStaticPaths() {
+  return import.meta.env.DEV ? [{ params: { preview: 'ideas' } }] : [];
+}
+const ideas = [
+  [1, 'Quiet inline confirmation'], [2, 'A separate copy button'], [3, 'A sliding confirmation'],
+  [4, 'Dots become a check'], [5, 'A small confirmation toast'], [6, 'A contact ticket'],
+  [7, 'An expandable action tray'], [8, 'A gentle touch ripple'], [9, 'Select it or copy it'],
+  [10, 'Choose copy or email'],
+] as const;
+const notes = [
+  'Recommended: one clear action, a small check and confirmation exactly where you clicked.',
+  'Keep the address readable. Give copying its own visible, comfortably sized control.',
+  'The address shifts slightly and a confirmation slides into the space below it.',
+  'A small dot motif echoes the site’s headings, then changes into a check after copying.',
+  'Hover or focus to sweep ink through the pill and reveal a copy icon. Copy the address for a drawn check and a little confirmation bubble.',
+  'A compact contact slip changes its footer from an instruction into a receipt.',
+  'Reveal two deliberate choices: copy the address or open your email app.',
+  'A single soft ripple acknowledges the click. The label confirms when copying succeeds.',
+  'A centered address and button. Copy it and a small paper slip settles into the button, followed by a check. Try it with your mouse or keyboard.',
+  'Choose what you want to do first. Email mode opens your email app; it never sends a message.',
+];
+const email = profile.email;
+---
+<BaseLayout title="Email interaction ideas | Grant Dev14" description="Ten local email interaction previews." noindex>
+  <IdeaLegend ideas={ideas} links={[{ label: 'Contact page', href: '/contact/' }]} />
+  <div class="wrap email-preview">
+    <header class="ep-head"><p>Local preview · contact interaction</p><h1 class="display">Ten ways to<br />get in touch.</h1><p>Try each version with your mouse, keyboard or phone. The copy buttons copy the real address. Nothing sends an email.</p><a href="#idea-1">Start with the simplest option <Arrow /></a></header>
+    <div class="ep-grid">
+      {ideas.map(([n, title]) => <section class="ep-idea" id={`idea-${n}`}>
+        <header><span class="ep-number">{String(n).padStart(2,'0')}</span><div><h2>{title}{n === 1 && <span class="ep-recommend">Recommended</span>}{n === 9 && <span class="ep-recommend">Your pick · refined</span>}</h2><p>{notes[n-1]}</p></div></header>
+        <div class:list={['ep-demo',`ep-v${n}`]} data-email-demo={n} data-email={email}>
+          {n === 1 && <button class="ep-inline" type="button" data-copy><span class="ep-address">{email}</span><span class="ep-copy-label">Copy email <span aria-hidden="true">↗</span></span><span class="ep-confirm" aria-hidden="true">✓ Copied</span></button>}
+          {n === 2 && <div class="ep-split"><span class="ep-address">{email}</span><button type="button" data-copy aria-label="Copy email address"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/></svg><span class="ep-confirm" aria-hidden="true">✓</span></button><span class="ep-under" data-feedback></span></div>}
+          {n === 3 && <button class="ep-lift" type="button" data-copy><span class="ep-address">{email}</span><span class="ep-copy-label">Tap to copy</span><span class="ep-confirm" aria-hidden="true">✓ Copied to clipboard</span></button>}
+          {n === 4 && <button class="ep-dots" type="button" data-copy><span class="ep-dot-icon" aria-hidden="true">{Array.from({length:9},()=> <i />)}<b>✓</b></span><span><span class="ep-address">{email}</span><span class="ep-under" data-feedback>Copy email</span></span></button>}
+          {n === 5 && <CopyEmail email={email} />}
+          {n === 6 && <button class="ep-ticket" type="button" data-copy><span class="ep-ticket-top">Grant Dev14 <span>Contact</span></span><span class="ep-address">{email}</span><span class="ep-ticket-bottom" data-feedback>Copy this address ↗</span></button>}
+          {n === 7 && <details class="ep-tray"><summary><span class="ep-address">{email}</span><span class="ep-tray-plus" aria-hidden="true">+</span></summary><div><button type="button" data-copy>Copy address <span data-feedback></span></button><a href={`mailto:${email}`}>Open email app <Arrow diagonal /></a></div></details>}
+          {n === 8 && <button class="ep-ripple" type="button" data-copy><span class="ep-address">{email}</span><span data-feedback>Copy email ↗</span></button>}
+          {n === 9 && <div class="ep-select"><label for="ep-email-address"><span class="ep-select-dot" aria-hidden="true"></span>Email address</label><div class="ep-select-row"><div class="ep-select-field"><input id="ep-email-address" value={email} readonly aria-describedby="ep-select-hint" /><span class="ep-copy-packet" aria-hidden="true"><i></i><i></i><i></i></span><span class="ep-select-track" aria-hidden="true"></span></div><button class="ep-copy-capsule" type="button" data-copy aria-label={`Copy ${email}`}><span class="ep-copy-halo" aria-hidden="true"></span><span class="ep-copy-symbol" aria-hidden="true"><svg class="ep-copy-sheets" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/></svg><svg class="ep-copy-check" viewBox="0 0 24 24"><path d="m5 12 4 4 10-10"/></svg></span><span data-feedback>Copy</span></button></div><p class="ep-select-hint" id="ep-select-hint"><span class="ep-hint-idle">Select the address or tap Copy.</span><span class="ep-hint-selected">Address selected. Press ⌘C or Ctrl+C.</span><span class="ep-hint-copied">Ready to paste into your email app.</span></p></div>}
+          {n === 10 && <div class="ep-mode"><div role="group" aria-label="Contact action"><button type="button" data-mode="copy" aria-pressed="true">Copy address</button><button type="button" data-mode="email" aria-pressed="false">Write an email</button></div><p class="ep-address">{email}</p><button class="ep-mode-action" type="button" data-copy><span data-feedback>Copy email address</span><Arrow /></button><a class="ep-mode-action" data-mail href={`mailto:${email}`} hidden>Open email app <Arrow diagonal /></a></div>}
+          <div class="ep-fallback" hidden><label>Copy this address manually<input readonly value={email} /></label><p>Copying isn’t available in this browser. Select the address above.</p></div>
+        </div>
+      </section>)}
+    </div>
+    <p class="ep-foot">Option 5 is now used on the contact page. The other versions remain alternatives to try here.</p>
+    <p class="sr-only" id="email-preview-status" role="status" aria-live="polite"></p>
+  </div>
+</BaseLayout>
+<script>
+  const status = document.getElementById('email-preview-status')!;
+  document.querySelectorAll<HTMLElement>('[data-email-demo]').forEach(demo => {
+    let timer = 0;
+    const labels = [...demo.querySelectorAll<HTMLElement>('[data-feedback]')].map(el => ({el, text:el.textContent}));
+    demo.querySelectorAll<HTMLButtonElement>('[data-copy]').forEach(button => button.addEventListener('click', async () => {
+      if (button.disabled) return;
+      button.disabled = true;
+      try {
+        await navigator.clipboard.writeText(demo.dataset.email!);
+        demo.dataset.copied = 'true';
+        demo.querySelector<HTMLElement>('.ep-fallback')!.hidden = true;
+        labels.forEach(({el}) => el.textContent = demo.dataset.emailDemo === '9' ? 'Copied' : '✓ Copied');
+        status.textContent = `Email address copied. Preview ${demo.dataset.emailDemo}.`;
+        if (demo.dataset.emailDemo === '9') demo.querySelector<HTMLInputElement>('#ep-email-address')!.setSelectionRange(0,0);
+        if (demo.dataset.emailDemo === '9' && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+          const field = demo.querySelector<HTMLElement>('.ep-select-field')!;
+          const from = field.getBoundingClientRect(), to = button.getBoundingClientRect();
+          const dx = to.left + to.width / 2 - (from.left + from.width / 2);
+          const dy = to.top + to.height / 2 - from.bottom;
+          const packet = demo.querySelector<HTMLElement>('.ep-copy-packet')!;
+          packet.getAnimations().forEach(animation => animation.cancel());
+          packet.animate([
+            { opacity:0, transform:'translate(0, -10px) rotate(-6deg)', offset:0 },
+            { opacity:1, transform:'translate(0, -10px) rotate(-6deg)', offset:.16 },
+            { opacity:1, transform:`translate(${dx}px, ${dy * .8}px) rotate(0deg)`, offset:.8 },
+            { opacity:0, transform:`translate(${dx}px, ${dy}px) scale(.72)`, offset:1 },
+          ], { duration:480, easing:'cubic-bezier(.45,0,.15,1)' });
+          demo.querySelector('.ep-select-track')!.animate([{ transform:'scaleX(.1)', opacity:1 }, { transform:'scaleX(1)', opacity:1, offset:.7 }, { transform:'scaleX(1)', opacity:0 }], { duration:480, easing:'cubic-bezier(.25,1,.5,1)' });
+          demo.querySelector('.ep-copy-check path')!.animate([{ strokeDashoffset:22 }, { strokeDashoffset:0 }], { duration:180, delay:260, fill:'backwards', easing:'cubic-bezier(.25,1,.5,1)' });
+          demo.querySelector('.ep-copy-halo')!.animate([{ opacity:.4, transform:'scale(1)' }, { opacity:0, transform:'scale(1.16)' }], { duration:240, delay:240, easing:'cubic-bezier(.25,1,.5,1)' });
+        }
+        clearTimeout(timer);
+        timer = window.setTimeout(() => { delete demo.dataset.copied; labels.forEach(({el,text}) => el.textContent = text); }, 2400);
+      } catch {
+        const fallback = demo.querySelector<HTMLElement>('.ep-fallback')!;
+        fallback.hidden = false;
+        const input = fallback.querySelector<HTMLInputElement>('input')!;
+        input.focus(); input.select();
+        status.textContent = 'Could not copy. Select the email address and copy it manually.';
+      } finally { button.disabled = false; }
+    }));
+    demo.querySelectorAll<HTMLButtonElement>('[data-mode]').forEach(button => button.addEventListener('click', () => {
+      const email = button.dataset.mode === 'email';
+      demo.querySelectorAll('[data-mode]').forEach(el => el.setAttribute('aria-pressed',String(el === button)));
+      demo.querySelector<HTMLElement>('[data-copy]')!.hidden = email;
+      demo.querySelector<HTMLElement>('[data-mail]')!.hidden = !email;
+    }));
+  });
+  const selectableEmail = document.querySelector<HTMLInputElement>('#ep-email-address')!;
+  const selectEmail = () => { selectableEmail.select(); selectableEmail.closest<HTMLElement>('[data-email-demo]')!.dataset.selected = 'true'; };
+  selectableEmail.addEventListener('click', selectEmail);
+  selectableEmail.addEventListener('focus', selectEmail);
+  selectableEmail.addEventListener('blur', () => { delete selectableEmail.closest<HTMLElement>('[data-email-demo]')!.dataset.selected; });
+</script>
+<style>
+  .email-preview { padding-bottom:80px; }
+  .ep-head { border-block:1px solid var(--ink); padding:32px 0 40px; margin-bottom:48px; }
+  .ep-head > p:first-child { font-size:13px; color:var(--muted); margin:0 0 20px; }
+  .ep-head h1 { font-size:clamp(52px,7vw,96px); line-height:.95; letter-spacing:-.02em; margin:0 0 24px; text-transform:uppercase; }
+  .ep-head > p { max-width:58ch; margin:0 0 20px; }
+  .ep-head > a { display:inline-flex; gap:16px; align-items:center; font-size:14px; min-height:44px; text-decoration:underline; text-underline-offset:4px; }
+  .ep-head .arrow-icon { width:18px; }
+  .ep-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:48px 32px; }
+  .ep-idea { min-width:0; border-top:1px solid var(--ink); padding-top:20px; scroll-margin-top:24px; }
+  .ep-idea > header { display:flex; gap:16px; min-height:112px; }
+  .ep-number { color:var(--muted); font-size:13px; padding-top:4px; }
+  .ep-idea h2 { font-size:20px; font-weight:500; letter-spacing:-.02em; margin:0 0 8px; }
+  .ep-idea header p { color:var(--muted); font-size:14px; line-height:1.5; margin:0; max-width:52ch; }
+  .ep-recommend { display:inline-block; border-bottom:1px solid currentColor; margin-left:12px; font-size:11px; vertical-align:middle; letter-spacing:0; }
+  .ep-demo { min-height:224px; display:flex; align-items:center; justify-content:center; flex-wrap:wrap; padding:32px 24px; background:var(--surface); gap:16px; }
+  .ep-demo button,.ep-demo input,.ep-demo a { font:inherit; }
+  .ep-demo button { cursor:pointer; border:0; background:none; color:var(--ink); }
+  .ep-address { display:block; font-size:16px; font-weight:500; letter-spacing:-.02em; overflow-wrap:anywhere; }
+  .ep-under { display:block; font-size:12px; color:var(--muted); margin-top:8px; min-height:18px; }
+  .ep-inline { position:relative; text-align:left; padding:16px 0; border-bottom:1px solid var(--ink)!important; min-height:80px; }
+  .ep-copy-label { display:flex; gap:24px; justify-content:space-between; font-size:12px; color:var(--muted); margin-top:10px; }
+  .ep-confirm { display:none; }
+  [data-copied] .ep-inline .ep-copy-label,[data-copied] .ep-lift .ep-copy-label { visibility:hidden; }
+  [data-copied] .ep-inline .ep-confirm { display:block; position:absolute; bottom:16px; font-size:12px; }
+  .ep-split { display:flex; align-items:center; gap:16px; position:relative; padding-bottom:24px; }
+  .ep-split button { position:relative; width:48px; height:48px; border:1px solid var(--ink); border-radius:50%; flex:none; display:grid; place-items:center; }
+  .ep-split svg { width:19px; height:19px; fill:none; stroke:currentColor; stroke-width:1.5; }
+  .ep-split .ep-under { position:absolute; bottom:0; left:0; }
+  [data-copied] .ep-split svg { visibility:hidden; }
+  [data-copied] .ep-split .ep-confirm { position:absolute; display:block; }
+  .ep-lift { min-height:100px; min-width:240px; padding:20px; position:relative; text-align:left; border:1px solid var(--line)!important; border-radius:12px; background:var(--bg)!important; }
+  .ep-lift .ep-address { transition:transform .3s ease; }
+  .ep-lift .ep-confirm { display:block; position:absolute; left:20px; bottom:20px; font-size:12px; opacity:0; transform:translateY(6px); transition:opacity .3s ease,transform .3s ease; }
+  [data-copied] .ep-lift .ep-address { transform:translateY(-4px); }
+  [data-copied] .ep-lift .ep-confirm { opacity:1; transform:none; }
+  .ep-dots { display:flex; align-items:center; gap:16px; min-height:72px; text-align:left; }
+  .ep-dot-icon { display:grid; grid-template-columns:repeat(3,4px); gap:4px; position:relative; place-content:center; width:44px; height:44px; }
+  .ep-dot-icon i { height:4px; width:4px; border-radius:50%; background:currentColor; transition:transform .3s,opacity .3s; }
+  .ep-dot-icon b { position:absolute; inset:0; display:grid; place-items:center; font-size:24px; opacity:0; transition:opacity .3s; }
+  [data-copied] .ep-dot-icon i { transform:scale(.2); opacity:0; }
+  [data-copied] .ep-dot-icon b { opacity:1; }
+  .ep-ticket { display:grid; text-align:left; padding:0!important; border:1px solid var(--ink)!important; width:min(100%,300px); background:var(--bg)!important; }
+  .ep-ticket-top { display:flex; justify-content:space-between; gap:16px; padding:12px 16px; font-size:11px; border-bottom:1px solid var(--line); }
+  .ep-ticket .ep-address { padding:20px 16px; }
+  .ep-ticket-bottom { padding:12px 16px; font-size:12px; border-top:1px dashed var(--line); }
+  [data-copied] .ep-ticket-bottom { background:var(--ink); color:var(--bg); }
+  .ep-tray { width:100%; max-width:320px; border-block:1px solid var(--ink); }
+  .ep-tray summary { display:flex; justify-content:space-between; align-items:center; gap:16px; cursor:pointer; min-height:64px; list-style:none; }
+  .ep-tray summary::-webkit-details-marker { display:none; }
+  .ep-tray-plus { font-size:24px; transition:transform .25s; }
+  .ep-tray[open] .ep-tray-plus { transform:rotate(45deg); }
+  .ep-tray > div { display:grid; border-top:1px solid var(--line); padding-block:8px; }
+  .ep-tray a,.ep-tray button { display:flex; justify-content:space-between; align-items:center; gap:16px; font-size:13px; min-height:44px; text-align:left; padding:8px 0; }
+  .ep-tray .arrow-icon { width:16px; }
+  .ep-ripple { position:relative; overflow:hidden; display:grid; gap:10px; padding:20px 24px; border:1px solid var(--ink)!important; border-radius:12px; text-align:left; isolation:isolate; }
+  .ep-ripple > span:last-child { font-size:12px; color:var(--muted); }
+  .ep-ripple::before { content:''; position:absolute; width:32px; height:32px; border-radius:50%; background:oklch(0 0 0 / .08); left:50%; top:50%; margin:-16px; opacity:0; z-index:-1; }
+  [data-copied] .ep-ripple::before { animation:email-ripple .65s ease-out; }
+  @keyframes email-ripple { from {opacity:1;transform:scale(.2)} to {opacity:0;transform:scale(14)} }
+  .ep-select { width:100%; max-width:340px; text-align:center; }
+  .ep-select > label { display:flex; align-items:center; justify-content:center; gap:8px; font-size:12px; margin-bottom:12px; }
+  .ep-select-dot { width:5px; height:5px; border-radius:50%; background:currentColor; opacity:.4; transition:opacity .2s; }
+  .ep-select:focus-within .ep-select-dot { opacity:1; }
+  .ep-select-row { position:relative; display:grid; grid-template-columns:minmax(0,1fr); justify-items:center; align-items:center; gap:28px; }
+  .ep-select-field::after { content:''; position:absolute; bottom:-1px; left:0; width:100%; height:1px; background:var(--ink); transform:scaleX(.12); transform-origin:center; transition:transform .25s cubic-bezier(.25,1,.5,1); pointer-events:none; }
+  .ep-select:focus-within .ep-select-field::after { transform:scaleX(1); }
+  .ep-select-field { position:relative; min-width:0; width:100%; border-bottom:1px solid var(--line); padding-bottom:8px; }
+  .ep-select input { width:100%; min-width:0; background:transparent; border:0; font-size:16px; min-height:48px; padding:8px 0; color:var(--ink); text-align:center; }
+  .ep-select input::selection { background:var(--ink); color:var(--bg); }
+  .ep-demo .ep-copy-capsule { position:relative; justify-self:center; min-width:128px; min-height:44px; display:grid; place-items:center; border-radius:999px; padding:10px 36px; background:var(--ink); color:var(--bg); font-size:12px; font-weight:500; }
+  .ep-copy-capsule:active { transform:scale(.97); }
+  .ep-copy-symbol { position:absolute; left:14px; top:50%; margin-top:-8.5px; width:17px; height:17px; display:block; }
+  .ep-copy-symbol svg { position:absolute; inset:0; width:17px; height:17px; fill:none; stroke:currentColor; stroke-width:1.6; stroke-linecap:round; stroke-linejoin:round; transition:opacity .18s,transform .18s; }
+  .ep-copy-check { opacity:0; transform:translateY(3px); }
+  .ep-copy-check path { stroke-dasharray:22; stroke-dashoffset:0; }
+  [data-copied] .ep-copy-check { opacity:1; transform:none; }
+  [data-copied] .ep-copy-sheets { opacity:0; transform:translateY(-3px); }
+  .ep-copy-packet { position:absolute; top:100%; left:50%; width:30px; height:36px; margin:-18px 0 0 -15px; display:flex; flex-direction:column; justify-content:center; gap:4px; padding:7px; border:1px solid var(--ink); border-radius:3px; background:var(--bg); color:var(--ink); opacity:0; pointer-events:none; z-index:1; }
+  .ep-copy-packet i { display:block; height:1px; background:currentColor; }
+  .ep-copy-packet i:nth-child(2) { width:75%; }
+  .ep-copy-packet i:nth-child(3) { width:50%; }
+  .ep-copy-halo { position:absolute; inset:-4px; border:1px solid var(--ink); border-radius:inherit; opacity:0; pointer-events:none; }
+  .ep-select-track { position:absolute; height:2px; bottom:-1px; left:0; right:0; transform:scaleX(0); transform-origin:left; background:var(--ink); pointer-events:none; }
+  .ep-select-hint { min-height:36px; font-size:12px; color:var(--muted); line-height:1.5; margin:12px 0 0; }
+  .ep-hint-selected,.ep-hint-copied { display:none; }
+  [data-selected] .ep-hint-idle,[data-copied] .ep-hint-idle,[data-copied] .ep-hint-selected { display:none; }
+  [data-selected]:not([data-copied]) .ep-hint-selected,[data-copied] .ep-hint-copied { display:inline; }
+  @media(hover:hover) { .ep-copy-capsule:hover .ep-copy-sheets { transform:translate(1px,-1px); } }
+  .ep-mode { width:100%; max-width:320px; }
+  .ep-mode > div { display:flex; border-bottom:1px solid var(--line); }
+  .ep-mode [data-mode] { flex:1; min-height:44px; font-size:12px; border-bottom:2px solid transparent; }
+  .ep-mode [aria-pressed=true] { border-bottom-color:var(--ink); font-weight:600; }
+  .ep-mode .ep-address { margin:20px 0; }
+  .ep-mode .ep-mode-action { display:flex; gap:24px; justify-content:space-between; align-items:center; min-height:44px; font-size:13px; width:100%; text-decoration:underline; text-underline-offset:4px; }
+  .ep-mode .arrow-icon { width:18px; }
+  .ep-mode [hidden] { display:none; }
+  .ep-fallback { flex-basis:100%; font-size:12px; }
+  .ep-fallback input { width:100%; margin-top:8px; border:1px solid var(--ink); padding:10px; font-size:16px; background:var(--bg); }
+  .ep-fallback p { margin:8px 0 0; }
+  .ep-foot { font-size:14px; color:var(--muted); border-top:1px solid var(--line); padding-top:24px; margin-top:48px; }
+  @media(max-width:760px) { .ep-grid {grid-template-columns:1fr;gap:40px} .ep-idea > header{min-height:0;margin-bottom:24px} .ep-demo{padding:24px 16px;min-height:200px} }
+  @media(max-width:380px) { .ep-demo{padding:24px 12px} .ep-address{font-size:14px} .ep-split{gap:8px} .ep-split button{width:44px;height:44px} .ep-lift{min-width:0;width:100%;padding:16px} .ep-lift .ep-confirm{left:16px} .ep-ripple{padding:16px} .ep-ticket .ep-address{padding:16px} .ep-head h1{font-size:52px} }
+  @media(prefers-reduced-motion:reduce) { .ep-demo *,.ep-demo *::before {animation:none!important;transition:none!important;transform:none!important} }
+</style>
