@@ -5,7 +5,8 @@
 // "Migrations & technical SEO" are stand-ins: those two have no project of their own to show yet.)
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import IdeaLegend from '../../components/IdeaLegend.astro';
-import { projects, canvasHues } from '../../data/projects';
+import { previewServices as services } from '../../data/services-preview';
+import '../../styles/service-card-media.css';
 import { withBase } from '../../utils/paths';
 
 export function getStaticPaths() {
@@ -28,17 +29,7 @@ const NOTES: Record<number, [string, string]> = {
   9: ['scroll through it', 'Each service is a full card in its project’s colour. As you scroll, the next card slides over the last, which shrinks back a little.'],
   10: ['move over it, or choose a service', 'A cursor spotlight on desktop. On phones, choose a service to change its subdued background, then use the separate enquiry link.'],
 };
-const shot = (slug: string) => {
-  const p = projects.find((x) => x.slug === slug)!;
-  return { name: p.name, src: withBase(`/images/projects/${slug}-960.webp`), small: withBase(`/images/projects/${slug}-480.webp`), phone: withBase(`/images/projects/${slug}-mobile-440.webp`), hue: canvasHues[p.canvas] ?? 60 };
-};
-const services = [
-  { name: 'Shopify development', short: 'Shopify', text: 'Custom themes, Liquid development, ecommerce builds, and integrations that connect your store to the tools you use.', tags: 'Shopify · Shopify Plus · Liquid', href: withBase('/contact/'), shots: ['tero', 'road-armor', 'omenz'].map(shot) },
-  { name: 'Webflow development', short: 'Webflow', text: 'Bring your designs to life with responsive Webflow development, CMS-driven pages, and considered interactions.', tags: 'Webflow · Finsweet Client-First · GSAP', href: withBase('/contact/'), shots: ['teamtown', 'all-terrain-industries', 'narrative-hub'].map(shot) },
-  { name: 'WordPress development', short: 'WordPress', text: 'Flexible business websites, custom themes, WooCommerce stores, and ongoing website improvements.', tags: 'WordPress · WooCommerce · PHP', href: withBase('/contact/'), shots: ['coptrz', 'financial-advisor-uk', 'coptrz'].map(shot) },
-  { name: 'Monthly support plans', short: 'Support', text: 'A developer on call every month: 20, 40 or 80 hours for updates, fixes, speed and improvements, with a health check and a short report each month.', tags: 'Basic · Medium · Large · VIP', href: withBase('/plans/'), shots: ['skinistry', 'light-my-bricks', 'omenz'].map(shot) },
-  { name: 'Migrations & technical SEO', short: 'Migrations & SEO', text: 'Platform migrations, third-party integrations, page-speed improvements, and technical search optimization.', tags: 'Migrations · APIs · Technical SEO', href: withBase('/contact/#audit'), shots: ['light-my-bricks', 'financial-advisor-uk', 'all-terrain-industries'].map(shot) },
-];
+
 ---
 <BaseLayout title="Services ideas | Grant Dev14" description="Local design preview." noindex>
   <IdeaLegend ideas={IDEAS} links={[{ label: 'Compare with the current homepage', href: '/#services' }]} />
@@ -46,7 +37,7 @@ const services = [
     <header class="sv-head">
       <span class="tiny-heading">Preview · the homepage Services section</span>
       <h1 class="display">Ten ways to<br />show services</h1>
-      <p>Each idea uses your five real services and real project screenshots. Hover, tap and scroll to try them. The pictures for Monthly support plans and Migrations & technical SEO are stand-ins.</p>
+      <p>Each idea uses your five real services and real project screenshots. Hover, tap and scroll to try them. Support and migration pictures in the earlier ideas are stand-ins. The stacking cards now show plan details and an illustrative audit instead.</p><a href={withBase('/ideas/service-cards/')}>Explore 20 more card designs ↗</a>
     </header>
     <div class="sv-preview-controls"><label class="sv-motion-control" hidden><input type="checkbox" data-motion-toggle />Pause animations</label><span>Ten local ideas · choose a number to compare</span></div>
     <noscript><p>These interactive previews need JavaScript. You can still <a href={withBase('/#services')}>view the current services section</a>.</p></noscript>
@@ -183,8 +174,10 @@ const services = [
   /* 9 */
   .sv-v9 { display: grid; gap: 26px; padding-bottom: 40px; }
   .sv-stack-card { position: sticky; top: calc(92px + var(--i) * 16px); }
-  .sv-stack-inner { display: grid; grid-template-columns: 0.85fr 1.15fr; gap: 30px; align-items: center; min-height: 440px; padding: 40px; border-radius: 28px; background: oklch(0.93 0.035 var(--hue)); box-shadow: 0 -10px 30px oklch(0 0 0 / 0.06); transform-origin: 50% 0; transform: scale(calc(1 - var(--p, 0) * 0.06)); filter: brightness(calc(1 - var(--p, 0) * 0.14)); will-change: transform; }
+  .sv-stack-inner { position:relative; isolation:isolate; display: grid; grid-template-columns: 0.85fr 1.15fr; gap: 30px; align-items: center; min-height: 440px; padding: 40px; border-radius: 28px; background: oklch(0.93 0.035 var(--hue)); box-shadow: 0 -10px 30px oklch(0 0 0 / 0.06); transform-origin: 50% 0; transform: scale(calc(1 - var(--p, 0) * 0.06)); filter: brightness(calc(1 - var(--p, 0) * 0.14)); will-change: transform; }
   .sv-stack-text { display: grid; gap: 12px; justify-items: start; } .sv-stack-text h3 { margin: 0; font-size: clamp(30px, 3.4vw, 50px); font-weight: 500; letter-spacing: -0.035em; } .sv-stack-text p { margin: 0; font-size: 15px; line-height: 1.65; color: color-mix(in oklch, var(--ink) 70%, transparent); } .sv-stack-text small { font-size: 11px; color: var(--muted); } .sv-stack-text a { margin-top: 6px; padding: 12px 20px; border-radius: 999px; background: var(--ink); color: var(--bg); font-size: 14px; text-decoration: none; }
+  .sv-stack-word { position:absolute; left:24px; bottom:0; max-width:calc(100% - 48px); overflow:hidden; white-space:nowrap; color:var(--ink); opacity:.055; font-family:'Big Shoulders Display',Impact,sans-serif; font-size:clamp(90px,14vw,180px); font-weight:800; line-height:.82; text-transform:uppercase; pointer-events:none; z-index:0; }
+  .sv-stack-text,.sv-stack-media { position:relative; z-index:1; }
   .sv-stack-media img { display: block; width: 100%; aspect-ratio: 16 / 10; object-fit: cover; object-position: top; border-radius: 14px; box-shadow: 0 20px 40px oklch(0 0 0 / 0.16); }
 
   /* 10 */
@@ -218,7 +211,9 @@ const services = [
     .sv-tabs { display: flex; gap: 18px; overflow-x: auto; scrollbar-width: none; } .sv-tab { flex: none; font-size: 14px; }
     .sv-panel { grid-template-columns: minmax(0,1fr); padding: 22px; min-height: 0; } .sv-panel-media { order: -1; margin-bottom: 18px; } .sv-panel-phone { bottom:-16px; right:-6px; }
     .sv-v8 { grid-template-columns: minmax(0,1fr); } .sv-big { font-size:clamp(40px,15vw,72px); gap:8px; max-width:calc(100% - 6px); } .sv-big-cap { position:relative; bottom:auto; padding: 16px; border-radius: 12px; background: var(--surface); }
-    .sv-stack-inner { grid-template-columns: 1fr; padding: 22px; min-height: 0; } .sv-stack-media { order: -1; } .sv-stack-card { top: calc(76px + var(--i) * 10px); }
+    .sv-stack-inner { grid-template-columns: 1fr; padding: 22px; min-height: 0; transform:none; filter:none; } .sv-stack-media { order: -1; } .sv-stack-card { top:var(--mobile-stack-top,24px); }
+    .sv-stack-word { left:16px; max-width:calc(100% - 32px); font-size:90px; }
+    .sv-stack-detail { position:sticky; top:var(--mobile-stack-top,24px); } .sv-stack-detail .sv-stack-media { order:0; }
     .sv-spot { padding: 8px 18px; } .sv-spot .sv-row .sv-service-name { font-size:22px; } .sv-spot-cta {margin-left:38px;max-width:calc(100% - 38px)}
   }
   .sv-page.is-still *,.sv-page.is-still *::before,.sv-page.is-still *::after { animation:none!important; transition:none!important; }

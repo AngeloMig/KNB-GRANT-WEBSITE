@@ -1,0 +1,19 @@
+---
+import { services } from '../data/services';
+import { serviceAction, serviceMediaMarkup } from '../scripts/service-card-media';
+import '../styles/service-card-media.css';
+import '../styles/services-stack.css';
+---
+<div class="service-stack">
+  {services.map((service,index) => <article class:list={['sv-stack-card',{'sv-stack-detail':index>2}]} style={`--i:${index};--hue:${service.shots[0].hue}`}>
+    <div class="sv-stack-inner">
+      <span class="sv-stack-word" aria-hidden="true">{service.short}</span>
+      <div class="sv-stack-text"><h3>{service.name}</h3><p class:list={{'service-copy-full':Boolean(service.mobileText)}}>{service.text}</p>{service.mobileText && <p class="service-copy-compact">{service.mobileText}</p>}<small>{service.tags}</small><a href={service.href}>{serviceAction(service)} <span aria-hidden="true">↗</span></a></div>
+      <div class="sv-stack-media" set:html={serviceMediaMarkup(service)} />
+    </div>
+  </article>)}
+</div>
+<script>
+  import { mountServicesStack } from '../scripts/services-stack';
+  document.querySelectorAll<HTMLElement>('.service-stack').forEach(mountServicesStack);
+</script>

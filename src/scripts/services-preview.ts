@@ -1,5 +1,8 @@
+import { mountStackLayout } from './stack-layout';
+import { serviceMediaMarkup, serviceCopyMarkup, mountServiceCardMedia } from './service-card-media';
+
 type Shot = { name: string; src: string; small: string; phone: string; hue: number };
-type Service = { name: string; short: string; text: string; tags: string; href: string; shots: Shot[] };
+type Service = { name: string; short: string; text: string; mobileText?: string; tags: string; href: string; shots: Shot[] };
 
 export function mountServicesPreview(page: HTMLElement) {
   if (page.dataset.ready) return;
@@ -207,15 +210,16 @@ export function mountServicesPreview(page: HTMLElement) {
   // 9: read all positions, then write; no work while this stack is off-screen.
   {
     const box = boxes[8];
-    box.innerHTML = services.map((s,i) => `<div class="sv-stack-card" style="--i:${i};--hue:${s.shots[0].hue}"><div class="sv-stack-inner"><div class="sv-stack-text"><span class="sv-n">${n2(i)} / ${n2(services.length - 1)}</span><h3>${esc(s.name)}</h3><p>${esc(s.text)}</p><small>${esc(s.tags)}</small><a href="${esc(s.href)}">${action(s)} ↗</a></div><div class="sv-stack-media">${img(s.shots[0].src)}</div></div></div>`).join('');
+    box.innerHTML = services.map((s,i) => `<div class="sv-stack-card${i > 2 ? ' sv-stack-detail' : ''}" style="--i:${i};--hue:${s.shots[0].hue}"><div class="sv-stack-inner"><span class="sv-stack-word" aria-hidden="true">${esc(s.short)}</span><div class="sv-stack-text"><h3>${esc(s.name)}</h3>${serviceCopyMarkup(s)}<small>${esc(s.tags)}</small><a href="${esc(s.href)}">${action(s)} ↗</a></div><div class="sv-stack-media">${i > 2 ? serviceMediaMarkup(s) : img(s.shots[0].src)}</div></div></div>`).join('');
+    mountStackLayout(box);
     const cards = [...box.querySelectorAll<HTMLElement>('.sv-stack-card')]; let queued = false;
     const update = () => {
-      queued = false; if (!motion() || !visible.has(box)) return;
+      queued = false; if (!motion() || compact.matches || !visible.has(box)) return;
       const rects = cards.map(card => card.getBoundingClientRect());
       const values = rects.map((r,i) => rects[i+1] ? Math.min(1,Math.max(0,(r.bottom - rects[i+1].top) / r.height)) : 0);
       cards.forEach((card,i) => card.style.setProperty('--p',values[i].toFixed(3)));
     };
-    addEventListener('scroll',() => { if (!queued && motion() && visible.has(box)) { queued = true; requestAnimationFrame(update); } },{passive:true});
+    addEventListener('scroll',() => { if (!queued && motion() && !compact.matches && visible.has(box)) { queued = true; requestAnimationFrame(update); } },{passive:true});
     prefs.add(() => { if (!motion()) cards.forEach(card => card.style.setProperty('--p','0')); });
   }
   // 10: preview selectors and a separate, honest CTA work on touch and keyboard.
@@ -240,6 +244,7 @@ export function mountServicesPreview(page: HTMLElement) {
     });
     prefs.add(() => { spot.classList.toggle('is-touch',!fine()); if (!motion() || !fine()) { radius = targetRadius = 0; draw(); } });
   }
+  mountServiceCardMedia(page);
   syncPrefs();
   const observer = new IntersectionObserver(entries => entries.forEach(entry => {
     const box = entry.target as HTMLElement;
