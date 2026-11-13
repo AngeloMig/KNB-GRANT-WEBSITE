@@ -1,3 +1,4 @@
+import { arrowMarkup } from '../utils/arrow';
 import { mountStackLayout } from './stack-layout';
 import { serviceMediaMarkup, serviceCopyMarkup, mountServiceCardMedia } from './service-card-media';
 
@@ -23,7 +24,7 @@ export function mountServicesPreview(page: HTMLElement) {
   const esc = (value: string) => value.replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]!));
   const action = (s: Service) => s.short === 'Support' ? 'Compare support plans' : s.short === 'Migrations & SEO' ? 'Get a free website audit' : 'Start a project';
   const img = (src: string, cls = '') => `<img class="${cls}" src="${esc(src)}" alt="" loading="lazy" decoding="async" draggable="false" width="${src.includes('mobile') ? 440 : 960}" height="${src.includes('mobile') ? 956 : 600}"/>`;
-  const rows = (extra: (s: Service, i: number) => string = () => '') => `<div class="sv-list">${services.map((s,i) => `<a class="sv-row" href="${esc(s.href)}" data-i="${i}"><span class="sv-n">${n2(i)}</span><h3>${esc(s.name)}</h3><div class="sv-copy"><p>${esc(s.text)}</p><small>${esc(s.tags)}</small></div><i class="sv-arrow" aria-hidden="true">↗</i>${extra(s,i)}</a>`).join('')}</div>`;
+  const rows = (extra: (s: Service, i: number) => string = () => '') => `<div class="sv-list">${services.map((s,i) => `<a class="sv-row" href="${esc(s.href)}" data-i="${i}"><span class="sv-n">${n2(i)}</span><h3>${esc(s.name)}</h3><div class="sv-copy"><p>${esc(s.text)}</p><small>${esc(s.tags)}</small></div><i class="sv-arrow" aria-hidden="true">${arrowMarkup(true)}</i>${extra(s,i)}</a>`).join('')}</div>`;
   const swap = (images: HTMLElement[], i: number) => {
     const current = images.find(image => image.classList.contains('on'));
     if (!images[i] || current === images[i]) return;
@@ -92,7 +93,7 @@ export function mountServicesPreview(page: HTMLElement) {
   // 2: one accessible accordion, with collapsed links removed from keyboard navigation.
   {
     const box = boxes[1];
-    box.innerHTML = services.map((s,i) => `<div class="sv-acc${i === 0 ? ' on' : ''}"><button type="button" class="sv-acc-head" id="sv-acc-${i}" aria-controls="sv-acc-body-${i}" aria-expanded="${i === 0}"><span class="sv-n">${n2(i)}</span><span class="sv-service-name">${esc(s.name)}</span><small>${esc(s.tags)}</small><i aria-hidden="true"></i></button><div class="sv-acc-body" id="sv-acc-body-${i}" role="region" aria-labelledby="sv-acc-${i}"><div class="sv-acc-inner"><div class="sv-acc-text"><p>${esc(s.text)}</p><a href="${esc(s.href)}">${action(s)} ↗</a></div><div class="sv-acc-shots">${s.shots.map((shot,k) => `<figure style="--k:${k}">${img(shot.small)}<figcaption>${esc(shot.name)}</figcaption></figure>`).join('')}</div></div></div></div>`).join('');
+    box.innerHTML = services.map((s,i) => `<div class="sv-acc${i === 0 ? ' on' : ''}"><button type="button" class="sv-acc-head" id="sv-acc-${i}" aria-controls="sv-acc-body-${i}" aria-expanded="${i === 0}"><span class="sv-n">${n2(i)}</span><span class="sv-service-name">${esc(s.name)}</span><small>${esc(s.tags)}</small><i aria-hidden="true"></i></button><div class="sv-acc-body" id="sv-acc-body-${i}" role="region" aria-labelledby="sv-acc-${i}"><div class="sv-acc-inner"><div class="sv-acc-text"><p>${esc(s.text)}</p><a href="${esc(s.href)}">${action(s)} ${arrowMarkup(true)}</a></div><div class="sv-acc-shots">${s.shots.map((shot,k) => `<figure style="--k:${k}">${img(shot.small)}<figcaption>${esc(shot.name)}</figcaption></figure>`).join('')}</div></div></div></div>`).join('');
     const items = [...box.querySelectorAll<HTMLElement>('.sv-acc')];
     const open = (i: number) => items.forEach((item,k) => {
       const on = k === i,body = item.querySelector<HTMLElement>('.sv-acc-body')!;
@@ -108,7 +109,7 @@ export function mountServicesPreview(page: HTMLElement) {
   // 3: pinned laptop and readable service descriptions.
   {
     const box = boxes[2];
-    box.innerHTML = `<div class="sv-pin-list">${services.map((s,i) => `<div class="sv-pin-item${i === 0 ? ' on' : ''}" data-i="${i}"><span class="sv-n">${n2(i)}</span><h3>${esc(s.name)}</h3><p>${esc(s.text)}</p><small>${esc(s.tags)}</small><a href="${esc(s.href)}">${action(s)} ↗</a></div>`).join('')}</div><div class="sv-pin-stage"><div class="sv-laptop"><div class="sv-screen">${services.map((s,i) => img(s.shots[0].src,i === 0 ? 'on' : '')).join('')}</div><span class="sv-laptop-base"></span></div><p class="sv-pin-count"><b>01</b> / ${n2(services.length - 1)} <span>${esc(services[0].shots[0].name)}</span></p></div>`;
+    box.innerHTML = `<div class="sv-pin-list">${services.map((s,i) => `<div class="sv-pin-item${i === 0 ? ' on' : ''}" data-i="${i}"><span class="sv-n">${n2(i)}</span><h3>${esc(s.name)}</h3><p>${esc(s.text)}</p><small>${esc(s.tags)}</small><a href="${esc(s.href)}">${action(s)} ${arrowMarkup(true)}</a></div>`).join('')}</div><div class="sv-pin-stage"><div class="sv-laptop"><div class="sv-screen">${services.map((s,i) => img(s.shots[0].src,i === 0 ? 'on' : '')).join('')}</div><span class="sv-laptop-base"></span></div><p class="sv-pin-count"><b>01</b> / ${n2(services.length - 1)} <span>${esc(services[0].shots[0].name)}</span></p></div>`;
     const items = [...box.querySelectorAll<HTMLElement>('.sv-pin-item')];
     const images = [...box.querySelectorAll<HTMLElement>('.sv-screen img')];
     const count = box.querySelector<HTMLElement>('.sv-pin-count')!;
@@ -144,7 +145,7 @@ export function mountServicesPreview(page: HTMLElement) {
   // 6: native buttons select columns; enquiry links are independent actions.
   {
     const box = boxes[5];
-    box.innerHTML = `<div class="sv-cols">${services.map((s,i) => `<article class="sv-col${i === 0 ? ' on' : ''}">${img(s.shots[0].src)}<button type="button" class="sv-col-trigger" aria-label="Preview ${esc(s.name)}" aria-expanded="${i === 0}" aria-controls="sv-col-body-${i}"><span class="sv-col-label"><i>${n2(i)}</i>${esc(s.short)}</span></button><div class="sv-col-body" id="sv-col-body-${i}"><h3>${esc(s.name)}</h3><p>${esc(s.text)}</p><small>${esc(s.tags)}</small><a href="${esc(s.href)}">${action(s)} ↗</a></div></article>`).join('')}</div>`;
+    box.innerHTML = `<div class="sv-cols">${services.map((s,i) => `<article class="sv-col${i === 0 ? ' on' : ''}">${img(s.shots[0].src)}<button type="button" class="sv-col-trigger" aria-label="Preview ${esc(s.name)}" aria-expanded="${i === 0}" aria-controls="sv-col-body-${i}"><span class="sv-col-label"><i>${n2(i)}</i>${esc(s.short)}</span></button><div class="sv-col-body" id="sv-col-body-${i}"><h3>${esc(s.name)}</h3><p>${esc(s.text)}</p><small>${esc(s.tags)}</small><a href="${esc(s.href)}">${action(s)} ${arrowMarkup(true)}</a></div></article>`).join('')}</div>`;
     const columns = [...box.querySelectorAll<HTMLElement>('.sv-col')];
     const set = (i: number) => columns.forEach((column,k) => {
       column.classList.toggle('on',k === i); column.querySelector('button')!.setAttribute('aria-expanded',String(k === i));
@@ -160,7 +161,7 @@ export function mountServicesPreview(page: HTMLElement) {
   // 7: complete tab semantics, explicit autoplay, and no double advance from pseudo-element events.
   {
     const box = boxes[6];
-    box.innerHTML = `<div class="sv-tab-controls"><p>Choose a service, or play the guided preview.</p><button type="button" class="sv-tab-play"></button></div><div class="sv-tabs" role="tablist" aria-label="Service previews">${services.map((s,i) => `<button type="button" role="tab" id="sv-tab-${i}" aria-controls="sv-panel-${i}" class="sv-tab${i === 0 ? ' on' : ''}" aria-selected="${i === 0}" tabindex="${i === 0 ? 0 : -1}"><span>${n2(i)}</span>${esc(s.short)}<i aria-hidden="true"></i></button>`).join('')}</div><div class="sv-panels">${services.map((s,i) => `<div class="sv-panel${i === 0 ? ' on' : ''}" role="tabpanel" id="sv-panel-${i}" aria-labelledby="sv-tab-${i}" style="--hue:${s.shots[0].hue}"><div class="sv-panel-text"><h3>${esc(s.name)}</h3><p>${esc(s.text)}</p><small>${esc(s.tags)}</small><a href="${esc(s.href)}">${action(s)} ↗</a></div><div class="sv-panel-media">${img(s.shots[0].src,'sv-panel-desk')}${img(s.shots[0].phone,'sv-panel-phone')}</div></div>`).join('')}</div>`;
+    box.innerHTML = `<div class="sv-tab-controls"><p>Choose a service, or play the guided preview.</p><button type="button" class="sv-tab-play"></button></div><div class="sv-tabs" role="tablist" aria-label="Service previews">${services.map((s,i) => `<button type="button" role="tab" id="sv-tab-${i}" aria-controls="sv-panel-${i}" class="sv-tab${i === 0 ? ' on' : ''}" aria-selected="${i === 0}" tabindex="${i === 0 ? 0 : -1}"><span>${n2(i)}</span>${esc(s.short)}<i aria-hidden="true"></i></button>`).join('')}</div><div class="sv-panels">${services.map((s,i) => `<div class="sv-panel${i === 0 ? ' on' : ''}" role="tabpanel" id="sv-panel-${i}" aria-labelledby="sv-tab-${i}" style="--hue:${s.shots[0].hue}"><div class="sv-panel-text"><h3>${esc(s.name)}</h3><p>${esc(s.text)}</p><small>${esc(s.tags)}</small><a href="${esc(s.href)}">${action(s)} ${arrowMarkup(true)}</a></div><div class="sv-panel-media">${img(s.shots[0].src,'sv-panel-desk')}${img(s.shots[0].phone,'sv-panel-phone')}</div></div>`).join('')}</div>`;
     const tabs = [...box.querySelectorAll<HTMLButtonElement>('.sv-tab')];
     const panels = [...box.querySelectorAll<HTMLElement>('.sv-panel')];
     const play = box.querySelector<HTMLButtonElement>('.sv-tab-play')!;
@@ -210,7 +211,7 @@ export function mountServicesPreview(page: HTMLElement) {
   // 9: read all positions, then write; no work while this stack is off-screen.
   {
     const box = boxes[8];
-    box.innerHTML = services.map((s,i) => `<div class="sv-stack-card${i > 2 ? ' sv-stack-detail' : ''}" style="--i:${i};--hue:${s.shots[0].hue}"><div class="sv-stack-inner"><span class="sv-stack-word" aria-hidden="true">${esc(s.short)}</span><div class="sv-stack-text"><h3>${esc(s.name)}</h3>${serviceCopyMarkup(s)}<small>${esc(s.tags)}</small><a href="${esc(s.href)}">${action(s)} ↗</a></div><div class="sv-stack-media">${i > 2 ? serviceMediaMarkup(s) : img(s.shots[0].src)}</div></div></div>`).join('');
+    box.innerHTML = services.map((s,i) => `<div class="sv-stack-card${i > 2 ? ' sv-stack-detail' : ''}" style="--i:${i};--hue:${s.shots[0].hue}"><div class="sv-stack-inner"><span class="sv-stack-word" aria-hidden="true">${esc(s.short)}</span><div class="sv-stack-text"><h3>${esc(s.name)}</h3>${serviceCopyMarkup(s)}<small>${esc(s.tags)}</small><a href="${esc(s.href)}">${action(s)} ${arrowMarkup(true)}</a></div><div class="sv-stack-media">${i > 2 ? serviceMediaMarkup(s) : img(s.shots[0].src)}</div></div></div>`).join('');
     mountStackLayout(box);
     const cards = [...box.querySelectorAll<HTMLElement>('.sv-stack-card')]; let queued = false;
     const update = () => {
@@ -225,7 +226,7 @@ export function mountServicesPreview(page: HTMLElement) {
   // 10: preview selectors and a separate, honest CTA work on touch and keyboard.
   {
     const box = boxes[9];
-    box.innerHTML = `<div class="sv-spot"><div class="sv-spot-imgs" aria-hidden="true">${services.map((s,i) => img(s.shots[0].src,i === 0 ? 'on' : '')).join('')}</div><div class="sv-list">${services.map((s,i) => `<div class="sv-spot-item"><button type="button" class="sv-row${i === 0 ? ' is-in' : ''}" data-i="${i}" aria-label="Preview ${esc(s.name)}" aria-expanded="${i === 0}" aria-controls="sv-spot-action-${i}"><span class="sv-n">${n2(i)}</span><span class="sv-service-name">${esc(s.name)}</span><span class="sv-copy"><span class="sv-description">${esc(s.text)}</span><small>${esc(s.tags)}</small></span><i class="sv-arrow" aria-hidden="true">${i === 0 ? '−' : '+'}</i></button><a class="sv-spot-cta" id="sv-spot-action-${i}" href="${esc(s.href)}"${i ? ' hidden' : ''}>${action(s)} ↗</a></div>`).join('')}</div></div>`;
+    box.innerHTML = `<div class="sv-spot"><div class="sv-spot-imgs" aria-hidden="true">${services.map((s,i) => img(s.shots[0].src,i === 0 ? 'on' : '')).join('')}</div><div class="sv-list">${services.map((s,i) => `<div class="sv-spot-item"><button type="button" class="sv-row${i === 0 ? ' is-in' : ''}" data-i="${i}" aria-label="Preview ${esc(s.name)}" aria-expanded="${i === 0}" aria-controls="sv-spot-action-${i}"><span class="sv-n">${n2(i)}</span><span class="sv-service-name">${esc(s.name)}</span><span class="sv-copy"><span class="sv-description">${esc(s.text)}</span><small>${esc(s.tags)}</small></span><i class="sv-arrow" aria-hidden="true">${i === 0 ? '−' : '+'}</i></button><a class="sv-spot-cta" id="sv-spot-action-${i}" href="${esc(s.href)}"${i ? ' hidden' : ''}>${action(s)} ${arrowMarkup(true)}</a></div>`).join('')}</div></div>`;
     const spot = box.querySelector<HTMLElement>('.sv-spot')!,layer = box.querySelector<HTMLElement>('.sv-spot-imgs')!;
     const images = [...layer.querySelectorAll<HTMLElement>('img')],buttons = [...box.querySelectorAll<HTMLButtonElement>('.sv-row')];
     let x = 0,y = 0,tx = 0,ty = 0,radius = 0,targetRadius = 0;

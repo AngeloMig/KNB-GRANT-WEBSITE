@@ -810,7 +810,7 @@ import ProjectOrbit from './ProjectOrbit.astro';
   :global(html.is-orbit-dragging), :global(html.is-orbit-dragging *) { -webkit-user-select: none; user-select: none; cursor: grabbing; }
   /* The header shares the hero's wash (full width), and its menu button and "Let's talk" the deep shade. */
   :global(html.hero-tinted .site-header) { background: transparent; isolation: isolate; }
-  :global(html.hero-tinted .site-header)::before { content: ''; position: absolute; z-index: -1; inset: 0 calc(50% - 50vw); background: var(--hero-wash); transition: background-color 1.4s var(--ease); }
+  :global(html.hero-tinted .site-header)::before { content: ''; position: absolute; z-index: -1; inset: 0; background: var(--hero-wash); transition: background-color 1.4s var(--ease); }
   :global(html.hero-tinted .menu-toggle) { transition: background-color 1.4s var(--ease), transform 0.3s var(--ease); }
   /* Only over the hero: once it has scrolled past the button, the button eases back to black. */
   :global(html.hero-tinted:not(.past-hero) .menu-toggle) { background-color: var(--hero-ink); }
@@ -829,7 +829,7 @@ import ProjectOrbit from './ProjectOrbit.astro';
   /* Phones: the name on one line across the screen, and the orbit's phone-shaped cards a little
      bigger, rising over the bottom of the name. */
   @media (max-width: 640px) {
-    .home-hero { --hero-card: 50vw; overflow: visible; }
+    .home-hero { --hero-card: 50vw; overflow: visible; overflow-x: clip; }
     .home-hero-dots { height: 23vw; }
     .home-hero-stage { margin-top: -7vw; }
     .home-hero-stage { --ph-h: calc(var(--hero-card) * 2.1466); }

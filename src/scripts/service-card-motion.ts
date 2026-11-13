@@ -12,7 +12,7 @@ export function mountAuditMotion(root: HTMLElement, paint: PaintAudit) {
     entries.forEach(entry => {
       const scene=scenes.find(item=>item.host===entry.target); if(!scene) return;
       if(entry.isIntersecting) active.add(scene);
-      else { active.delete(scene); if(scene.animating) { scene.animating=false; scene.value=scene.target; paint(scene.audit,scene.value); } }
+      else { active.delete(scene); scene.armed=false; if(scene.animating) { scene.animating=false; scene.value=scene.target; paint(scene.audit,scene.value); } }
     }); schedule();
   },{rootMargin:'120px 0px'});
   const resize = new ResizeObserver(()=>{ measuring=true; schedule(); });
@@ -31,7 +31,8 @@ export function mountAuditMotion(root: HTMLElement, paint: PaintAudit) {
     sizes.forEach(({scene,height})=>{
       scene.top=Math.max(minimumTop,Math.round((innerHeight-height)/2));
       scene.pinned=enabled && innerWidth>760 && height<=innerHeight-minimumTop-28;
-      scene.armed=false; scene.armedGesture=intent;
+      // Mobile browser bars resize the viewport while scrolling. Preserve the
+      // armed gesture across that measurement; visibility below resets it safely.
       scene.host.classList.toggle('is-pinned',scene.pinned);
       scene.host.style.setProperty('--sc-scene-top',`${scene.top}px`);
       // Hold the centered card for the next separate gesture, without a long scrub.
@@ -46,18 +47,21 @@ export function mountAuditMotion(root: HTMLElement, paint: PaintAudit) {
         scene.card.classList.toggle('sc-entered',entry>.999); scene.entry=entry;
       }
       const readable=gauges.top>=minimumTop && gauges.bottom<=innerHeight-24;
+      const visible=gauges.bottom>minimumTop && gauges.top<innerHeight-88;
       const centered=scene.pinned ? Math.abs(card.top-scene.top)<3 : readable && Math.abs((gauges.top+gauges.bottom)/2-(minimumTop+innerHeight)/2)<110;
       const wasArmed=scene.armed;
       if(centered && !scene.armed) { scene.armed=true; scene.armedGesture=intent; }
       if(scene.scroll!==scrollToken) {
         scene.scroll=scrollToken;
         if(scene.manual && scene.intent!==intent) scene.manual=false;
-        if(enabled && readable && !scene.manual && (scene.armed || wasArmed) && intent!==scene.armedGesture) {
+        if(enabled && visible && !scene.manual && (scene.armed || wasArmed) && intent!==scene.armedGesture) {
           const target=direction>0?1:0;
           if(target!==scene.target || (!scene.animating && Math.abs(scene.value-target)>.001)) start(scene,target,720,time);
         }
       }
-      if(!centered) scene.armed=false;
+      // Keep the centered state through a phone swipe's momentum. Otherwise it can
+      // leave the narrow center band before the visitor begins their next swipe.
+      if(!visible) scene.armed=false;
       if(!enabled) { scene.animating=false; if(!scene.manual) scene.value=scene.target=1; }
       else if(scene.animating) {
         const p=clamp((time-scene.started)/scene.duration);

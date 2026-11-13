@@ -371,3 +371,20 @@ Owner then requested stacking on phones, a more compact migration/SEO card, smal
 - Astro check113files:0errors,0warnings,4existing hints; scoped layout scan `[]`; whitespace check passes. Final GitHub export rebuilt18pages with encrypted quote and existing lazy-chunk advisory. No push/deployment. Source/export local; development server restarted4321.
 
 Proofs: ignored `output/home-mobile-stack-320.png` (overlapping first two service cards), `home-mobile-stack.png` (tall-card clearance). Final compact support proof is saved separately after refreshing the built version. No physical-device FPS measurement or new Lighthouse score is claimed.
+
+
+### 13 November 2026 — responsive headings, vector arrows and mobile audit trigger
+
+Owner requested smaller mobile score numbers, consistent Safari/button arrows, a tidier Plan / Move / Check & launch rail, an overflow audit across pages, and a larger Support plans heading. The follow-up also identified unreliable mobile scroll animation.
+
+- Shared arrow geometry now lives in `src/utils/arrow.ts`. Astro Arrow and the service widget/preview markup use the same SVG path; service CTA arrows no longer depend on Unicode font rendering. Mobile card arrows are18px; primary tap areas remain44px.
+- Audit score numbers reduced22→16px on phones. The migration rail has centered, evenly distributed nodes/labels and CSS check marks at completion. Captions stay available on tablet/desktop. All three route choices remain functional in the mobile disclosure, with44px tap targets. Tablet support/audit cards use a full-width media row rather than squeezing two columns; tablet audit controls are44px.
+- The audit now retains its armed state through swipe momentum and viewport-height measurements (mobile browser chrome can resize while scrolling). It resets when the score panel leaves the readable viewport. Native passive scrolling, finite720ms animation, manual Before/After controls and reduced-motion handling remain. Browser input verified0% on centered arrival and100% on the next small gesture, including a390×844→390×900 height change between arrival and the next gesture. This is responsive-browser verification, not physical iPhone/touch/FPS evidence.
+- Support plans heading now shares the standard desktop/tablet title scale; mobile uses44–72px fluid text (54.6px at390,44.8px at320), retaining a single-line title at the tested phone widths. Other public page heading styles were inspected and retained.
+- Removed scrollbar-sized homepage overhang from marquee/closing-band viewport margins and the tinted header background. The mobile orbit clips only horizontal overflow; vertical hero composition remains visible.
+
+Verification: main routes `/`, `/about/`, `/plans/`, `/contact/`, `/estimate/`, private `/quote/` shell and404 checked at320,390,768 and1440 widths. All11 public project pages checked at320,768 and1440. Landscape1024×768 service layout also checked. Final homepage widths match client widths at320/390/768/1024/1440; no service-card/widget horizontal overflow at320. All five primary card CTAs44px high and fit; global estimate/navigation controls49px high with equal bottom726px at320×740. Mobile plan finder and navigation fit320px without horizontal overflow and Escape dismisses them. Migration route changes update source/destination/detail correctly. Desktop native input: card centered at top185px, Before0%; next30px scroll reachesAfter100% without moving the centered card. No console errors in the final desktop check.
+
+Final Astro check114 files:0errors,0warnings,4existing hints. GitHub export rebuilt18pages; quote encryption retained; existing lazy-chunk advisory persists. No new Lighthouse/real-device performance scores, push or deployment. Dev server restarted at4321.
+
+Proofs in ignored `output/`: `mobile-audit-smaller-scores.png`, `mobile-support-heading-updated.png`, `desktop-service-audit-refined.png`.

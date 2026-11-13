@@ -42,7 +42,7 @@ body {
   -webkit-font-smoothing: antialiased;
   /* Draw arrow characters like ↗ as text, never as colour emoji (iOS). */
   font-variant-emoji: text;
-  /* Full-bleed sections use 100vw, which includes the scrollbar on some systems. */
+  /* Keep decorative overflow from becoming sideways page movement. */
   overflow-x: clip;
 }
 body:has(dialog[open]) {
@@ -6065,7 +6065,8 @@ html:active-view-transition-type(grow)::view-transition-new(root) {
 
 /* Slow platform marquee between the intro and the projects. Breaks out of .wrap to run edge to edge. */
 .marquee {
-  margin-inline: calc(50% - 50vw);
+  /* Use the content viewport, excluding the desktop scrollbar. */
+  margin-inline: calc(-1 * var(--gutter));
   overflow: hidden;
   border-block: 1px solid var(--line);
   padding-block: 16px;
@@ -8826,7 +8827,7 @@ html:active-view-transition-type(grow)::view-transition-new(root) {
 /* Homepage: closing call to action. A full-width black band that ends the page, with the page's
    rounded bottom corners (it takes over main's bottom padding). */
 .closing-cta {
-  margin: 40px calc(50% - 50vw) -90px;
+  margin: 40px calc(-1 * var(--gutter)) -90px;
   padding: clamp(64px, 9vw, 130px) var(--gutter) clamp(72px, 10vw, 140px);
   border-radius: 0 0 var(--curtain-radius, 28px) var(--curtain-radius, 28px);
   background: var(--ink);

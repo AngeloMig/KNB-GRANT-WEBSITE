@@ -101,10 +101,10 @@
 .sc-platform-flow>span { display:grid; place-items:center; width:24px; height:24px; border-radius:50%; background:#f1f3f4; font-size:15px; }
 .sc-migration-detail { margin:10px 0 16px; min-height:0; }
 .sc-migration-steps { --migration-progress:0; position:relative; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; list-style:none; margin:0; padding:0; }
-.sc-migration-steps::before,.sc-migration-steps::after { content:''; position:absolute; top:5px; left:5px; right:5px; height:1px; background:#ddd; }
+.sc-migration-steps::before,.sc-migration-steps::after { content:''; position:absolute; top:7px; left:calc(100% / 6); right:calc(100% / 6); height:1px; background:#ddd; }
 .sc-migration-steps::after { background:#171717; transform:scaleX(var(--migration-progress)); transform-origin:left; }
-.sc-migration-steps li { display:grid; align-content:start; gap:5px; position:relative; min-width:0; z-index:1; }
-.sc-step-node { width:11px; height:11px; border:1px solid #b6b6b6; border-radius:50%; background:#fff; margin-bottom:4px; transition:background .15s,border-color .15s; }
+.sc-migration-steps li { display:grid; align-content:start; gap:6px; justify-items:center; text-align:center; position:relative; min-width:0; z-index:1; }
+.sc-step-node { position:relative; width:15px; height:15px; border:1px solid #b6b6b6; border-radius:50%; background:#fff; margin-bottom:4px; transition:background .15s,border-color .15s; }
 .sc-migration-steps li[data-step-state=active] .sc-step-node { border-color:#171717; box-shadow:0 0 0 3px #fff; }
 .sc-migration-steps li[data-step-state=done] .sc-step-node { background:#171717; border-color:#171717; }
 .sc-migration-steps strong { font-size:12px; font-weight:500; }
@@ -150,7 +150,7 @@
   .sc-audit .sc-gauges { gap:12px 10px; margin:12px 0; }
   .sc-audit .sc-gauge { gap:6px; }
   .sc-audit .sc-gauge-ring { width:54px; }
-  .sc-audit .sc-gauge-ring strong { font-size:22px; }
+  .sc-audit .sc-gauge-ring strong { font-size:16px; line-height:1; }
   .sc-audit .sc-audit-note { margin-bottom:12px; font-size:11px; line-height:1.45; }
   .sc-audit .sc-migration { padding-top:12px; }
   .sc-audit .sc-migration>header { margin-bottom:6px; }
@@ -167,7 +167,7 @@
   .sc-migration-details .sc-routes { padding-bottom:4px; }
   .sc-migration-details .sc-migration-detail { font-size:12px; margin:8px 0 12px; }
   .sc-audit .sc-migration-steps { grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; }
-  .sc-audit .sc-migration-steps::before,.sc-audit .sc-migration-steps::after { top:5px; bottom:auto; left:5px; right:5px; width:auto; height:1px; }
+  .sc-audit .sc-migration-steps::before,.sc-audit .sc-migration-steps::after { top:7px; bottom:auto; left:calc(100% / 6); right:calc(100% / 6); width:auto; height:1px; }
   .sc-audit .sc-migration-steps::after { transform:scaleX(var(--migration-progress)); transform-origin:left; }
   .sc-audit .sc-migration-steps li { grid-template-columns:minmax(0,1fr); gap:5px; }
   .sc-audit .sc-step-node { grid-row:auto; margin:0 0 3px; }
@@ -218,3 +218,22 @@
   .cc-card[data-service] .sc-support .sc-plan+.sc-plan { border-left:0; border-top:1px solid #ddd; }
 }
 .sc-migration-details summary:focus-visible,.sc-audit button:focus-visible { outline:2px solid #171717; outline-offset:3px; }
+
+/* Vector arrows render the same shape on Safari and other browsers. */
+.sc-plan-top>.arrow-icon { width:16px; height:16px; }
+.sc-project figcaption a { display:inline-flex; align-items:center; gap:6px; }
+.sc-project figcaption .arrow-icon { width:14px; height:14px; }
+.sc-platform-flow .arrow-icon { width:16px; height:16px; }
+.cc-footer>span:last-child { display:inline-flex; align-items:center; gap:4px; }
+.cc-footer .arrow-icon { width:14px; height:14px; }
+.sc-migration-steps li[data-step-state=done] .sc-step-node::after { content:''; position:absolute; top:3px; left:3px; width:6px; height:4px; border-left:1.5px solid #fff; border-bottom:1.5px solid #fff; transform:rotate(-45deg); }
+@media(max-width:760px) {
+  .service-stack .sv-stack-text>a>.arrow-icon,.sv-v9 .sv-stack-text>a>.arrow-icon,.cc-cta>.arrow-icon { width:18px; height:18px; }
+  .sc-audit .sc-migration-steps { gap:4px; }
+  .sc-audit .sc-migration-steps strong { font-size:10px; min-height:2.7em; max-width:9ch; text-wrap:balance; }
+}
+@media(min-width:761px) and (max-width:1050px) {
+  .sc-audit-switch button,.sc-routes button { min-height:44px; }
+  .service-stack .sv-stack-detail .sv-stack-inner { grid-template-columns:minmax(0,1fr); }
+  .service-stack .sv-stack-detail .sv-stack-text { max-width:60ch; }
+}
