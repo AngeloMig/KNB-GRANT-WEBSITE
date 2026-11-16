@@ -22,7 +22,7 @@ export function mountServicesPreview(page: HTMLElement) {
   const prefs = new Set<() => void>();
   const n2 = (i: number) => String(i + 1).padStart(2, '0');
   const esc = (value: string) => value.replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]!));
-  const action = (s: Service) => s.short === 'Support' ? 'Compare support plans' : s.short === 'Migrations & SEO' ? 'Get a free website audit' : 'Start a project';
+  const action = (s: Service) => s.short === 'Support' ? 'Compare support plans' : s.short === 'Performance' ? 'Get a free website audit' : 'Start a project';
   const img = (src: string, cls = '') => `<img class="${cls}" src="${esc(src)}" alt="" loading="lazy" decoding="async" draggable="false" width="${src.includes('mobile') ? 440 : 960}" height="${src.includes('mobile') ? 956 : 600}"/>`;
   const rows = (extra: (s: Service, i: number) => string = () => '') => `<div class="sv-list">${services.map((s,i) => `<a class="sv-row" href="${esc(s.href)}" data-i="${i}"><span class="sv-n">${n2(i)}</span><h3>${esc(s.name)}</h3><div class="sv-copy"><p>${esc(s.text)}</p><small>${esc(s.tags)}</small></div><i class="sv-arrow" aria-hidden="true">${arrowMarkup(true)}</i>${extra(s,i)}</a>`).join('')}</div>`;
   const swap = (images: HTMLElement[], i: number) => {

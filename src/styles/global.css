@@ -32,6 +32,18 @@ html {
   scroll-behavior: smooth;
   scroll-padding-top: 28px;
 }
+/* Smooth wheel scrolling (Lenis, desktop only, src/scripts/smooth-scroll.ts). It moves the page itself,
+   so the browser's own smooth scrolling must be off or the two fight over every step. */
+html.lenis,
+html.lenis body {
+  height: auto;
+}
+html.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+.lenis.lenis-smooth iframe {
+  pointer-events: none;
+}
 body {
   margin: 0;
   background: var(--bg);
@@ -4331,6 +4343,16 @@ main {
   z-index: 2;
   background: var(--bg);
 }
+/* The header's content stops at the 1720px column; on wider screens its background carries on to
+   the screen edges (a layer behind it), so the white page doesn't show either side of it. */
+.footer-reveal .site-header::before {
+  content: "";
+  position: absolute;
+  inset: 0 calc(-1 * max(0px, (100vw - 1720px) / 2));
+  z-index: -1;
+  background: var(--bg);
+  pointer-events: none;
+}
 /* The footer tucks under the page's rounded corners, so grey (not white) shows through them. */
 .footer-reveal .site-footer {
   position: sticky;
@@ -6065,8 +6087,9 @@ html:active-view-transition-type(grow)::view-transition-new(root) {
 
 /* Slow platform marquee between the intro and the projects. Breaks out of .wrap to run edge to edge. */
 .marquee {
-  /* Use the content viewport, excluding the desktop scrollbar. */
-  margin-inline: calc(-1 * var(--gutter));
+  /* Edge to edge: out past the gutter, and on screens wider than the 1720px content column, on past
+     the space either side of it too. (Any sliver under a desktop scrollbar is clipped by the body.) */
+  margin-inline: calc(-1 * (var(--gutter) + max(0px, (100vw - 1720px) / 2)));
   overflow: hidden;
   border-block: 1px solid var(--line);
   padding-block: 16px;
@@ -8827,8 +8850,12 @@ html:active-view-transition-type(grow)::view-transition-new(root) {
 /* Homepage: closing call to action. A full-width black band that ends the page, with the page's
    rounded bottom corners (it takes over main's bottom padding). */
 .closing-cta {
-  margin: 40px calc(-1 * var(--gutter)) -90px;
-  padding: clamp(64px, 9vw, 130px) var(--gutter) clamp(72px, 10vw, 140px);
+  /* The content column stops growing at 1720px. On wider screens the band carries on to the page
+     edges (--bleed is the space either side of the column), and its padding grows by the same amount,
+     so the text stays lined up with the rest of the page. */
+  --bleed: max(0px, (100vw - 1720px) / 2);
+  margin: 40px calc(-1 * (var(--gutter) + var(--bleed))) -90px;
+  padding: clamp(64px, 9vw, 130px) calc(var(--gutter) + var(--bleed)) clamp(72px, 10vw, 140px);
   border-radius: 0 0 var(--curtain-radius, 28px) var(--curtain-radius, 28px);
   background: var(--ink);
   color: var(--bg);

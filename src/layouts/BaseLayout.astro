@@ -153,6 +153,13 @@ const person = { '@context': 'https://schema.org', '@type': 'Person', name: prof
 
   startReveals();
 
+  // Smooth wheel scrolling (Lenis), desktop only: a mouse or trackpad, motion on, and not the quote
+  // tool (its own panels scroll). Loaded as its own small file after the page, so phones never fetch it.
+  if (root.classList.contains('motion') && matchMedia('(hover: hover) and (pointer: fine)').matches && !location.pathname.includes('/quote/')) {
+    const go = () => import('../scripts/smooth-scroll').then(({ startSmoothScroll }) => startSmoothScroll());
+    if ('requestIdleCallback' in window) requestIdleCallback(go, { timeout: 1200 }); else setTimeout(go, 300);
+  }
+
   // Same-page links ("See my work", the review quote, back to top) glide with an eased scroll
   // instead of the browser's quick jump. A wheel, touch or key press takes over straight away.
   const glide = (top: number, done: () => void) => {
@@ -161,6 +168,18 @@ const person = { '@context': 'https://schema.org', '@type': 'Person', name: prof
     const distance = to - from;
     if (!root.classList.contains('motion') || Math.abs(distance) < 4) { window.scrollTo({ top: to, behavior: 'instant' }); done(); return; }
     const duration = Math.min(1500, 650 + Math.abs(distance) * 0.22);
+    const easing = (p: number) => (p < 0.5 ? 4 * p * p * p : 1 - (-2 * p + 2) ** 3 / 2);
+    // With smooth scrolling on (desktop), Lenis does the glide, so the two never pull against each other.
+    // (A menu link has just put the page back, so Lenis may not have resumed yet: resume it first.)
+    // It re-measures first: while the menu was open the page was one screen tall, and its new height
+    // would otherwise only be noticed a moment later (too late: the glide would stop at the top).
+    const lenis = (window as unknown as { lenis?: { isStopped: boolean; start: () => void; resize: () => void; scrollTo: (top: number, o: object) => void } }).lenis;
+    if (lenis) {
+      lenis.resize();
+      if (lenis.isStopped && !document.querySelector('.page-shell.is-frozen')) lenis.start();
+      lenis.scrollTo(to, { duration: duration / 1000, easing, onComplete: done });
+      return;
+    }
     const start = performance.now();
     let stopped = false;
     const stop = () => { stopped = true; };
@@ -171,8 +190,7 @@ const person = { '@context': 'https://schema.org', '@type': 'Person', name: prof
     const step = (now: number) => {
       if (stopped) { finish(); return; }
       const p = Math.min(1, (now - start) / duration);
-      const eased = p < 0.5 ? 4 * p * p * p : 1 - (-2 * p + 2) ** 3 / 2;
-      window.scrollTo(0, from + distance * eased);
+      window.scrollTo(0, from + distance * easing(p));
       if (p < 1) requestAnimationFrame(step); else finish();
     };
     requestAnimationFrame(step);

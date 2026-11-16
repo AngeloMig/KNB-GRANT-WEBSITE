@@ -1,0 +1,7 @@
+export const auditAreas = [
+  {name:'Speed', question:'Why does my site feel slow?', outcome:'Less waiting', copy:'Find what’s slowing your website down.', checks:['Large images and extra scripts','What delays the first screen'], takeaway:'A clear starting point for faster pages.'},
+  {name:'Mobile', question:'Does it work well on a phone?', outcome:'A better phone experience', copy:'Review layouts, readability and buttons on a phone.', checks:['Text and layouts on small screens','Buttons that are easy to tap'], takeaway:'The phone issues worth fixing first.'},
+  {name:'Ease of use', question:'Can people find what they need?', outcome:'An easier next step', copy:'Check navigation, forms and accessibility.', checks:['Menus and important forms','Keyboard access and readable content'], takeaway:'Practical ways to make the site easier to use.'},
+  {name:'SEO basics', question:'Are the search basics in place?', outcome:'Clearer search foundations', copy:'Review page titles, headings and broken links.', checks:['Titles and heading structure','Links that lead to missing pages'], takeaway:'Search issues explained in plain language.'},
+  {name:'Next steps', question:'What should I improve first?', outcome:'A clearer plan', copy:'Prioritise the most useful improvements.', checks:['Which findings matter most','What to tackle next'], takeaway:'Findings and next steps, sent by email.'},
+] as const;

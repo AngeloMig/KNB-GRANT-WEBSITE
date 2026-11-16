@@ -1,0 +1,23 @@
+export { auditAreas } from './audit-scope';
+export const auditIncludedIdeas = [
+  {name:'The considered accordion',why:'A cleaner version of the current design, with a useful first answer already open.',hint:'Expand any of the five areas.',recommended:true},
+  {name:'Everything at a glance',why:'All five areas stay visible. No opening and closing needed.',hint:'Read the complete scope in one view.',recommended:true},
+  {name:'Underlined tabs',why:'Familiar navigation keeps one clear explanation in view.',hint:'Choose an area. Use arrow keys within the tabs.'},
+  {name:'A small audit index',why:'A vertical index leaves more space for the explanation.',hint:'Choose a topic on the left.'},
+  {name:'A row of topics',why:'Soft topic buttons make exploration feel lighter.',hint:'Choose a topic to see what Grant checks.'},
+  {name:'Lead with the benefit',why:'Business-friendly outcomes come before the technical checks.',hint:'Open a benefit to explore the review.'},
+  {name:'An editorial mosaic',why:'One featured topic and four smaller explanations add rhythm.',hint:'Choose which topic gets the spotlight.'},
+  {name:'The scope sheet',why:'A simple table connects each area with what gets reviewed.',hint:'Compare all five areas side by side.'},
+  {name:'Through your visitor’s eyes',why:'Follows the journey from loading a page to taking action.',hint:'Move through the five stops.'},
+  {name:'One detail at a time',why:'A compact reader gives every topic its own space.',hint:'Use Previous and Next, or choose a topic.'},
+  {name:'Checks and takeaways',why:'Separates the review from the advice the visitor receives.',hint:'Choose an area to compare both sides.'},
+  {name:'Three simple groups',why:'Groups the scope into experience, search and next steps.',hint:'Open a group to see the related checks.'},
+  {name:'A dark audit panel',why:'A darker surface gives the scope more presence in the white report.',hint:'Open a topic; notice the quiet colour change.'},
+  {name:'Connected by dots',why:'A fine vertical line ties the five areas into one review.',hint:'Open any point along the line.'},
+  {name:'The review note',why:'An informal note explains the work in a more personal voice.',hint:'Read the note, then open the full checklist.'},
+  {name:'Start with your concern',why:'Lets visitors mark what matters to them while keeping the full scope clear.',hint:'Select a few concerns. These choices stay on this page.'},
+  {name:'Questions a client would ask',why:'Every heading sounds like a real business owner’s question.',hint:'Open a question for a plain-language answer.',recommended:true},
+  {name:'The compact summary',why:'A short visible overview opens into the complete scope.',hint:'Expand the scope when you want more detail.'},
+  {name:'Short version / more detail',why:'Visitors choose how much explanation they want.',hint:'Switch between the two reading levels.'},
+  {name:'Scope with a next step',why:'Pairs a concise scope with a clear invitation to request the audit.',hint:'Explore the topics, then follow the existing audit link.',recommended:true},
+] as const;

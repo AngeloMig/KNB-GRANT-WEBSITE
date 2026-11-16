@@ -1,0 +1,30 @@
+---
+import { auditAreas as areas } from '../data/audit-included-ideas';
+import Arrow from './Arrow.astro';
+import { withBase } from '../utils/paths';
+interface Props { variant:number; }
+const {variant:v}=Astro.props;
+const groupLabels=['Website experience','Search foundations','Your next steps'];
+const groups=[areas.slice(0,3),areas.slice(3,4),areas.slice(4)];
+---
+<div class:list={['inc-design',`inc-v${v}`]} data-inc-design={v}>
+  <header class="inc-scope-heading"><span class="inc-dot" aria-hidden="true"></span><h3>What’s included in your free audit</h3></header>
+  {(v===1||v===6||v===13||v===14||v===17) && <div class="inc-disclosures">{areas.map((a,i)=><details open={v===1&&i===0}><summary><span>{v===6?a.outcome:v===17?a.question:a.name}{v===6&&<small>{a.name}</small>}</span><span class="inc-plus" aria-hidden="true">+</span></summary><div class="inc-disclosure-body"><p>{a.copy}</p><ul>{a.checks.map(c=><li>{c}</li>)}</ul>{v===17&&<small>{a.takeaway}</small>}</div></details>)}</div>}
+  {v===2 && <ul class="inc-open-list">{areas.map(a=><li><span class="inc-check" aria-hidden="true"></span><div><h4>{a.name}</h4><p>{a.copy}</p></div></li>)}</ul>}
+  {(v===3||v===4||v===5||v===7||v===9||v===10||v===11||v===20) && <div class="inc-explorer" data-inc-explorer>
+    <div class="inc-topic-list" role="tablist" aria-label={`Audit topics, design ${v}`} aria-orientation={v===4?'vertical':'horizontal'}>{areas.map((a,i)=><button type="button" role="tab" id={`inc-tab-${v}-${i}`} aria-controls={`inc-panel-${v}-${i}`} aria-selected={i===0} tabindex={i===0?0:-1} data-inc-topic={i}>{v===9&&<span class="inc-stop" aria-hidden="true"></span>}{v===9?['Arrive','Browse','Act','Find','Improve'][i]:a.name}</button>)}</div>
+    <div class="inc-topic-panels">{areas.map((a,i)=><div role="tabpanel" id={`inc-panel-${v}-${i}`} aria-labelledby={`inc-tab-${v}-${i}`} data-inc-panel={i} hidden={i!==0} tabindex="0">
+      {v===7 ? <><span class="inc-feature-word" aria-hidden="true">{a.name}</span><h4>{a.outcome}</h4><p>{a.copy}</p><ul>{a.checks.map(c=><li>{c}</li>)}</ul></> : v===11 ? <div class="inc-check-takeaway"><div><span>What Grant checks</span><h4>{a.name}</h4><ul>{a.checks.map(c=><li>{c}</li>)}</ul></div><div><span>What you get</span><p>{a.takeaway}</p></div></div> : <><span class="inc-topic-caption">{v===9?a.name:'Included in the review'}</span><h4>{v===20?a.question:a.outcome}</h4><p>{a.copy}</p>{v!==20&&<ul>{a.checks.map(c=><li>{c}</li>)}</ul>}</>}
+    </div>)}</div>
+    {v===7&&<div class="inc-mosaic-rest">{areas.map((a,i)=><div data-inc-other={i} hidden={i===0}><strong>{a.name}</strong><p>{a.copy}</p></div>)}</div>}
+    {v===10&&<div class="inc-reader-controls"><button type="button" data-inc-step="-1" aria-label="Previous audit topic"><span><Arrow/></span></button><span data-inc-reader-count aria-live="polite">1 of 5</span><button type="button" data-inc-step="1" aria-label="Next audit topic"><Arrow/></button></div>}
+    {v===20&&<div class="inc-next-step"><p>Your website. A clearer starting point.</p><a href={withBase('/contact/#audit')}>Get my free website audit <Arrow diagonal/></a><small>Grant emails you the findings. Free, no obligation.</small></div>}
+  </div>}
+  {v===8&&<table class="inc-scope-table"><caption>Five areas, one clear review.</caption><thead><tr><th scope="col">Area</th><th scope="col">What Grant reviews</th></tr></thead><tbody>{areas.map(a=><tr><th scope="row">{a.name}</th><td>{a.copy}</td></tr>)}</tbody></table>}
+  {v===12&&<div class="inc-groups">{groups.map((group,i)=><details open={i===0}><summary><span>{groupLabels[i]}<small>{group.map(a=>a.name).join(' · ')}</small></span><span class="inc-plus" aria-hidden="true">+</span></summary><ul>{group.map(a=><li><strong>{a.name}</strong><p>{a.copy}</p></li>)}</ul></details>)}</div>}
+  {v===15&&<div class="inc-note"><p class="inc-note-lead">I’ll look at how your site loads, how it works on a phone, and how easy it is to use.</p><p>I’ll also review the SEO basics and explain which improvements are worth tackling first.</p><span class="inc-note-signature">— Grant</span><details><summary>See the five audit areas<span class="inc-plus" aria-hidden="true">+</span></summary><ul>{areas.map(a=><li><strong>{a.name}</strong> — {a.copy}</li>)}</ul></details></div>}
+  {v===16&&<div class="inc-priorities"><p>What would you most like to understand?</p><div>{areas.map((a,i)=><label><input type="checkbox" data-inc-concern={i}/><span><strong>{a.name}</strong><small>{a.copy}</small></span></label>)}</div><p class="inc-priority-status" role="status" aria-live="polite">All five areas are included. Choose a concern to highlight it.</p><small>Preview only. Your choices aren’t sent or saved.</small></div>}
+  {v===18&&<div class="inc-compact"><p>Speed, mobile, ease of use, SEO basics — and a clear set of next steps.</p><details><summary>Explore all five areas<span class="inc-plus" aria-hidden="true">+</span></summary><ul>{areas.map(a=><li><strong>{a.name}</strong><p>{a.copy}</p></li>)}</ul></details></div>}
+  {v===19&&<div class="inc-depth"><div class="inc-depth-controls" role="group" aria-label="Amount of detail"><button type="button" data-inc-depth="short" aria-pressed="true">Short version</button><button type="button" data-inc-depth="full" aria-pressed="false">More detail</button></div><ul>{areas.map(a=><li><h4>{a.name}</h4><p>{a.copy}</p><ul data-inc-full hidden>{a.checks.map(c=><li>{c}</li>)}</ul></li>)}</ul></div>}
+  <footer class="inc-scope-foot">A review and recommendations. Any development work is agreed separately.</footer>
+</div>

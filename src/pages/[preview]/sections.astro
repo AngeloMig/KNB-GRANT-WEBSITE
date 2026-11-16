@@ -1,0 +1,1059 @@
+---
+// Design preview: 20 new sections the site could add (homepage, About, Plans or Contact). Local preview
+// only: in a build this route has no pages. Open http://localhost:4321/ideas/sections/.
+// "Real" sections read the site's own data (projects, experience, support prices, Manila time);
+// "Needs you" sections are layouts waiting for facts only Grant has. Nothing here is a client quote.
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import IdeaLegend from '../../components/IdeaLegend.astro';
+import { withBase } from '../../utils/paths';
+import { projects } from '../../data/projects';
+import { experience } from '../../data/profile';
+import { PACKAGES, DEFAULT_PACKAGE_SETTINGS } from '../../data/quote-model';
+
+export function getStaticPaths() {
+  return import.meta.env.DEV ? [{ params: { preview: 'ideas' } }] : [];
+}
+
+const IDEAS = [
+  [1, 'The project line'], [2, 'Platform matchmaker'], [3, 'Your day, my day'], [4, 'Periodic table of skills'], [5, 'Career scrubber'],
+  [6, 'Questions as a chat'], [7, 'Launch clipboard'], [8, 'Odometer numbers'], [9, 'Drag-around project wall'], [10, 'The receipt'],
+  [11, 'Myth or fact'], [12, 'Hours slider'], [13, 'Booking board'], [14, 'Industry bubbles'], [15, 'Red-pen audit'],
+  [16, 'Code becomes the page'], [17, 'Field notes'], [18, 'Where clients are'], [19, 'A month of support'], [20, 'Fill-in-the-blanks brief'],
+] as const;
+const NOTES: Record<number, [string, string, string]> = {
+  1: ['Needs you · wording', 'How a project runs, as a transit line. A dot travels from stop to stop; tap a stop to read what happens there and what the client gets.', 'Homepage or Estimate'],
+  2: ['Advice to confirm', 'Visitors tick what’s true for them and the three platforms re-score live, with a “best fit” badge. Answers the most common first question.', 'Homepage or Contact'],
+  3: ['Real · live time zones', 'A 24-hour dial with the visitor’s working day and Grant’s (Manila) laid over each other, showing the overlap. Try other cities.', 'Contact or About'],
+  4: ['Real · from your CV tags', 'Every skill on the CV as an element tile, coloured by kind. Hover one to see where it was used.', 'About'],
+  5: ['Real · from your experience', 'The career on a to-scale timeline. Drag across it to read what Grant was doing in any month.', 'About'],
+  6: ['Real · facts from the site', 'An FAQ that answers like a chat: tap a question, see typing dots, then the answer. Prices and reply times come from the support plans.', 'Plans or Contact'],
+  7: ['Needs you · your list', 'The pre-launch checklist on a clipboard. Items tick off as you scroll, and the last one stamps “Ready to launch”.', 'Homepage or Services'],
+  8: ['Real · counted from the site', 'Numbers that roll up like a car’s odometer when they come into view: years, projects, platforms, companies, industries.', 'Homepage or About'],
+  9: ['Real · project screenshots', 'An endless wall of the work. Drag (or flick) it in any direction; it drifts on its own when left alone.', 'Homepage'],
+  10: ['Needs you · what’s included', 'What every build includes, printed as a receipt that feeds out of a slot. Totals “included”.', 'Estimate or Services'],
+  11: ['Wording to approve', 'Common myths about websites on cards. Tap one to flip it to the real story. Shows expertise without a sales pitch.', 'Homepage or Services'],
+  12: ['Real · your prices', 'Drag how many hours of help a month you need. It compares pay-as-you-go with the plan that fits and shows the saving.', 'Plans'],
+  13: ['Needs your calendar', 'The next twelve weeks as a board: open, filling up or booked. Gives a real “next start date”.', 'Contact or Estimate'],
+  14: ['Real · project industries', 'The industries Grant has built for, as floating bubbles sized by how many projects. Tap one to see those projects.', 'Homepage'],
+  15: ['Example notes', 'A made-up shop page that gets marked up in red pen as it scrolls in: the kind of things a free audit finds.', 'Contact (audit)'],
+  16: ['Example code', 'Code types itself on the left while the section it describes builds on the right, line by line.', 'Services or About'],
+  17: ['Needs posts', 'Notes from the build: a short journal, pinned like notebook pages. The titles are suggestions.', 'New “Notes” page'],
+  18: ['Countries read from web addresses', 'A slowly turning dotted globe with arcs from Manila to where clients are. Drag to spin it.', 'About or Homepage'],
+  19: ['Example month', 'A support plan in motion: requests move across a small board while the hours used fill up against the plan.', 'Plans'],
+  20: ['Works today · links to the estimate', 'A brief written as one sentence with blanks to pick. The finished sentence becomes the message.', 'Contact or Homepage'],
+};
+const img = (slug: string, w = 640) => withBase(`/images/projects/${slug}-${w}.webp`);
+
+// ── Real data
+const prices = DEFAULT_PACKAGE_SETTINGS.prices;
+const payg = DEFAULT_PACKAGE_SETTINGS.payg;
+const plans = PACKAGES.filter((p) => p.id !== 'custom').map((p) => ({ id: p.id, name: p.name, hours: p.daily ? Math.round(p.daily * 21.7) : p.hours, price: prices[p.id as keyof typeof prices], reply: p.response, daily: p.daily }));
+const money = (n: number) => `$${n.toLocaleString('en-US')}`;
+const months: Record<string, number> = { Jan: 0, Feb: 1, Mar: 2, Apr: 3, May: 4, Jun: 5, Jul: 6, Aug: 7, Sep: 8, Oct: 9, Nov: 10, Dec: 11 };
+const toM = (s: string) => { const [m, y] = s.trim().split(' '); return Number(y) * 12 + months[m]; };
+const roles = experience.map((e) => { const [a, b] = e.dates.split('—'); return { company: e.company, role: e.role, from: toM(a), to: toM(b), dates: e.dates, tags: e.tags }; });
+const minM = Math.min(...roles.map((r) => r.from)), maxM = Math.max(...roles.map((r) => r.to)) + 2;
+const lanes: number[] = [];
+const laned = [...roles].sort((a, b) => a.from - b.from).map((r) => { let l = lanes.findIndex((end) => end < r.from); if (l < 0) { l = lanes.length; lanes.push(r.to); } else lanes[l] = r.to; return { ...r, lane: l }; });
+const startYear = Math.floor(minM / 12);
+const yearsActive = new Date().getFullYear() - startYear;
+
+const tagCompanies: Record<string, string[]> = {};
+experience.forEach((e) => e.tags.forEach((t) => { (tagCompanies[t] ||= []).push(e.company); }));
+const SYMBOLS: Record<string, [string, string]> = {
+  Shopify: ['Sh', 'platform'], Webflow: ['Wf', 'platform'], WordPress: ['Wp', 'platform'],
+  'Website builds': ['Wb', 'craft'], 'Website development': ['Wd', 'craft'], Migrations: ['Mg', 'craft'], Integrations: ['In', 'craft'],
+  'Technical SEO': ['Se', 'care'], 'Page speed': ['Ps', 'care'], Maintenance: ['Mn', 'care'], 'Website management': ['Wm', 'care'], 'Quality assurance': ['Qa', 'care'],
+  'Team leadership': ['Tl', 'people'], 'Project coordination': ['Pc', 'people'], 'Agency clients': ['Ac', 'people'],
+};
+const elements = Object.entries(SYMBOLS).filter(([name]) => tagCompanies[name]).map(([name, [sym, kind]], i) => ({ n: i + 1, name, sym, kind, at: tagCompanies[name] }));
+
+const groupOf = (c: string) => /auto|4wd/i.test(c) ? 'Automotive' : /fashion|lingerie/i.test(c) ? 'Fashion' : /beauty|wellness/i.test(c) ? 'Beauty & wellness' : /agency|design/i.test(c) ? 'Agencies & design' : /drone|tech/i.test(c) ? 'Technology' : /toy|hobb/i.test(c) ? 'Toys & hobbies' : /financ/i.test(c) ? 'Finance' : c;
+const industries = Object.entries(projects.reduce<Record<string, typeof projects>>((acc, p) => { (acc[groupOf(p.category)] ||= []).push(p); return acc; }, {})).map(([name, list]) => ({ name, list: list.map((p) => ({ slug: p.slug, name: p.name, platform: p.platform })) })).sort((a, b) => b.list.length - a.list.length);
+
+const tld = (u: string) => (/\.com\.au|\.au\//.test(u) ? 'Australia' : /uk/i.test(u) ? 'United Kingdom' : '');
+const clientCountries = Object.entries(projects.reduce<Record<string, string[]>>((acc, p) => { const c = tld(p.url) || (p.name.includes('UK') ? 'United Kingdom' : ''); if (c) (acc[c] ||= []).push(p.name); return acc; }, {}));
+
+const stats = [
+  { n: yearsActive, label: `years building websites (since ${startYear})` },
+  { n: projects.length, label: 'projects on this site' },
+  { n: 3, label: 'platforms: Shopify, Webflow, WordPress' },
+  { n: experience.length, label: 'companies worked with' },
+  { n: industries.length, label: 'industries built for' },
+];
+
+const wall = projects.map((p) => ({ slug: p.slug, name: p.name, platform: p.platform, src: img(p.slug, 640), href: withBase(`/work/${p.slug}/`) }));
+const DATA = { roles: laned, minM, maxM, plans, payg, wall, industries: industries.map((g) => ({ ...g, list: g.list.map((p) => ({ ...p, src: img(p.slug, 480), href: withBase(`/work/${p.slug}/`) })) })), base: withBase('/') };
+
+const stops = [
+  ['Brief', 'A short call or the estimator. You get a written plan and a fixed quote before anything starts.'],
+  ['Plan', 'Pages, content and features mapped out together, so nothing is a surprise later.'],
+  ['Build', 'Built on a private preview link you can open any time, with updates as it grows.'],
+  ['Review', 'You click through everything on phone and desktop; changes go in the same week.'],
+  ['Launch', 'Redirects, forms, checkout and speed checked, then the switch-over, usually with no downtime.'],
+  ['Aftercare', 'A walkthrough of how to edit it yourself, and a support plan if you want one.'],
+];
+const faqs = [
+  ['Which platforms do you build on?', 'Shopify, Webflow and WordPress (WooCommerce too). If you’re not sure which suits you, I’ll recommend one and explain why.'],
+  ['How much is monthly support?', `Plans start at ${money(prices.basic)} a month for ${plans[0].hours} hours. Medium is ${money(prices.medium)} for ${plans[1].hours} hours, Large ${money(prices.large)} for ${plans[2].hours}. Or pay as you go at ${money(payg)} an hour.`],
+  ['How fast do you reply?', `On the Basic plan: ${PACKAGES[0].response.toLowerCase()}. Larger plans are faster, and VIP includes weekend emergency calls.`],
+  ['Where are you based?', 'Manila (GMT+8). Mornings there overlap with evenings in Australia and late nights in the UK and US, so most clients wake up to progress.'],
+  ['Do you work with agencies?', `Yes. Tero was built with ${projects.find((p) => p.agency)?.agency ?? 'an agency'}, and I spent four years at Rivyl leading Shopify work for agency clients.`],
+  ['How do I start?', 'The estimator takes about two minutes and gives you a price range and timeline straight away. Or just send a message.'],
+];
+const checks = ['Every old link redirects to its new page', 'Forms send, and the emails arrive', 'A test order goes all the way through checkout', 'Every page checked on phone, tablet and desktop', 'Images compressed and sized for each screen', 'Page titles and descriptions written', 'Sitemap submitted to Google', 'Analytics and conversion tracking firing', 'Custom 404 page in place', 'Favicon and social share image set', 'SSL certificate active everywhere', 'Backup taken before the switch'];
+const receipt = [['Private preview site', '✓'], ['Phone, tablet and desktop checks', '✓'], ['Speed pass before launch', '✓'], ['SEO basics and redirects', '✓'], ['Handover walkthrough video', '✓'], ['Aftercare after launch', '__ days']];
+const myths = [
+  ['A redesign will fix low sales.', 'Often it’s speed, trust or a confusing checkout. Fixing those can do more than a new look, for a fraction of the cost.'],
+  ['Moving platforms means losing your Google rankings.', 'Not if every old address is redirected to its new page. A migration is planned around that from day one.'],
+  ['Page builders are always slow.', 'Webflow, Shopify and WordPress can all be fast. It depends on how the site is built, not the logo on the login page.'],
+  ['You need a developer for every small change.', 'A good build lets you edit text, images and products yourself. A developer is for the things that should be done right.'],
+  ['More apps make a better store.', 'Every app adds code to every page. A few chosen well beat twenty installed “just in case”.'],
+  ['Launch day is the finish line.', 'It’s where you start learning what visitors actually do. The best sites keep improving after launch.'],
+];
+const notes = [
+  ['Moving from WooCommerce to Shopify without losing rankings', 'Migrations', 'olive'],
+  ['What actually slows a Shopify store down', 'Speed', 'blue'],
+  ['Webflow or WordPress for a content site?', 'Platforms', 'rose'],
+];
+const codeLines = [
+  { t: '{% comment %} Hero section {% endcomment %}', s: '' },
+  { t: '<section class="hero">', s: 'frame' },
+  { t: '  <h1>{{ section.settings.title }}</h1>', s: 'title' },
+  { t: '  <p>{{ section.settings.text }}</p>', s: 'text' },
+  { t: '  <img src="{{ section.settings.image | image_url: width: 1200 }}"', s: 'image' },
+  { t: '       loading="lazy" width="1200" height="800">', s: '' },
+  { t: '  <a class="button" href="{{ section.settings.link }}">', s: 'button' },
+  { t: '    {{ section.settings.button_label }}', s: '' },
+  { t: '  </a>', s: '' },
+  { t: '</section>', s: 'done' },
+];
+---
+<BaseLayout title="Section ideas | Grant Dev14" description="Local design preview." noindex>
+  <IdeaLegend ideas={IDEAS} links={[{ label: 'Homepage', href: '/' }, { label: 'About', href: '/about/' }, { label: 'Plans', href: '/plans/' }]} />
+  <script type="application/json" id="sx-data" set:html={JSON.stringify(DATA)} />
+  <div class="wrap sx-page">
+    <header class="sx-head">
+      <span class="tiny-heading">Preview · 20 new sections</span>
+      <h1 class="display">Twenty<br />new sections</h1>
+      <p>Ideas for new sections across the site. <b>Real</b> ones use the site’s own data (your projects, CV, support prices and Manila time). <b>Needs you</b> ones are layouts waiting for facts only you have. Each says where it would fit best.</p>
+    </header>
+
+    {/* 1 ─ The project line */}
+    <section class="sx" id="idea-1">
+      <div class="sx-top"><span class="idea-tag"><b>1</b>{IDEAS[0][1]}<em>{NOTES[1][0]}</em></span><p class="sx-why">{NOTES[1][1]} <i>Fits: {NOTES[1][2]}</i></p></div>
+      <div class="sx-stage sx-metro" data-metro>
+        <p class="sx-kicker">How a project runs</p>
+        <div class="sx-metro-line" style="--n:6">
+          <span class="sx-metro-fill"></span><span class="sx-metro-train" aria-hidden="true"></span>
+          <ol>{stops.map(([name], i) => <li><button type="button" data-i={i} aria-pressed={i === 0 ? 'true' : 'false'}><span class="sx-stop-dot"></span><span class="sx-stop-n">0{i + 1}</span><span class="sx-stop-name">{name}</span></button></li>)}</ol>
+        </div>
+        <div class="sx-metro-panel" aria-live="polite">{stops.map(([name, text], i) => <div data-panel={i} hidden={i !== 0}><h3>{name}</h3><p>{text}</p></div>)}</div>
+      </div>
+    </section>
+
+    {/* 2 ─ Platform matchmaker */}
+    <section class="sx" id="idea-2">
+      <div class="sx-top"><span class="idea-tag"><b>2</b>{IDEAS[1][1]}<em>{NOTES[2][0]}</em></span><p class="sx-why">{NOTES[2][1]} <i>Fits: {NOTES[2][2]}</i></p></div>
+      <div class="sx-stage sx-match" data-match>
+        <div class="sx-match-q">
+          <p class="sx-kicker">Which platform suits you?</p>
+          <h3>Tick what’s true for you</h3>
+          {[['sell', 'I sell physical products'], ['subs', 'I sell subscriptions or bundles'], ['edit', 'I want to edit page designs myself'], ['blog', 'I publish a lot of articles'], ['motion', 'Design and animation matter most'], ['plugins', 'I need bookings, memberships or forums']].map(([id, label]) => <button type="button" class="sx-toggle" data-k={id} aria-pressed="false"><span class="sx-check"></span>{label}</button>)}
+        </div>
+        <div class="sx-match-cards">
+          {[['shopify', 'Shopify', 'For stores: checkout, stock and payments built in.'], ['webflow', 'Webflow', 'For design-led sites you can edit visually.'], ['wordpress', 'WordPress', 'For content-heavy sites and plugins for everything.']].map(([id, name, line]) => <article class="sx-pcard" data-p={id}><span class="sx-best">Best fit</span><h4>{name}</h4><p>{line}</p><div class="sx-meter"><i></i></div><small class="sx-score">Tick a few to see</small></article>)}
+        </div>
+      </div>
+    </section>
+
+    {/* 3 ─ Time zones */}
+    <section class="sx" id="idea-3">
+      <div class="sx-top"><span class="idea-tag"><b>3</b>{IDEAS[2][1]}<em>{NOTES[3][0]}</em></span><p class="sx-why">{NOTES[3][1]} Grant’s hours (9 am to 6 pm in Manila) are a guess to confirm. <i>Fits: {NOTES[3][2]}</i></p></div>
+      <div class="sx-stage sx-tz" data-tz>
+        <svg viewBox="0 0 320 320" class="sx-dial" aria-hidden="true"><g class="sx-dial-ticks"></g><path class="sx-arc sx-arc-you" /><path class="sx-arc sx-arc-me" /><path class="sx-arc sx-arc-both" /><line class="sx-hand" x1="160" y1="160" x2="160" y2="40" /><circle cx="160" cy="160" r="5" class="sx-hub" /></svg>
+        <div class="sx-tz-copy">
+          <p class="sx-kicker">Your day, my day</p>
+          <h3 class="sx-tz-line">…</h3>
+          <p class="sx-tz-sub">…</p>
+          <ul class="sx-legend"><li><i class="you"></i>Your working day</li><li><i class="me"></i>Grant’s working day</li><li><i class="both"></i>Both online</li></ul>
+          <div class="sx-tz-cities" role="group" aria-label="Try another city">{[['', 'You'], ['Europe/London', 'London'], ['America/New_York', 'New York'], ['Australia/Sydney', 'Sydney'], ['America/Los_Angeles', 'Los Angeles']].map(([z, l], i) => <button type="button" data-zone={z} aria-pressed={i === 0 ? 'true' : 'false'}>{l}</button>)}</div>
+        </div>
+      </div>
+    </section>
+
+    {/* 4 ─ Periodic table */}
+    <section class="sx" id="idea-4">
+      <div class="sx-top"><span class="idea-tag"><b>4</b>{IDEAS[3][1]}<em>{NOTES[4][0]}</em></span><p class="sx-why">{NOTES[4][1]} <i>Fits: {NOTES[4][2]}</i></p></div>
+      <div class="sx-stage sx-table" data-table>
+        <div class="sx-elements">{elements.map((e) => <button type="button" class={`sx-el k-${e.kind}`} data-at={e.at.join(' · ')} data-name={e.name} data-sym={e.sym} data-n={e.n} data-kind={e.kind}><small>{e.n}</small><b>{e.sym}</b><span>{e.name}</span></button>)}</div>
+        <aside class="sx-el-detail" aria-live="polite"><div class="sx-el-big k-platform"><small>1</small><b>{elements[0].sym}</b></div><h3>{elements[0].name}</h3><p>Used at {elements[0].at.join(', ')}</p><ul class="sx-legend"><li><i class="k-platform"></i>Platforms</li><li><i class="k-craft"></i>Building</li><li><i class="k-care"></i>Care & quality</li><li><i class="k-people"></i>People</li></ul></aside>
+      </div>
+    </section>
+
+    {/* 5 ─ Career scrubber */}
+    <section class="sx" id="idea-5">
+      <div class="sx-top"><span class="idea-tag"><b>5</b>{IDEAS[4][1]}<em>{NOTES[5][0]}</em></span><p class="sx-why">{NOTES[5][1]} <i>Fits: {NOTES[5][2]}</i></p></div>
+      <div class="sx-stage sx-career" data-career>
+        <p class="sx-career-read" aria-live="polite"><span class="sx-career-date">…</span><span class="sx-career-what">…</span></p>
+        <div class="sx-career-track" style={`--lanes:${lanes.length}`}>
+          {laned.map((r) => <div class="sx-career-bar" style={`--a:${(r.from - minM) / (maxM - minM)};--b:${(r.to - minM + 1) / (maxM - minM)};--lane:${r.lane}`}><b>{r.company}</b><span>{r.role}</span></div>)}
+          <span class="sx-career-cursor" aria-hidden="true"></span>
+        </div>
+        <div class="sx-career-years">{Array.from({ length: Math.floor(maxM / 12) - startYear + 1 }, (_, i) => startYear + i).map((y) => <span style={`--x:${Math.max(0, (y * 12 - minM) / (maxM - minM))}`}>{y}</span>)}</div>
+        <input type="range" class="sx-career-range" min="0" max="1000" value="1000" aria-label="Move through the years" />
+      </div>
+    </section>
+
+    {/* 6 ─ FAQ chat */}
+    <section class="sx" id="idea-6">
+      <div class="sx-top"><span class="idea-tag"><b>6</b>{IDEAS[5][1]}<em>{NOTES[6][0]}</em></span><p class="sx-why">{NOTES[6][1]} <i>Fits: {NOTES[6][2]}</i></p></div>
+      <div class="sx-stage sx-chat" data-chat>
+        <div class="sx-phone-chat">
+          <header><span class="sx-avatar">G</span><div><b>Grant</b><small>Usually replies within a day</small></div></header>
+          <div class="sx-thread" aria-live="polite"><p class="sx-msg them">Hi! Ask me anything below 👇</p></div>
+        </div>
+        <div class="sx-chips">{faqs.map(([q, a]) => <button type="button" data-a={a}>{q}</button>)}</div>
+      </div>
+    </section>
+
+    {/* 7 ─ Launch clipboard */}
+    <section class="sx" id="idea-7">
+      <div class="sx-top"><span class="idea-tag"><b>7</b>{IDEAS[6][1]}<em>{NOTES[7][0]}</em></span><p class="sx-why">{NOTES[7][1]} <i>Fits: {NOTES[7][2]}</i></p></div>
+      <div class="sx-stage sx-clip-stage" data-clip>
+        <div class="sx-clip-copy"><p class="sx-kicker">Before launch</p><h3>Checked before your site goes live</h3><p class="sx-clip-count"><b>0</b> of {checks.length} checked</p></div>
+        <div class="sx-clipboard"><span class="sx-clip-top" aria-hidden="true"></span><ol>{checks.map((c) => <li><span class="sx-box"></span>{c}</li>)}</ol><span class="sx-stamp">Ready to launch</span></div>
+      </div>
+    </section>
+
+    {/* 8 ─ Odometer */}
+    <section class="sx" id="idea-8">
+      <div class="sx-top"><span class="idea-tag"><b>8</b>{IDEAS[7][1]}<em>{NOTES[8][0]}</em></span><p class="sx-why">{NOTES[8][1]} <i>Fits: {NOTES[8][2]}</i></p></div>
+      <div class="sx-stage sx-odo" data-odo>{stats.map((s) => <div class="sx-odo-item"><div class="sx-odo-num" data-n={s.n} aria-label={String(s.n)}>{String(s.n).padStart(2, '0').split('').map(() => <span class="sx-odo-col"><span class="sx-odo-reel">{[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map((d) => <i>{d}</i>)}</span></span>)}</div><p>{s.label}</p></div>)}</div>
+    </section>
+
+    {/* 9 ─ Project wall */}
+    <section class="sx" id="idea-9">
+      <div class="sx-top"><span class="idea-tag"><b>9</b>{IDEAS[8][1]}<em>{NOTES[9][0]}</em></span><p class="sx-why">{NOTES[9][1]} <i>Fits: {NOTES[9][2]}</i></p></div>
+      <div class="sx-wall" data-wall><div class="sx-wall-tiles"></div><span class="sx-wall-hint">Drag to explore</span></div>
+    </section>
+
+    {/* 10 ─ Receipt */}
+    <section class="sx" id="idea-10">
+      <div class="sx-top"><span class="idea-tag"><b>10</b>{IDEAS[9][1]}<em>{NOTES[10][0]}</em></span><p class="sx-why">{NOTES[10][1]} The aftercare length is a blank for you. <i>Fits: {NOTES[10][2]}</i></p></div>
+      <div class="sx-stage sx-receipt-stage" data-receipt>
+        <div class="sx-printer"><span class="sx-slot"></span><div class="sx-paper-clip"><div class="sx-paper">
+          <p class="sx-r-head">GRANT DEV14<br /><small>Every build includes</small></p>
+          <p class="sx-r-dash"></p>
+          {receipt.map(([k, v]) => <p class="sx-r-line"><span>{k}</span><b>{v}</b></p>)}
+          <p class="sx-r-dash"></p>
+          <p class="sx-r-line sx-r-total"><span>Peace of mind</span><b>INCLUDED</b></p>
+          <p class="sx-r-foot">Thank you · keep for your records<br /><span class="sx-barcode" aria-hidden="true"></span></p>
+        </div></div></div>
+        <button type="button" class="sx-btn" data-reprint>Print again</button>
+      </div>
+    </section>
+
+    {/* 11 ─ Myths */}
+    <section class="sx" id="idea-11">
+      <div class="sx-top"><span class="idea-tag"><b>11</b>{IDEAS[10][1]}<em>{NOTES[11][0]}</em></span><p class="sx-why">{NOTES[11][1]} <i>Fits: {NOTES[11][2]}</i></p></div>
+      <div class="sx-stage sx-myths">{myths.map(([m, f], i) => <button type="button" class="sx-flip" style={`--r:${(i % 3 - 1) * 1.4}deg`} aria-pressed="false"><span class="sx-face sx-front"><small>Myth</small><b>{m}</b><em>Tap to flip</em></span><span class="sx-face sx-back"><small>What’s true</small><b>{f}</b></span></button>)}</div>
+    </section>
+
+    {/* 12 ─ Hours slider */}
+    <section class="sx" id="idea-12">
+      <div class="sx-top"><span class="idea-tag"><b>12</b>{IDEAS[11][1]}<em>{NOTES[12][0]}</em></span><p class="sx-why">{NOTES[12][1]} <i>Fits: {NOTES[12][2]}</i></p></div>
+      <div class="sx-stage sx-hours" data-hours>
+        <div class="sx-hours-top"><p class="sx-kicker">How much help a month?</p><p class="sx-hours-big"><b class="display">20</b><span>hours a month</span></p></div>
+        <input type="range" min="2" max="180" value="20" step="1" class="sx-hours-range" aria-label="Hours of help a month" />
+        <div class="sx-hours-ticks">{plans.map((p) => <span style={`--x:${(p.hours - 2) / 178}`}>{p.name}<small>{p.hours}h</small></span>)}</div>
+        <div class="sx-hours-compare">
+          <div class="sx-cost sx-cost-payg"><small>Pay as you go</small><b>…</b><i></i></div>
+          <div class="sx-cost sx-cost-plan"><small>…</small><b>…</b><i></i></div>
+        </div>
+        <p class="sx-hours-save" aria-live="polite">…</p>
+      </div>
+    </section>
+
+    {/* 13 ─ Booking board */}
+    <section class="sx" id="idea-13">
+      <div class="sx-top"><span class="idea-tag"><b>13</b>{IDEAS[12][1]}<em>{NOTES[13][0]}</em></span><p class="sx-why">{NOTES[13][1]} The pattern below is an example. <i>Fits: {NOTES[13][2]}</i></p></div>
+      <div class="sx-stage sx-book" data-book><div class="sx-book-head"><p class="sx-kicker">Availability <span class="sx-example">Example</span></p><h3 class="sx-book-next">…</h3></div><div class="sx-weeks"></div><ul class="sx-legend"><li><i class="open"></i>Open</li><li><i class="some"></i>Filling up</li><li><i class="full"></i>Booked</li></ul></div>
+    </section>
+
+    {/* 14 ─ Industry bubbles */}
+    <section class="sx" id="idea-14">
+      <div class="sx-top"><span class="idea-tag"><b>14</b>{IDEAS[13][1]}<em>{NOTES[14][0]}</em></span><p class="sx-why">{NOTES[14][1]} <i>Fits: {NOTES[14][2]}</i></p></div>
+      <div class="sx-stage sx-bubbles-stage" data-bubbles>
+        <div class="sx-bubbles">{industries.map((g, i) => <button type="button" class="sx-bubble" style={`--s:${0.78 + g.list.length * 0.22};--d:${i * 0.7}s;--h:${[245, 60, 20, 295, 105, 160, 330][i % 7]}`} data-g={i} aria-pressed="false"><b>{g.name}</b><small>{g.list.length} {g.list.length === 1 ? 'project' : 'projects'}</small></button>)}</div>
+        <div class="sx-bubble-list" aria-live="polite"><p class="sx-bubble-empty">Tap an industry to see the work.</p></div>
+      </div>
+    </section>
+
+    {/* 15 ─ Red-pen audit */}
+    <section class="sx" id="idea-15">
+      <div class="sx-top"><span class="idea-tag"><b>15</b>{IDEAS[14][1]}<em>{NOTES[15][0]}</em></span><p class="sx-why">{NOTES[15][1]} <i>Fits: {NOTES[15][2]}</i></p></div>
+      <div class="sx-stage sx-redpen" data-redpen>
+        <div class="sx-mock" aria-hidden="true">
+          <div class="sx-mock-bar"><span></span><span></span><span></span><i>example-shop.com</i></div>
+          <div class="sx-mock-nav"><b>SHOP</b><span></span><span></span><span></span><em>☰</em></div>
+          <div class="sx-mock-hero"><div><i></i><i></i><i class="short"></i><u>Shop now</u></div></div>
+          <div class="sx-mock-grid"><span></span><span></span><span></span><span></span></div>
+          <svg class="sx-ink" viewBox="0 0 600 420" preserveAspectRatio="none">
+            <path pathLength="1" d="M330 120c90-12 210 6 214 60 4 62-150 80-232 64-70-14-82-112 18-124" />
+            <path pathLength="1" d="M520 64c26-6 60 2 58 22s-40 26-62 18-20-36 4-40" />
+            <path pathLength="1" d="M62 222c40 4 90 2 110-2" />
+            <path pathLength="1" d="M40 330c60-10 140-8 200-2M330 334c60-6 160-6 220 2" />
+          </svg>
+          <p class="sx-note n1">2.4 MB hero image: 3 s on a phone</p>
+          <p class="sx-note n2">Menu hidden behind ☰ even on desktop</p>
+          <p class="sx-note n3">No clear next step</p>
+          <p class="sx-note n4">No prices or reviews on the cards</p>
+        </div>
+        <div class="sx-redpen-copy"><p class="sx-kicker">Free website audit</p><h3>What a fresh pair of eyes finds</h3><p>A made-up shop, marked up the way a real audit would. Send your address and get your own notes within a day.</p><a class="sx-btn" href={withBase('/contact/#audit')}>Get my audit</a><button type="button" class="sx-btn ghost" data-redraw>Mark it up again</button></div>
+      </div>
+    </section>
+
+    {/* 16 ─ Code → page */}
+    <section class="sx" id="idea-16">
+      <div class="sx-top"><span class="idea-tag"><b>16</b>{IDEAS[15][1]}<em>{NOTES[16][0]}</em></span><p class="sx-why">{NOTES[16][1]} <i>Fits: {NOTES[16][2]}</i></p></div>
+      <div class="sx-stage sx-code" data-code>
+        <pre class="sx-editor" aria-label="Example Shopify section code"><code></code><span class="sx-caret"></span></pre>
+        <div class="sx-result" aria-hidden="true"><div class="sx-res-frame"><div class="sx-res-text"><h4 class="sx-res-title">Made for warm water</h4><p class="sx-res-p">Audio recorded to be heard in the bath.</p><span class="sx-res-btn">Listen now</span></div><div class="sx-res-img" style={`background-image:url(${img('tero', 480)})`}></div></div></div>
+        <script type="application/json" id="sx-code-lines" set:html={JSON.stringify(codeLines)} />
+      </div>
+    </section>
+
+    {/* 17 ─ Field notes */}
+    <section class="sx" id="idea-17">
+      <div class="sx-top"><span class="idea-tag"><b>17</b>{IDEAS[16][1]}<em>{NOTES[17][0]}</em></span><p class="sx-why">{NOTES[17][1]} <i>Fits: {NOTES[17][2]}</i></p></div>
+      <div class="sx-stage sx-notes">{notes.map(([t, tag, tone], i) => <a href="#idea-17" class={`sx-notecard t-${tone}`} style={`--r:${[-2.2, 1.4, -0.8][i]}deg`}><span class="sx-tape" aria-hidden="true"></span><small>{tag} · Suggested topic</small><h3>{t}</h3><span class="sx-lines" aria-hidden="true"></span><em>Read the note →</em></a>)}</div>
+    </section>
+
+    {/* 18 ─ Globe */}
+    <section class="sx" id="idea-18">
+      <div class="sx-top"><span class="idea-tag"><b>18</b>{IDEAS[17][1]}<em>{NOTES[18][0]}</em></span><p class="sx-why">{NOTES[18][1]} Only Australia and the UK can be read from the projects’ web addresses; you’d add the rest. <i>Fits: {NOTES[18][2]}</i></p></div>
+      <div class="sx-stage sx-globe-stage" data-globe>
+        <canvas class="sx-globe" width="560" height="560" aria-hidden="true"></canvas>
+        <div class="sx-globe-copy"><p class="sx-kicker">Based in Manila, working worldwide</p><ul class="sx-places"><li><i class="home"></i><b>Manila</b><span>Home base</span></li>{clientCountries.map(([c, names]) => <li><i></i><b>{c}</b><span>{names.join(', ')}</span></li>)}<li class="todo"><i></i><b>More to add</b><span>e.g. Road Armor, Skinistry: you’d confirm where</span></li></ul></div>
+      </div>
+    </section>
+
+    {/* 19 ─ Support month */}
+    <section class="sx" id="idea-19">
+      <div class="sx-top"><span class="idea-tag"><b>19</b>{IDEAS[18][1]}<em>{NOTES[19][0]}</em></span><p class="sx-why">{NOTES[19][1]} <i>Fits: {NOTES[19][2]}</i></p></div>
+      <div class="sx-stage sx-board" data-board>
+        <div class="sx-board-head"><p class="sx-kicker">A month on the Basic plan <span class="sx-example">Example</span></p><div class="sx-usage"><span><b class="sx-used">0</b> of {plans[0].hours} hours used</span><div class="sx-usage-bar"><i></i></div></div></div>
+        <div class="sx-cols">{['Asked', 'Doing', 'Done'].map((c) => <div class="sx-col" data-col={c}><h4>{c}</h4><div class="sx-col-body"></div></div>)}</div>
+      </div>
+    </section>
+
+    {/* 20 ─ Mad libs */}
+    <section class="sx" id="idea-20">
+      <div class="sx-top"><span class="idea-tag"><b>20</b>{IDEAS[19][1]}<em>{NOTES[20][0]}</em></span><p class="sx-why">{NOTES[20][1]} <i>Fits: {NOTES[20][2]}</i></p></div>
+      <div class="sx-stage sx-libs" data-libs>
+        <p class="sx-kicker">Tell me in one sentence</p>
+        <p class="sx-sentence">Hi Grant, I need
+          <label class="sx-blank"><select data-k="what"><option>a new online store</option><option>a redesign of my site</option><option>a move to a new platform</option><option>a faster, better-ranked site</option><option>ongoing help each month</option></select></label>
+          on
+          <label class="sx-blank"><select data-k="on"><option>Shopify</option><option>Webflow</option><option>WordPress</option><option>whatever suits best</option></select></label>
+          for my
+          <label class="sx-blank"><select data-k="for"><option>skincare brand</option><option>fashion label</option><option>car parts shop</option><option>agency</option><option>local business</option><option>startup</option></select></label>,
+          ideally live
+          <label class="sx-blank"><select data-k="when"><option>in the next month</option><option>within three months</option><option>this year</option><option>whenever it’s right</option></select></label>,
+          with a budget of about
+          <label class="sx-blank"><select data-k="budget"><option>under $2,000</option><option>$2,000–5,000</option><option>$5,000–10,000</option><option>$10,000 or more</option><option>not sure yet</option></select></label>.
+        </p>
+        <div class="sx-libs-foot"><a class="sx-btn" href={withBase('/contact/')} data-libs-send>Send this to Grant</a><button type="button" class="sx-btn ghost" data-libs-copy>Copy sentence</button><span class="sx-libs-note" aria-live="polite"></span></div>
+      </div>
+    </section>
+  </div>
+</BaseLayout>
+
+<script>
+  type Role = { company: string; role: string; from: number; to: number; dates: string; lane: number };
+  type Data = { roles: Role[]; minM: number; maxM: number; plans: { id: string; name: string; hours: number; price: number; reply: string; daily: number }[]; payg: number; wall: { slug: string; name: string; platform: string; src: string; href: string }[]; industries: { name: string; list: { slug: string; name: string; platform: string; src: string; href: string }[] }[]; base: string };
+  const D: Data = JSON.parse(document.getElementById('sx-data')!.textContent!);
+  const root = document.documentElement;
+  const motion = () => root.classList.contains('motion') && !matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const onView = (el: Element, fn: () => void, threshold = 0.35) => { const io = new IntersectionObserver(([e]) => { if (e.isIntersecting) { io.disconnect(); fn(); } }, { threshold }); io.observe(el); };
+  const money = (n: number) => `$${Math.round(n).toLocaleString('en-US')}`;
+  const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+  // 1 ─ Project line
+  document.querySelectorAll<HTMLElement>('[data-metro]').forEach((box) => {
+    const btns = [...box.querySelectorAll<HTMLButtonElement>('button[data-i]')];
+    const panels = [...box.querySelectorAll<HTMLElement>('[data-panel]')];
+    let auto = 0;
+    const go = (i: number) => { box.style.setProperty('--p', String(i / (btns.length - 1))); btns.forEach((b, j) => { b.setAttribute('aria-pressed', String(j === i)); b.classList.toggle('is-past', j < i); }); panels.forEach((p, j) => (p.hidden = j !== i)); };
+    btns.forEach((b, i) => b.addEventListener('click', () => { clearInterval(auto); go(i); }));
+    go(0);
+    onView(box, () => { if (!motion()) return; let i = 0; auto = window.setInterval(() => { i = (i + 1) % btns.length; go(i); }, 2600); });
+  });
+
+  // 2 ─ Platform matchmaker
+  document.querySelectorAll<HTMLElement>('[data-match]').forEach((box) => {
+    const W: Record<string, Record<string, number>> = { sell: { shopify: 3, wordpress: 1 }, subs: { shopify: 3, wordpress: 1 }, edit: { webflow: 3, shopify: 1 }, blog: { wordpress: 3, webflow: 2 }, motion: { webflow: 3 }, plugins: { wordpress: 3 } };
+    const cards = [...box.querySelectorAll<HTMLElement>('.sx-pcard')];
+    const update = () => {
+      const on = [...box.querySelectorAll<HTMLElement>('.sx-toggle[aria-pressed="true"]')].map((b) => b.dataset.k!);
+      const score: Record<string, number> = { shopify: 0, webflow: 0, wordpress: 0 };
+      on.forEach((k) => Object.entries(W[k]).forEach(([p, v]) => (score[p] += v)));
+      const max = Math.max(...Object.values(score));
+      const total = on.reduce((s, k) => s + Math.max(...Object.values(W[k])), 0) || 1;
+      cards.forEach((c) => { const s = score[c.dataset.p!]; c.style.setProperty('--m', String(on.length ? s / total : 0)); c.classList.toggle('is-best', on.length > 0 && s === max && s > 0); c.querySelector('.sx-score')!.textContent = on.length ? `${Math.round((s / total) * 100)}% match` : 'Tick a few to see'; });
+    };
+    box.querySelectorAll<HTMLButtonElement>('.sx-toggle').forEach((b) => b.addEventListener('click', () => { b.setAttribute('aria-pressed', String(b.getAttribute('aria-pressed') !== 'true')); update(); }));
+    update();
+  });
+
+  // 3 ─ Time zones
+  document.querySelectorAll<HTMLElement>('[data-tz]').forEach((box) => {
+    const svg = box.querySelector('svg')!;
+    const ticks = svg.querySelector('.sx-dial-ticks')!;
+    for (let h = 0; h < 24; h++) {
+      const a = (h / 24) * Math.PI * 2 - Math.PI / 2, r1 = h % 6 ? 138 : 130, r2 = 146;
+      ticks.insertAdjacentHTML('beforeend', `<line x1="${160 + Math.cos(a) * r1}" y1="${160 + Math.sin(a) * r1}" x2="${160 + Math.cos(a) * r2}" y2="${160 + Math.sin(a) * r2}" />`);
+      if (h % 6 === 0) ticks.insertAdjacentHTML('beforeend', `<text x="${160 + Math.cos(a) * 114}" y="${164 + Math.sin(a) * 114}">${h === 0 ? '12am' : h === 12 ? '12pm' : h < 12 ? h + 'am' : h - 12 + 'pm'}</text>`);
+    }
+    const offset = (zone: string, d = new Date()) => { const s = d.toLocaleString('en-US', { timeZone: zone || undefined, hour12: false, hour: '2-digit', minute: '2-digit' }); const [h, m] = s.split(':').map(Number); return (h % 24) + m / 60; };
+    const arc = (r: number, h1: number, h2: number) => { const span = ((h2 - h1) % 24 + 24) % 24; if (span <= 0) return ''; const a1 = (h1 / 24) * Math.PI * 2 - Math.PI / 2, a2 = a1 + (span / 24) * Math.PI * 2; return `M${160 + Math.cos(a1) * r} ${160 + Math.sin(a1) * r}A${r} ${r} 0 ${span > 12 ? 1 : 0} 1 ${160 + Math.cos(a2) * r} ${160 + Math.sin(a2) * r}`; };
+    const fmt = (h: number) => { const hh = Math.floor(((h % 24) + 24) % 24), mm = Math.round((h - Math.floor(h)) * 60); const d = new Date(2000, 0, 1, hh, mm); return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }).toLowerCase(); };
+    let zone = '';
+    const draw = () => {
+      const now = offset(zone), manila = offset('Asia/Manila');
+      const shift = now - manila; // Manila hour + shift = local hour
+      const meStart = 9 + shift, meEnd = 18 + shift;
+      svg.querySelector('.sx-arc-you')!.setAttribute('d', arc(100, 9, 18));
+      svg.querySelector('.sx-arc-me')!.setAttribute('d', arc(122, meStart, meEnd));
+      // overlap of [9,18] with [meStart, meEnd] on a 24h circle
+      let best = 0, bStart = 0;
+      for (let k = -1; k <= 1; k++) { const s = Math.max(9, meStart + 24 * k), e = Math.min(18, meEnd + 24 * k); if (e - s > best) { best = e - s; bStart = s; } }
+      svg.querySelector('.sx-arc-both')!.setAttribute('d', best > 0 ? arc(111, bStart, bStart + best) : '');
+      const a = (now / 24) * 360;
+      svg.querySelector('.sx-hand')!.setAttribute('transform', `rotate(${a} 160 160)`);
+      const who = zone ? box.querySelector(`[data-zone="${zone}"]`)!.textContent : 'you';
+      box.querySelector('.sx-tz-line')!.textContent = `It’s ${fmt(now)} for ${who === 'you' ? 'you' : 'in ' + who} and ${fmt(manila)} in Manila.`;
+      box.querySelector('.sx-tz-sub')!.textContent = best > 0 ? `Your working days overlap for about ${Math.round(best)} ${Math.round(best) === 1 ? 'hour' : 'hours'}: ${fmt(bStart)} to ${fmt(bStart + best)} ${who === 'you' ? 'your time' : 'there'}.` : `No overlap, which works in your favour: Grant works while you sleep, so you wake up to progress. His day starts at ${fmt(meStart)} ${who === 'you' ? 'your time' : 'there'}.`;
+    };
+    box.querySelectorAll<HTMLButtonElement>('[data-zone]').forEach((b) => b.addEventListener('click', () => { zone = b.dataset.zone!; box.querySelectorAll('[data-zone]').forEach((x) => x.setAttribute('aria-pressed', String(x === b))); draw(); }));
+    draw(); setInterval(draw, 30000);
+  });
+
+  // 4 ─ Periodic table
+  document.querySelectorAll<HTMLElement>('[data-table]').forEach((box) => {
+    const big = box.querySelector<HTMLElement>('.sx-el-big')!, h = box.querySelector('aside h3')!, p = box.querySelector('aside p')!;
+    const show = (el: HTMLElement) => { big.className = `sx-el-big k-${el.dataset.kind}`; big.innerHTML = `<small>${el.dataset.n}</small><b>${el.dataset.sym}</b>`; h.textContent = el.dataset.name!; p.textContent = `Used at ${el.dataset.at!.split(' · ').join(', ')}`; box.querySelectorAll('.sx-el').forEach((x) => x.classList.toggle('is-on', x === el)); };
+    box.querySelectorAll<HTMLElement>('.sx-el').forEach((el) => { el.addEventListener('pointerenter', () => show(el)); el.addEventListener('focus', () => show(el)); el.addEventListener('click', () => show(el)); });
+    show(box.querySelector('.sx-el')!);
+  });
+
+  // 5 ─ Career scrubber
+  document.querySelectorAll<HTMLElement>('[data-career]').forEach((box) => {
+    const track = box.querySelector<HTMLElement>('.sx-career-track')!, range = box.querySelector<HTMLInputElement>('.sx-career-range')!;
+    const M = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const bars = [...box.querySelectorAll<HTMLElement>('.sx-career-bar')];
+    const set = (t: number) => {
+      const m = Math.round(D.minM + t * (D.maxM - D.minM - 1));
+      box.style.setProperty('--t', String(t));
+      const on = D.roles.filter((r) => m >= r.from && m <= r.to);
+      box.querySelector('.sx-career-date')!.textContent = `${M[m % 12]} ${Math.floor(m / 12)}`;
+      box.querySelector('.sx-career-what')!.textContent = on.length ? on.map((r) => `${r.role} at ${r.company}`).join(' + ') : 'Between roles';
+      bars.forEach((b, i) => b.classList.toggle('is-on', on.includes(D.roles[i])));
+    };
+    const fromX = (x: number) => { const r = track.getBoundingClientRect(); return Math.min(1, Math.max(0, (x - r.left) / r.width)); };
+    let drag = false;
+    track.addEventListener('pointerdown', (e) => { drag = true; track.setPointerCapture(e.pointerId); set(fromX(e.clientX)); range.value = String(fromX(e.clientX) * 1000); });
+    track.addEventListener('pointermove', (e) => { if (drag || e.pointerType === 'mouse') { set(fromX(e.clientX)); range.value = String(fromX(e.clientX) * 1000); } });
+    track.addEventListener('pointerup', () => (drag = false));
+    range.addEventListener('input', () => set(Number(range.value) / 1000));
+    set(1);
+    onView(box, () => { if (!motion()) return; const t0 = performance.now(); const step = (now: number) => { const p = Math.min(1, (now - t0) / 2600); const e = 1 - (1 - p) ** 3; set(e); range.value = String(e * 1000); if (p < 1) requestAnimationFrame(step); }; requestAnimationFrame(step); });
+  });
+
+  // 6 ─ FAQ chat
+  document.querySelectorAll<HTMLElement>('[data-chat]').forEach((box) => {
+    const thread = box.querySelector<HTMLElement>('.sx-thread')!;
+    let busy = false;
+    const add = (cls: string, html: string) => { const p = document.createElement('p'); p.className = `sx-msg ${cls}`; p.innerHTML = html; thread.append(p); thread.scrollTo({ top: thread.scrollHeight, behavior: motion() ? 'smooth' : 'auto' }); return p; };
+    box.querySelectorAll<HTMLButtonElement>('.sx-chips button').forEach((b) => b.addEventListener('click', async () => {
+      if (busy) return; busy = true; b.classList.add('is-asked');
+      add('me', b.textContent!);
+      await wait(350);
+      const typing = add('them typing', '<i></i><i></i><i></i>');
+      await wait(motion() ? 900 + Math.min(900, b.dataset.a!.length * 6) : 0);
+      typing.remove(); add('them', b.dataset.a!); busy = false;
+    }));
+  });
+
+  // 7 ─ Launch clipboard (scroll-driven)
+  document.querySelectorAll<HTMLElement>('[data-clip]').forEach((box) => {
+    const items = [...box.querySelectorAll('li')], count = box.querySelector('.sx-clip-count b')!;
+    let last = -1, queued = false;
+    const update = () => {
+      queued = false;
+      const r = box.getBoundingClientRect();
+      const p = Math.min(1, Math.max(0, (innerHeight * 0.85 - r.top) / (r.height * 0.9)));
+      const n = motion() ? Math.round(p * items.length) : items.length;
+      if (n === last) return; last = n;
+      items.forEach((li, i) => li.classList.toggle('is-done', i < n));
+      count.textContent = String(n);
+      box.classList.toggle('is-ready', n === items.length);
+    };
+    addEventListener('scroll', () => { if (!queued) { queued = true; requestAnimationFrame(update); } }, { passive: true });
+    update();
+  });
+
+  // 8 ─ Odometer
+  document.querySelectorAll<HTMLElement>('[data-odo]').forEach((box) => {
+    const nums = [...box.querySelectorAll<HTMLElement>('.sx-odo-num')];
+    const set = (on: boolean) => nums.forEach((n, k) => { const digits = String(n.dataset.n).padStart(2, '0').split(''); n.querySelectorAll<HTMLElement>('.sx-odo-reel').forEach((reel, i) => { reel.style.transitionDelay = `${k * 120 + i * 90}ms`; reel.style.setProperty('--d', on ? digits[i] : '0'); }); });
+    set(!motion());
+    onView(box, () => requestAnimationFrame(() => set(true)), 0.5);
+  });
+
+  // 9 ─ Drag-around wall
+  document.querySelectorAll<HTMLElement>('[data-wall]').forEach((box) => {
+    const holder = box.querySelector<HTMLElement>('.sx-wall-tiles')!;
+    const cols = 6, rows = 4, small = matchMedia('(max-width: 640px)').matches;
+    const cw = small ? 220 : 340, ch = small ? 150 : 228, gap = small ? 14 : 22;
+    const W = cols * (cw + gap), H = rows * (ch + gap);
+    const tiles: { el: HTMLElement; x: number; y: number }[] = [];
+    for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
+      const p = D.wall[(r * cols + c + r * 2) % D.wall.length];
+      const a = document.createElement('a'); a.className = 'sx-tile'; a.href = p.href; a.draggable = false;
+      a.style.width = `${cw}px`; a.style.height = `${ch}px`;
+      a.innerHTML = `<img src="${p.src}" alt="" loading="lazy" decoding="async" draggable="false"><span><b>${p.name}</b>${p.platform}</span>`;
+      a.setAttribute('aria-label', `${p.name}, ${p.platform}`);
+      holder.append(a); tiles.push({ el: a, x: c * (cw + gap) + (r % 2) * (cw / 2), y: r * (ch + gap) });
+    }
+    let ox = 0, oy = 0, vx = -0.25, vy = -0.12, dragging = false, moved = 0, lx = 0, ly = 0, seen = false;
+    const mod = (n: number, m: number) => ((n % m) + m) % m;
+    const place = () => { for (const t of tiles) { const x = mod(t.x + ox, W) - (cw + gap); const y = mod(t.y + oy, H) - (ch + gap); t.el.style.transform = `translate3d(${x}px, ${y}px, 0)`; } };
+    const loop = () => { if (seen && !dragging) { ox += vx; oy += vy; const drift = motion() ? 1 : 0; vx = vx * 0.95 + -0.25 * 0.05 * drift; vy = vy * 0.95 + -0.12 * 0.05 * drift; if (!motion()) { vx *= 0.9; vy *= 0.9; } place(); } requestAnimationFrame(loop); };
+    new IntersectionObserver(([e]) => (seen = e.isIntersecting)).observe(box);
+    box.addEventListener('pointerdown', (e) => { dragging = true; moved = 0; lx = e.clientX; ly = e.clientY; box.setPointerCapture(e.pointerId); box.classList.add('is-dragging'); });
+    box.addEventListener('pointermove', (e) => { if (!dragging) return; const dx = e.clientX - lx, dy = e.clientY - ly; lx = e.clientX; ly = e.clientY; ox += dx; oy += dy; vx = dx; vy = dy; moved += Math.abs(dx) + Math.abs(dy); place(); box.classList.add('was-dragged'); });
+    const end = () => { dragging = false; box.classList.remove('is-dragging'); };
+    box.addEventListener('pointerup', end); box.addEventListener('pointercancel', end);
+    box.addEventListener('click', (e) => { if (moved > 6) e.preventDefault(); }, true);
+    place(); requestAnimationFrame(loop);
+  });
+
+  // 10 ─ Receipt
+  document.querySelectorAll<HTMLElement>('[data-receipt]').forEach((box) => {
+    const print = () => { box.classList.remove('is-printing'); void box.offsetWidth; box.classList.add('is-printing'); };
+    onView(box, print, 0.4);
+    box.querySelector('[data-reprint]')!.addEventListener('click', print);
+  });
+
+  // 11 ─ Myths
+  document.querySelectorAll<HTMLButtonElement>('.sx-flip').forEach((b) => b.addEventListener('click', () => b.setAttribute('aria-pressed', String(b.getAttribute('aria-pressed') !== 'true'))));
+
+  // 12 ─ Hours slider
+  document.querySelectorAll<HTMLElement>('[data-hours]').forEach((box) => {
+    const range = box.querySelector<HTMLInputElement>('.sx-hours-range')!;
+    const set = () => {
+      const h = Number(range.value);
+      box.style.setProperty('--v', String((h - 2) / 178));
+      box.querySelector('.sx-hours-big b')!.textContent = String(h);
+      const paygCost = h * D.payg;
+      const plan = D.plans.find((p) => p.hours >= h) ?? D.plans[D.plans.length - 1];
+      const max = Math.max(paygCost, plan.price);
+      const pc = box.querySelector<HTMLElement>('.sx-cost-payg')!, pl = box.querySelector<HTMLElement>('.sx-cost-plan')!;
+      pc.querySelector('b')!.textContent = `${money(paygCost)}/mo`; pc.style.setProperty('--w', String(paygCost / max));
+      pl.querySelector('small')!.textContent = `${plan.name} plan · ${plan.daily ? `${plan.daily} hrs a day` : `${plan.hours} hrs`}`;
+      pl.querySelector('b')!.textContent = `${money(plan.price)}/mo`; pl.style.setProperty('--w', String(plan.price / max));
+      const save = paygCost - plan.price;
+      box.querySelector('.sx-hours-save')!.innerHTML = save > 0 ? `The <b>${plan.name}</b> plan saves you <b>${money(save)}</b> a month, with ${plan.hours - h > 0 ? `${plan.hours - h} hours to spare` : 'every hour used'}.` : `For ${h} ${h === 1 ? 'hour' : 'hours'}, pay as you go is cheaper. A plan starts paying off from about ${Math.ceil(D.plans[0].price / D.payg)} hours a month.`;
+      pl.classList.toggle('is-better', save > 0); pc.classList.toggle('is-better', save <= 0);
+    };
+    range.addEventListener('input', set); set();
+  });
+
+  // 13 ─ Booking board (example pattern)
+  document.querySelectorAll<HTMLElement>('[data-book]').forEach((box) => {
+    const weeks = box.querySelector('.sx-weeks')!;
+    const d = new Date(); d.setDate(d.getDate() + ((8 - d.getDay()) % 7 || 7));
+    const pattern = ['full', 'full', 'full', 'some', 'full', 'some', 'open', 'open', 'some', 'open', 'open', 'open'];
+    let next = '';
+    pattern.forEach((s, i) => { const w = new Date(d); w.setDate(d.getDate() + i * 7); const label = w.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }); if (!next && s === 'open') next = w.toLocaleDateString('en-GB', { day: 'numeric', month: 'long' }); weeks.insertAdjacentHTML('beforeend', `<div class="sx-week ${s}" style="--i:${i}"><small>Week of</small><b>${label}</b><span>${s === 'full' ? 'Booked' : s === 'some' ? 'Filling up' : 'Open'}</span></div>`); });
+    box.querySelector('.sx-book-next')!.textContent = `Next new project can start the week of ${next}`;
+    onView(box, () => box.classList.add('is-in'));
+  });
+
+  // 14 ─ Industry bubbles
+  document.querySelectorAll<HTMLElement>('[data-bubbles]').forEach((box) => {
+    const list = box.querySelector<HTMLElement>('.sx-bubble-list')!;
+    box.querySelectorAll<HTMLButtonElement>('.sx-bubble').forEach((b) => b.addEventListener('click', () => {
+      const g = D.industries[Number(b.dataset.g)];
+      box.querySelectorAll('.sx-bubble').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+      list.innerHTML = `<h3>${g.name}</h3><div class="sx-bubble-cards">${g.list.map((p) => `<a href="${p.href}"><img src="${p.src}" alt="" loading="lazy"><span><b>${p.name}</b>${p.platform}</span></a>`).join('')}</div>`;
+    }));
+  });
+
+  // 15 ─ Red pen
+  document.querySelectorAll<HTMLElement>('[data-redpen]').forEach((box) => {
+    const draw = () => { box.classList.remove('is-marked'); void box.offsetWidth; box.classList.add('is-marked'); };
+    onView(box, draw, 0.45);
+    box.querySelector('[data-redraw]')!.addEventListener('click', draw);
+  });
+
+  // 16 ─ Code → page
+  document.querySelectorAll<HTMLElement>('[data-code]').forEach((box) => {
+    const lines: { t: string; s: string }[] = JSON.parse(box.querySelector('#sx-code-lines')!.textContent!);
+    const code = box.querySelector('code')!;
+    const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    // One pass, so a colour added for one kind of token is never re-matched by the next.
+    const hl = (s: string) => s.replace(/(\{\{.*?\}\}|\{%.*?%\})|(<\/?[a-z0-9]+)|("[^"]*"?)|([&<>])/g, (_m, lq, tg, st, ch) => (lq ? `<span class="lq">${esc(lq)}</span>` : tg ? `<span class="tg">${esc(tg)}</span>` : st ? `<span class="st">${esc(st)}</span>` : esc(ch)));
+    let running = false;
+    const run = async () => {
+      if (running) return; running = true;
+      box.querySelectorAll('.sx-result [class^="sx-res"]').forEach((e) => e.classList.remove('on'));
+      box.querySelector('.sx-res-frame')!.classList.remove('on');
+      let done = '';
+      for (const l of lines) {
+        if (!motion()) { done += hl(l.t) + '\n'; } else {
+          for (let i = 1; i <= l.t.length; i += 2) { code.innerHTML = done + hl(l.t.slice(0, i)); await wait(14); }
+          done += hl(l.t) + '\n'; code.innerHTML = done; await wait(140);
+        }
+        const map: Record<string, string> = { frame: '.sx-res-frame', title: '.sx-res-title', text: '.sx-res-p', image: '.sx-res-img', button: '.sx-res-btn' };
+        if (map[l.s]) box.querySelector(map[l.s])!.classList.add('on');
+      }
+      code.innerHTML = done; box.classList.add('is-done');
+      await wait(motion() ? 4200 : 0); running = false; if (motion()) { box.classList.remove('is-done'); if (inView) run(); }
+    };
+    let inView = false;
+    new IntersectionObserver(([e]) => { inView = e.isIntersecting; if (inView) run(); }, { threshold: 0.4 }).observe(box);
+  });
+
+  // 18 ─ Dotted globe
+  document.querySelectorAll<HTMLElement>('[data-globe]').forEach((box) => {
+    const cv = box.querySelector('canvas')!, ctx = cv.getContext('2d')!;
+    const dpr = Math.min(2, devicePixelRatio || 1); const S = 560; cv.width = S * dpr; cv.height = S * dpr; ctx.scale(dpr, dpr);
+    const R = 230, N = 1100, pts: [number, number, number][] = [];
+    for (let i = 0; i < N; i++) { const y = 1 - (i / (N - 1)) * 2, r = Math.sqrt(1 - y * y), th = Math.PI * (3 - Math.sqrt(5)) * i; pts.push([Math.cos(th) * r, y, Math.sin(th) * r]); }
+    const ll = (lat: number, lon: number): [number, number, number] => { const a = (lat * Math.PI) / 180, b = (lon * Math.PI) / 180; return [Math.cos(a) * Math.sin(b), Math.sin(a), Math.cos(a) * Math.cos(b)]; };
+    const home = ll(14.6, 121), places = [ll(-33.9, 151.2), ll(-37.8, 145), ll(51.5, -0.1)];
+    let rot = -2.1, tilt = 0.3, v = 0.0025, drag = false, lx = 0, seen = false;
+    const proj = ([x, y, z]: [number, number, number]) => { const cx = x * Math.cos(rot) - z * Math.sin(rot), cz = x * Math.sin(rot) + z * Math.cos(rot); const cy = y * Math.cos(tilt) - cz * Math.sin(tilt), cz2 = y * Math.sin(tilt) + cz * Math.cos(tilt); return { x: S / 2 + cx * R, y: S / 2 - cy * R, z: cz2 }; };
+    const slerp = (a: number[], b: number[], t: number): [number, number, number] => { const d = Math.acos(Math.min(1, a[0] * b[0] + a[1] * b[1] + a[2] * b[2])); const s = Math.sin(d) || 1; const k1 = Math.sin((1 - t) * d) / s, k2 = Math.sin(t * d) / s, lift = 1 + Math.sin(t * Math.PI) * 0.18; return [(a[0] * k1 + b[0] * k2) * lift, (a[1] * k1 + b[1] * k2) * lift, (a[2] * k1 + b[2] * k2) * lift]; };
+    const ink = getComputedStyle(root).getPropertyValue('--ink').trim() || '#222';
+    const frame = (time: number) => {
+      if (seen) {
+        if (!drag && motion()) rot += v;
+        ctx.clearRect(0, 0, S, S);
+        for (const p of pts) { const q = proj(p); if (q.z < -0.05) continue; ctx.globalAlpha = 0.12 + q.z * 0.5; ctx.fillStyle = ink; ctx.beginPath(); ctx.arc(q.x, q.y, 1.1 + q.z * 0.9, 0, 6.283); ctx.fill(); }
+        ctx.globalAlpha = 1;
+        places.forEach((pl, k) => {
+          ctx.beginPath(); let started = false;
+          for (let i = 0; i <= 48; i++) { const q = proj(slerp(home, pl, i / 48)); if (q.z < -0.1) { started = false; continue; } if (!started) { ctx.moveTo(q.x, q.y); started = true; } else ctx.lineTo(q.x, q.y); }
+          ctx.strokeStyle = 'oklch(0.62 0.17 30)'; ctx.lineWidth = 1.6; ctx.setLineDash([4, 5]); ctx.lineDashOffset = -time / 40 - k * 3; ctx.stroke(); ctx.setLineDash([]);
+          const q = proj(pl); if (q.z > 0) { ctx.fillStyle = 'oklch(0.62 0.17 30)'; ctx.beginPath(); ctx.arc(q.x, q.y, 5, 0, 6.283); ctx.fill(); }
+        });
+        const h = proj(home); if (h.z > 0) { const pulse = (time / 1400) % 1; ctx.strokeStyle = 'oklch(0.5 0.15 245)'; ctx.globalAlpha = 1 - pulse; ctx.beginPath(); ctx.arc(h.x, h.y, 6 + pulse * 18, 0, 6.283); ctx.stroke(); ctx.globalAlpha = 1; ctx.fillStyle = 'oklch(0.5 0.15 245)'; ctx.beginPath(); ctx.arc(h.x, h.y, 6, 0, 6.283); ctx.fill(); }
+      }
+      requestAnimationFrame(frame);
+    };
+    new IntersectionObserver(([e]) => (seen = e.isIntersecting)).observe(cv);
+    cv.addEventListener('pointerdown', (e) => { drag = true; lx = e.clientX; cv.setPointerCapture(e.pointerId); });
+    cv.addEventListener('pointermove', (e) => { if (!drag) return; rot += (e.clientX - lx) * 0.008; lx = e.clientX; });
+    cv.addEventListener('pointerup', () => (drag = false));
+    requestAnimationFrame(frame);
+  });
+
+  // 19 ─ Support month (example)
+  document.querySelectorAll<HTMLElement>('[data-board]').forEach((box) => {
+    const cols = Object.fromEntries([...box.querySelectorAll<HTMLElement>('.sx-col')].map((c) => [c.dataset.col!, c.querySelector('.sx-col-body')!]));
+    const jobs: [string, number][] = [['Add the spring collection', 3], ['Fix the mobile menu on iOS', 1.5], ['New banner for the sale', 1], ['Compress homepage images', 2], ['Update shipping rates', 0.5], ['Add a size guide page', 3], ['Check checkout after app update', 1], ['Monthly health check', 1.5]];
+    const plan = D.plans[0].hours; let used = 0, i = 0, running = false;
+    const usedEl = box.querySelector('.sx-used')!;
+    const tick = async () => {
+      if (running) return; running = true;
+      while (i < jobs.length && document.contains(box)) {
+        const [t, h] = jobs[i++];
+        const card = document.createElement('div'); card.className = 'sx-ticket'; card.innerHTML = `<b>${t}</b><small>${h} h</small>`;
+        cols.Asked.prepend(card); await wait(motion() ? 900 : 0);
+        cols.Doing.prepend(card); card.classList.add('doing'); await wait(motion() ? 1300 : 0);
+        cols.Done.prepend(card); card.classList.remove('doing'); card.classList.add('done');
+        used += h; usedEl.textContent = String(used); box.style.setProperty('--u', String(Math.min(1, used / plan)));
+        [...cols.Done.children].slice(4).forEach((c) => c.remove());
+        await wait(motion() ? 400 : 0);
+      }
+      await wait(motion() ? 2500 : 0);
+      if (motion()) { i = 0; used = 0; usedEl.textContent = '0'; box.style.setProperty('--u', '0'); Object.values(cols).forEach((c) => (c.innerHTML = '')); running = false; tick(); }
+    };
+    onView(box, tick, 0.4);
+  });
+
+  // 20 ─ Mad libs
+  document.querySelectorAll<HTMLElement>('[data-libs]').forEach((box) => {
+    const sentence = () => box.querySelector('.sx-sentence')!.textContent!.replace(/\s+/g, ' ').trim().replace(/\s(?=[,.])/g, '').replace(/\s*\n\s*/g, ' ');
+    const text = () => { const v = (k: string) => (box.querySelector(`select[data-k="${k}"]`) as HTMLSelectElement).value; return `Hi Grant, I need ${v('what')} on ${v('on')} for my ${v('for')}, ideally live ${v('when')}, with a budget of about ${v('budget')}.`; };
+    // Each blank is as wide as the words picked (measured in the select's own font), plus its arrow.
+    const ctx2 = document.createElement('canvas').getContext('2d')!;
+    const fit = () => box.querySelectorAll<HTMLSelectElement>('select').forEach((s) => { const cs = getComputedStyle(s); ctx2.font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`; s.style.width = `${Math.ceil(ctx2.measureText(s.options[s.selectedIndex].text).width + parseFloat(cs.fontSize) * 0.95)}px`; });
+    addEventListener('resize', fit);
+    box.querySelectorAll('select').forEach((s) => s.addEventListener('change', () => { fit(); box.querySelector('.sx-libs-note')!.textContent = ''; s.closest('.sx-blank')!.animate([{ transform: 'scale(1.06)' }, { transform: 'none' }], { duration: 300, easing: 'ease-out' }); }));
+    fit(); void sentence;
+    box.querySelector('[data-libs-copy]')!.addEventListener('click', async () => { try { await navigator.clipboard.writeText(text()); box.querySelector('.sx-libs-note')!.textContent = 'Copied. Paste it into the contact form.'; } catch { box.querySelector('.sx-libs-note')!.textContent = text(); } });
+    box.querySelector<HTMLAnchorElement>('[data-libs-send]')!.addEventListener('click', () => { try { sessionStorage.setItem('brief-sentence', text()); } catch {} });
+  });
+</script>
+
+<style is:global>
+  .sx-page { padding-bottom: 120px; }
+  .sx-head { padding: 40px 0 70px; max-width: 900px; }
+  .sx-head h1 { font-size: clamp(64px, 11vw, 170px); margin: 14px 0 22px; }
+  .sx-head p { font-size: 17px; max-width: 640px; color: var(--muted); }
+  .sx { padding: 64px 0; border-top: 1px solid var(--line); scroll-margin-top: 20px; }
+  .sx-top { display: grid; grid-template-columns: minmax(0, 1fr); gap: 4px; margin-bottom: 28px; max-width: 820px; }
+  .sx-why { margin: 0; color: var(--muted); font-size: 15px; }
+  .sx-why i { font-style: normal; color: var(--ink); white-space: nowrap; }
+  .sx-why i::before { content: '· '; color: var(--muted); }
+  .sx-stage { position: relative; border-radius: 26px; background: var(--surface); padding: clamp(24px, 4vw, 56px); overflow: hidden; }
+  .sx-kicker { margin: 0 0 10px; font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+  .sx-stage h3 { margin: 0 0 12px; font-size: clamp(24px, 2.6vw, 36px); line-height: 1.08; letter-spacing: -0.02em; font-weight: 600; }
+  .sx-btn { display: inline-flex; align-items: center; gap: 10px; padding: 13px 22px; border-radius: 999px; background: var(--ink); color: var(--bg); border: 1px solid var(--ink); font: 600 14px Archivo, sans-serif; cursor: pointer; text-decoration: none; transition: transform 0.3s var(--ease); }
+  .sx-btn:hover { transform: translateY(-2px); }
+  .sx-btn.ghost { background: transparent; color: var(--ink); }
+  .sx-example { display: inline-block; margin-left: 8px; padding: 2px 8px; border-radius: 999px; background: oklch(0.93 0.09 95); color: oklch(0.3 0.05 90); font-size: 10.5px; letter-spacing: 0.04em; }
+  .sx-legend { display: flex; flex-wrap: wrap; gap: 8px 18px; list-style: none; padding: 0; margin: 18px 0 0; font-size: 13px; color: var(--muted); }
+  .sx-legend li { display: flex; align-items: center; gap: 8px; }
+  .sx-legend i { width: 14px; height: 14px; border-radius: 4px; display: inline-block; }
+
+  /* 1 — metro */
+  .sx-metro { --p: 0; background: oklch(0.97 0.012 245); }
+  .sx-metro-line { position: relative; margin: 40px 0 34px; }
+  .sx-metro-line::before, .sx-metro-fill { content: ''; position: absolute; left: calc(100% / var(--n) / 2); right: calc(100% / var(--n) / 2); top: 13px; height: 6px; border-radius: 6px; background: oklch(0.86 0.02 245); }
+  .sx-metro-fill { right: auto; width: calc((100% - 100% / var(--n)) * var(--p)); background: oklch(0.5 0.16 245); transition: width 0.9s var(--ease); }
+  .sx-metro-train { position: absolute; top: 3px; left: calc(100% / var(--n) / 2 + (100% - 100% / var(--n)) * var(--p)); width: 26px; height: 26px; margin-left: -13px; border-radius: 50%; background: oklch(0.5 0.16 245); box-shadow: 0 0 0 6px oklch(0.5 0.16 245 / 0.18); transition: left 0.9s var(--ease); z-index: 2; }
+  .sx-metro ol { position: relative; display: grid; grid-template-columns: repeat(var(--n), 1fr); list-style: none; margin: 0; padding: 0; }
+  .sx-metro button { display: grid; justify-items: center; gap: 6px; width: 100%; padding: 0; background: none; border: 0; cursor: pointer; font: inherit; color: var(--muted); }
+  .sx-stop-dot { width: 32px; height: 32px; border-radius: 50%; background: var(--bg); border: 6px solid oklch(0.86 0.02 245); transition: border-color 0.4s; }
+  .sx-metro button.is-past .sx-stop-dot, .sx-metro button[aria-pressed='true'] .sx-stop-dot { border-color: oklch(0.5 0.16 245); }
+  .sx-stop-n { font-size: 11px; letter-spacing: 0.1em; }
+  .sx-stop-name { font-size: 17px; font-weight: 600; color: var(--ink); }
+  .sx-metro button[aria-pressed='true'] .sx-stop-name { color: oklch(0.45 0.16 245); }
+  .sx-metro-panel { max-width: 620px; min-height: 120px; }
+  .sx-metro-panel > div { animation: sx-up 0.5s var(--ease); }
+  .sx-metro-panel p { font-size: 17px; margin: 0; }
+  @keyframes sx-up { from { opacity: 0; transform: translateY(10px); } }
+  @media (max-width: 700px) {
+    .sx-stop-name { font-size: 13px; }
+    .sx-stop-dot { width: 26px; height: 26px; border-width: 5px; }
+    .sx-metro-train { width: 20px; height: 20px; margin-left: -10px; top: 3px; }
+    .sx-metro-line::before, .sx-metro-fill { top: 10px; }
+    .sx-stop-n { display: none; }
+  }
+
+  /* 2 — matchmaker */
+  .sx-match { display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); gap: clamp(24px, 4vw, 60px); align-items: start; }
+  .sx-toggle { display: flex; align-items: center; gap: 12px; width: 100%; margin: 0 0 8px; padding: 14px 16px; border-radius: 14px; background: var(--bg); border: 1px solid var(--line); font: 500 15px Archivo, sans-serif; text-align: left; cursor: pointer; transition: border-color 0.3s, background 0.3s; }
+  .sx-check { width: 20px; height: 20px; border-radius: 6px; border: 1.5px solid var(--line); flex: none; display: grid; place-items: center; transition: background 0.3s; }
+  .sx-toggle[aria-pressed='true'] { border-color: var(--ink); }
+  .sx-toggle[aria-pressed='true'] .sx-check { background: var(--ink); border-color: var(--ink); }
+  .sx-toggle[aria-pressed='true'] .sx-check::after { content: '✓'; color: var(--bg); font-size: 13px; }
+  .sx-match-cards { display: grid; gap: 14px; }
+  .sx-pcard { --m: 0; position: relative; padding: 22px 24px; border-radius: 20px; background: var(--bg); border: 1px solid var(--line); transition: transform 0.5s var(--ease), box-shadow 0.5s, border-color 0.5s; }
+  .sx-pcard h4 { margin: 0 0 4px; font-size: 22px; }
+  .sx-pcard p { margin: 0 0 14px; color: var(--muted); font-size: 14px; }
+  .sx-meter { height: 8px; border-radius: 8px; background: var(--surface); overflow: hidden; }
+  .sx-meter i { display: block; height: 100%; width: calc(var(--m) * 100%); background: var(--ink); border-radius: inherit; transition: width 0.7s var(--ease); }
+  .sx-score { display: block; margin-top: 8px; color: var(--muted); }
+  .sx-best { position: absolute; top: 18px; right: 18px; padding: 4px 10px; border-radius: 999px; background: oklch(0.55 0.15 150); color: #fff; font-size: 12px; font-weight: 600; opacity: 0; transform: scale(0.8); transition: 0.4s var(--ease); }
+  .sx-pcard.is-best { transform: translateX(-8px); border-color: oklch(0.55 0.15 150); box-shadow: 0 18px 40px -24px oklch(0.4 0.1 150 / 0.6); }
+  .sx-pcard.is-best .sx-best { opacity: 1; transform: none; }
+  .sx-pcard.is-best .sx-meter i { background: oklch(0.55 0.15 150); }
+  @media (max-width: 800px) { .sx-match { grid-template-columns: 1fr; } .sx-pcard.is-best { transform: none; } }
+
+  /* 3 — time zones */
+  .sx-tz { display: grid; grid-template-columns: minmax(220px, 360px) minmax(0, 1fr); gap: clamp(24px, 5vw, 70px); align-items: center; }
+  .sx-dial { width: 100%; height: auto; }
+  .sx-dial-ticks line { stroke: var(--muted); stroke-width: 1.5; opacity: 0.5; }
+  .sx-dial-ticks text { font: 600 11px Archivo, sans-serif; fill: var(--muted); text-anchor: middle; }
+  .sx-arc { fill: none; stroke-linecap: round; transition: d 0.6s var(--ease); }
+  .sx-arc-you { stroke: oklch(0.82 0.08 245); stroke-width: 16; }
+  .sx-arc-me { stroke: oklch(0.78 0.12 60); stroke-width: 16; }
+  .sx-arc-both { stroke: oklch(0.55 0.15 150); stroke-width: 6; }
+  .sx-hand { stroke: var(--ink); stroke-width: 3; stroke-linecap: round; transition: transform 0.6s var(--ease); }
+  .sx-hub { fill: var(--ink); }
+  .sx-legend i.you { background: oklch(0.82 0.08 245); } .sx-legend i.me { background: oklch(0.78 0.12 60); } .sx-legend i.both { background: oklch(0.55 0.15 150); }
+  .sx-tz-sub { font-size: 16px; max-width: 520px; color: var(--muted); }
+  .sx-tz-cities { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 22px; }
+  .sx-tz-cities button, .sx-chips button { padding: 9px 15px; border-radius: 999px; border: 1px solid var(--line); background: var(--bg); font: 500 13.5px Archivo, sans-serif; cursor: pointer; }
+  .sx-tz-cities button[aria-pressed='true'] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+  @media (max-width: 760px) { .sx-tz { grid-template-columns: 1fr; } .sx-dial { max-width: 300px; margin: 0 auto; } }
+
+  /* 4 — periodic table */
+  .sx-table { display: grid; grid-template-columns: minmax(0, 1fr) 280px; gap: 32px; align-items: start; background: oklch(0.2 0.01 260); color: oklch(0.96 0 0); }
+  .sx-elements { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+  .sx-el, .sx-el-big { --c: oklch(0.7 0.13 245); position: relative; aspect-ratio: 1; padding: 8px 10px; border-radius: 10px; border: 1px solid color-mix(in oklch, var(--c) 60%, transparent); background: color-mix(in oklch, var(--c) 16%, transparent); color: inherit; font: inherit; text-align: left; display: flex; flex-direction: column; cursor: pointer; transition: transform 0.35s var(--ease), background 0.3s; }
+  .sx-el small, .sx-el-big small { font-size: 11px; opacity: 0.7; }
+  .sx-el b { font: 800 clamp(26px, 3vw, 40px)/1 "Big Shoulders Display", sans-serif; margin: auto 0 2px; color: var(--c); }
+  .sx-el span { font-size: 10.5px; line-height: 1.2; opacity: 0.85; }
+  .sx-el:hover, .sx-el.is-on { transform: translateY(-4px) scale(1.04); background: color-mix(in oklch, var(--c) 32%, transparent); }
+  .k-platform { --c: oklch(0.72 0.14 245); } .k-craft { --c: oklch(0.78 0.14 75); } .k-care { --c: oklch(0.74 0.14 150); } .k-people { --c: oklch(0.72 0.15 330); }
+  .sx-legend i.k-platform, .sx-legend i.k-craft, .sx-legend i.k-care, .sx-legend i.k-people { background: var(--c); }
+  .sx-table .sx-legend { color: oklch(0.8 0 0); }
+  .sx-el-detail { position: sticky; top: 20px; }
+  .sx-el-big { width: 150px; margin-bottom: 18px; cursor: default; }
+  .sx-el-big b { font: 800 84px/1 "Big Shoulders Display", sans-serif; margin: auto 0 0; color: var(--c); }
+  .sx-el-detail p { color: oklch(0.8 0 0); }
+  @media (max-width: 800px) { .sx-table { grid-template-columns: 1fr; } .sx-elements { grid-template-columns: repeat(3, 1fr); } .sx-el-detail { position: static; display: grid; grid-template-columns: 110px 1fr; gap: 0 16px; align-items: center; } .sx-el-big { width: 100px; margin: 0; grid-row: span 2; } .sx-el-big b { font-size: 54px; } .sx-el-detail .sx-legend { grid-column: 1 / -1; } }
+
+  /* 5 — career */
+  .sx-career { --t: 1; }
+  .sx-career-read { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 18px; min-height: 64px; margin: 0 0 24px; }
+  .sx-career-date { font: 800 clamp(40px, 5vw, 64px)/1 "Big Shoulders Display", sans-serif; }
+  .sx-career-what { font-size: 18px; font-weight: 500; }
+  .sx-career-track { position: relative; height: calc(var(--lanes) * 74px); cursor: ew-resize; touch-action: pan-y; }
+  .sx-career-bar { position: absolute; top: calc(var(--lane) * 74px); left: calc(var(--a) * 100%); width: calc((var(--b) - var(--a)) * 100%); height: 62px; padding: 10px 14px; border-radius: 14px; background: var(--bg); border: 1px solid var(--line); overflow: hidden; display: grid; align-content: center; transition: background 0.3s, color 0.3s, border-color 0.3s; }
+  .sx-career-bar b { font-size: 14px; white-space: nowrap; }
+  .sx-career-bar span { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sx-career-bar.is-on { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+  .sx-career-bar.is-on span { color: oklch(0.8 0 0); }
+  .sx-career-cursor { position: absolute; top: -10px; bottom: -10px; left: calc(var(--t) * 100%); width: 2px; background: oklch(0.6 0.18 30); pointer-events: none; }
+  .sx-career-cursor::before { content: ''; position: absolute; top: -6px; left: -5px; width: 12px; height: 12px; border-radius: 50%; background: oklch(0.6 0.18 30); }
+  .sx-career-years { position: relative; height: 24px; margin-top: 14px; font-size: 12px; color: var(--muted); }
+  .sx-career-years span { position: absolute; left: calc(var(--x) * 100%); }
+  .sx-career-range { width: 100%; margin-top: 18px; accent-color: var(--ink); }
+  @media (max-width: 640px) { .sx-career-years span:nth-child(odd) { display: none; } .sx-career-bar { padding: 8px 10px; } }
+
+  /* 6 — chat */
+  .sx-chat { display: grid; grid-template-columns: minmax(260px, 380px) minmax(0, 1fr); gap: clamp(24px, 5vw, 70px); align-items: center; background: oklch(0.96 0.02 150); }
+  .sx-phone-chat { border-radius: 32px; background: var(--bg); box-shadow: 0 30px 60px -36px oklch(0.2 0.05 150 / 0.6); overflow: hidden; border: 8px solid oklch(0.18 0 0); }
+  .sx-phone-chat header { display: flex; gap: 10px; align-items: center; padding: 14px 16px; border-bottom: 1px solid var(--line); }
+  .sx-phone-chat header small { display: block; color: var(--muted); font-size: 11.5px; }
+  .sx-avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--ink); color: var(--bg); display: grid; place-items: center; font-weight: 700; }
+  .sx-thread { height: 360px; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 8px; scrollbar-width: none; }
+  .sx-msg { margin: 0; max-width: 84%; padding: 10px 14px; border-radius: 18px; font-size: 14px; line-height: 1.4; animation: sx-pop 0.35s var(--ease); }
+  .sx-msg.them { align-self: flex-start; background: var(--surface); border-bottom-left-radius: 6px; }
+  .sx-msg.me { align-self: flex-end; background: oklch(0.55 0.15 150); color: #fff; border-bottom-right-radius: 6px; }
+  .sx-msg.typing { display: flex; gap: 4px; padding: 14px; }
+  .sx-msg.typing i { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); animation: sx-dot 1s infinite; }
+  .sx-msg.typing i:nth-child(2) { animation-delay: 0.15s; } .sx-msg.typing i:nth-child(3) { animation-delay: 0.3s; }
+  @keyframes sx-dot { 50% { transform: translateY(-4px); opacity: 0.4; } }
+  @keyframes sx-pop { from { opacity: 0; transform: translateY(8px) scale(0.96); } }
+  .sx-chips { display: flex; flex-wrap: wrap; gap: 10px; }
+  .sx-chips button { padding: 12px 18px; font-size: 15px; transition: background 0.3s, color 0.3s; }
+  .sx-chips button:hover { background: var(--ink); color: var(--bg); }
+  .sx-chips button.is-asked { opacity: 0.55; }
+  @media (max-width: 760px) { .sx-chat { grid-template-columns: 1fr; } .sx-thread { height: 300px; } }
+
+  /* 7 — clipboard */
+  .sx-clip-stage { display: grid; grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr); gap: 40px; align-items: center; background: oklch(0.95 0.03 80); }
+  .sx-clip-count { font-size: 18px; } .sx-clip-count b { font: 800 46px/1 "Big Shoulders Display", sans-serif; margin-right: 4px; }
+  .sx-clipboard { position: relative; padding: 46px 26px 26px; border-radius: 18px; background: oklch(0.62 0.07 60); box-shadow: 0 30px 50px -30px oklch(0.3 0.06 60 / 0.7); transform: rotate(1.2deg); }
+  .sx-clip-top { position: absolute; top: -14px; left: 50%; width: 120px; height: 38px; margin-left: -60px; border-radius: 10px; background: linear-gradient(oklch(0.82 0 0), oklch(0.62 0 0)); box-shadow: 0 4px 8px oklch(0 0 0 / 0.25); }
+  .sx-clipboard ol { list-style: none; margin: 0; padding: 18px 22px; background: #fffdf6; border-radius: 6px; counter-reset: c; }
+  .sx-clipboard li { display: flex; gap: 12px; align-items: center; padding: 8px 0; border-bottom: 1px dashed oklch(0.85 0.02 80); font-size: 14.5px; transition: color 0.3s; }
+  .sx-box { width: 20px; height: 20px; border: 1.5px solid oklch(0.5 0.02 80); border-radius: 5px; flex: none; position: relative; }
+  .sx-clipboard li.is-done { color: oklch(0.5 0.02 80); }
+  .sx-clipboard li.is-done .sx-box::after { content: ''; position: absolute; left: 5px; top: -3px; width: 7px; height: 15px; border: solid oklch(0.5 0.17 150); border-width: 0 3px 3px 0; transform: rotate(40deg); animation: sx-tick 0.35s var(--ease); }
+  @keyframes sx-tick { from { transform: rotate(40deg) scale(0); } }
+  .sx-stamp { position: absolute; right: 30px; bottom: 40px; padding: 8px 16px; border: 4px solid oklch(0.55 0.2 27); border-radius: 10px; color: oklch(0.55 0.2 27); font: 800 28px/1 "Big Shoulders Display", sans-serif; text-transform: uppercase; letter-spacing: 0.04em; transform: rotate(-12deg) scale(2.4); opacity: 0; transition: transform 0.4s cubic-bezier(0.3, 1.6, 0.5, 1), opacity 0.2s; mix-blend-mode: multiply; }
+  .sx-clip-stage.is-ready .sx-stamp { opacity: 0.9; transform: rotate(-12deg) scale(1); }
+  @media (max-width: 760px) { .sx-clip-stage { grid-template-columns: 1fr; } .sx-clipboard { padding: 40px 12px 14px; } .sx-clipboard ol { padding: 12px 14px; } .sx-stamp { right: 14px; bottom: 24px; font-size: 22px; } }
+
+  /* 8 — odometer */
+  .sx-odo { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 18px; background: var(--ink); color: var(--bg); }
+  .sx-odo-num { display: flex; gap: 4px; margin-bottom: 12px; }
+  .sx-odo-col { height: clamp(64px, 7vw, 100px); width: clamp(44px, 4.8vw, 68px); overflow: hidden; border-radius: 10px; background: oklch(0.26 0 0); box-shadow: inset 0 10px 14px -8px oklch(0 0 0 / 0.8), inset 0 -10px 14px -8px oklch(0 0 0 / 0.8); }
+  .sx-odo-reel { --d: 0; display: flex; flex-direction: column; transform: translateY(calc(var(--d) * -10%)); transition: transform 1.6s cubic-bezier(0.2, 0.9, 0.2, 1); }
+  .sx-odo-reel i { font: 800 clamp(48px, 5.6vw, 80px)/clamp(64px, 7vw, 100px) "Big Shoulders Display", sans-serif; font-style: normal; text-align: center; height: clamp(64px, 7vw, 100px); }
+  .sx-odo p { margin: 0; color: oklch(0.78 0 0); font-size: 14px; max-width: 200px; }
+  @media (max-width: 900px) { .sx-odo { grid-template-columns: repeat(2, 1fr); row-gap: 30px; } }
+
+  /* 9 — wall */
+  .sx-wall { position: relative; height: clamp(420px, 52vw, 640px); border-radius: 26px; overflow: hidden; background: oklch(0.94 0.01 260); cursor: grab; touch-action: none; user-select: none; }
+  .sx-wall.is-dragging { cursor: grabbing; }
+  .sx-wall-tiles { position: absolute; inset: 0; }
+  .sx-tile { position: absolute; top: 0; left: 0; border-radius: 16px; overflow: hidden; background: var(--bg); box-shadow: 0 16px 30px -20px oklch(0.2 0.02 260 / 0.5); will-change: transform; }
+  .sx-tile img { width: 100%; height: 100%; object-fit: cover; object-position: top; pointer-events: none; }
+  .sx-tile span { position: absolute; left: 10px; bottom: 10px; padding: 6px 12px; border-radius: 999px; background: oklch(1 0 0 / 0.92); font-size: 12px; color: var(--muted); display: flex; gap: 8px; opacity: 0; transform: translateY(6px); transition: 0.3s var(--ease); }
+  .sx-tile span b { color: var(--ink); }
+  .sx-tile:hover span { opacity: 1; transform: none; }
+  .sx-wall-hint { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); padding: 14px 22px; border-radius: 999px; background: var(--ink); color: var(--bg); font-weight: 600; pointer-events: none; transition: opacity 0.4s; }
+  .sx-wall.was-dragged .sx-wall-hint { opacity: 0; }
+
+  /* 10 — receipt */
+  .sx-receipt-stage { display: grid; grid-template-columns: minmax(0, 1fr); justify-items: center; gap: 18px; background: oklch(0.93 0.015 60); padding-top: 30px; }
+  .sx-printer { position: relative; width: min(360px, 100%); }
+  .sx-slot { display: block; height: 28px; margin: 0 -18px; border-radius: 14px; background: linear-gradient(oklch(0.32 0 0), oklch(0.2 0 0)); box-shadow: 0 10px 18px -8px oklch(0 0 0 / 0.5); position: relative; z-index: 2; }
+  .sx-paper-clip { overflow: hidden; margin-top: -12px; padding: 0 10px 20px; }
+  .sx-paper { position: relative; padding: 28px 22px 34px; background: #fffef9; font: 13px/1.6 ui-monospace, "SF Mono", Menlo, monospace; color: oklch(0.25 0 0); box-shadow: 0 10px 20px -12px oklch(0 0 0 / 0.3); transform: translateY(-101%); --mask: radial-gradient(circle at 8px 100%, transparent 7px, #000 7.5px) 0 0 / 16px 100%; -webkit-mask: linear-gradient(#000, #000) top / 100% calc(100% - 8px) no-repeat, radial-gradient(circle at 8px 8px, transparent 7px, #000 7.5px) bottom / 16px 8px repeat-x; }
+  .sx-receipt-stage.is-printing .sx-paper { animation: sx-print 2.6s steps(26) forwards; }
+  @keyframes sx-print { to { transform: none; } }
+  .sx-r-head { text-align: center; font-weight: 700; letter-spacing: 0.2em; margin: 0; }
+  .sx-r-head small { font-weight: 400; letter-spacing: 0.04em; }
+  .sx-r-dash { border-top: 1.5px dashed oklch(0.6 0 0); margin: 12px 0; }
+  .sx-r-line { display: flex; justify-content: space-between; gap: 10px; margin: 2px 0; }
+  .sx-r-line span { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; }
+  .sx-r-line b { flex: none; }
+  .sx-r-line span::after { content: ' ..........................................'; color: oklch(0.7 0 0); }
+  .sx-r-total { font-weight: 700; font-size: 15px; }
+  .sx-r-foot { text-align: center; margin: 18px 0 0; font-size: 11px; color: oklch(0.5 0 0); }
+  .sx-barcode { display: block; height: 40px; margin: 10px auto 0; width: 80%; background: repeating-linear-gradient(90deg, #222 0 2px, transparent 2px 4px, #222 4px 5px, transparent 5px 8px, #222 8px 11px, transparent 11px 12px); }
+
+  /* 11 — myths */
+  .sx-myths { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; background: none; padding: 0; overflow: visible; }
+  .sx-flip { position: relative; height: 250px; padding: 0; border: 0; background: none; cursor: pointer; perspective: 1000px; font: inherit; text-align: left; transform: rotate(var(--r)); transition: transform 0.4s var(--ease); }
+  .sx-flip:hover { transform: rotate(0) translateY(-4px); }
+  .sx-face { position: absolute; inset: 0; padding: 24px; border-radius: 22px; display: flex; flex-direction: column; gap: 10px; backface-visibility: hidden; transition: transform 0.8s var(--ease); }
+  .sx-face small { font-size: 12px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; }
+  .sx-face b { font-size: 21px; line-height: 1.2; font-weight: 600; }
+  .sx-front { background: oklch(0.93 0.05 25); color: oklch(0.32 0.1 25); }
+  .sx-front b { font-size: 26px; text-decoration: line-through; text-decoration-thickness: 0; transition: text-decoration-thickness 0.3s; }
+  .sx-front em { margin-top: auto; font-style: normal; font-size: 13px; opacity: 0.7; }
+  .sx-back { background: oklch(0.3 0.06 150); color: oklch(0.95 0.03 150); transform: rotateY(180deg); }
+  .sx-back b { font-size: 17px; font-weight: 500; }
+  .sx-flip[aria-pressed='true'] .sx-front { transform: rotateY(-180deg); }
+  .sx-flip[aria-pressed='true'] .sx-back { transform: none; }
+  @media (max-width: 900px) { .sx-myths { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 560px) { .sx-myths { grid-template-columns: 1fr; } .sx-flip { height: 210px; } }
+
+  /* 12 — hours */
+  .sx-hours { --v: 0.1; }
+  .sx-hours-top { display: flex; justify-content: space-between; align-items: end; flex-wrap: wrap; gap: 10px; }
+  .sx-hours-big { margin: 0; display: flex; align-items: baseline; gap: 10px; }
+  .sx-hours-big b { font-size: clamp(64px, 8vw, 110px); line-height: 0.9; }
+  .sx-hours-range { width: 100%; margin: 26px 0 6px; accent-color: var(--ink); height: 28px; }
+  .sx-hours-ticks { position: relative; height: 34px; font-size: 12px; font-weight: 600; }
+  .sx-hours-ticks span { position: absolute; left: calc(var(--x) * 100%); transform: translateX(-50%); text-align: center; display: grid; }
+  .sx-hours-ticks span::before { content: ''; width: 1px; height: 8px; background: var(--muted); margin: 0 auto 2px; }
+  .sx-hours-ticks small { color: var(--muted); font-weight: 400; }
+  .sx-hours-compare { display: grid; gap: 12px; margin-top: 26px; }
+  .sx-cost { --w: 0; display: grid; grid-template-columns: 200px 120px 1fr; align-items: center; gap: 14px; }
+  .sx-cost small { color: var(--muted); font-size: 13.5px; }
+  .sx-cost b { font-size: 20px; }
+  .sx-cost i { height: 18px; border-radius: 9px; background: var(--line); width: calc(var(--w) * 100%); transition: width 0.5s var(--ease), background 0.3s; }
+  .sx-cost.is-better i { background: oklch(0.55 0.15 150); }
+  .sx-hours-save { font-size: 18px; margin: 22px 0 0; }
+  @media (max-width: 700px) { .sx-cost { grid-template-columns: 1fr auto; } .sx-cost i { grid-column: 1 / -1; } .sx-hours-ticks { font-size: 10.5px; } .sx-hours-ticks span:nth-child(1) { transform: translateX(-80%); } .sx-hours-ticks span:nth-child(2) { transform: translateX(-10%); } .sx-hours-ticks span:nth-child(4) { transform: translateX(-90%); } }
+
+  /* 13 — booking */
+  .sx-weeks { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; margin-top: 18px; }
+  .sx-week { padding: 14px; border-radius: 14px; display: grid; gap: 2px; opacity: 0; transform: rotateX(-80deg); transform-origin: top; transition: 0.6s var(--ease) calc(var(--i) * 60ms); }
+  .sx-book.is-in .sx-week { opacity: 1; transform: none; }
+  .sx-week small { font-size: 11px; opacity: 0.7; } .sx-week b { font-size: 18px; } .sx-week span { font-size: 12.5px; font-weight: 600; }
+  .sx-week.full, .sx-legend i.full { background: oklch(0.86 0 0); color: oklch(0.45 0 0); }
+  .sx-week.some, .sx-legend i.some { background: oklch(0.9 0.09 85); color: oklch(0.35 0.08 70); }
+  .sx-week.open, .sx-legend i.open { background: oklch(0.88 0.1 150); color: oklch(0.3 0.08 150); }
+  @media (max-width: 800px) { .sx-weeks { grid-template-columns: repeat(3, 1fr); } }
+
+  /* 14 — bubbles */
+  .sx-bubbles-stage { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr); gap: 30px; align-items: center; background: oklch(0.97 0.01 300); }
+  .sx-bubbles { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 14px; min-height: 380px; }
+  .sx-bubble { --s: 1; width: calc(118px * var(--s)); aspect-ratio: 1; border-radius: 50%; border: 0; display: grid; place-content: center; text-align: center; padding: 10px; background: oklch(0.9 0.07 var(--h)); color: oklch(0.3 0.08 var(--h)); font: inherit; cursor: pointer; animation: sx-float 6s ease-in-out var(--d) infinite; transition: background 0.3s, transform 0.3s; }
+  .sx-bubble b { font-size: calc(13px * var(--s)); line-height: 1.15; } .sx-bubble small { font-size: 11.5px; opacity: 0.75; }
+  .sx-bubble:hover, .sx-bubble[aria-pressed='true'] { background: oklch(0.45 0.13 var(--h)); color: #fff; }
+  @keyframes sx-float { 50% { transform: translate(4px, -10px); } }
+  .sx-bubble-list h3 { animation: sx-up 0.4s var(--ease); }
+  .sx-bubble-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .sx-bubble-cards a { display: block; border-radius: 14px; overflow: hidden; background: var(--bg); animation: sx-up 0.5s var(--ease) both; }
+  .sx-bubble-cards a:nth-child(2) { animation-delay: 0.08s; }
+  .sx-bubble-cards img { width: 100%; aspect-ratio: 16 / 10; object-fit: cover; object-position: top; display: block; }
+  .sx-bubble-cards span { display: flex; justify-content: space-between; padding: 10px 12px; font-size: 12.5px; color: var(--muted); }
+  .sx-bubble-cards b { color: var(--ink); }
+  .sx-bubble-empty { color: var(--muted); font-size: 16px; }
+  @media (max-width: 800px) { .sx-bubbles-stage { grid-template-columns: 1fr; } .sx-bubbles { min-height: 0; } .sx-bubble { width: calc(92px * var(--s)); } .sx-bubble b { font-size: calc(11px * var(--s)); } }
+
+  /* 15 — red pen */
+  .sx-redpen { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 0.75fr); gap: 40px; align-items: center; }
+  .sx-mock { position: relative; aspect-ratio: 600 / 420; border-radius: 14px; background: var(--bg); box-shadow: 0 24px 50px -30px oklch(0 0 0 / 0.35); overflow: hidden; }
+  .sx-mock-bar { display: flex; gap: 6px; align-items: center; height: 7%; padding: 0 12px; background: var(--surface); }
+  .sx-mock-bar span { width: 9px; height: 9px; border-radius: 50%; background: var(--line); }
+  .sx-mock-bar i { margin-left: 14px; font-size: 11px; color: var(--muted); font-style: normal; }
+  .sx-mock-nav { display: flex; align-items: center; gap: 14px; height: 10%; padding: 0 5%; border-bottom: 1px solid var(--surface); }
+  .sx-mock-nav span { width: 46px; height: 6px; border-radius: 3px; background: var(--line); visibility: hidden; }
+  .sx-mock-nav em { margin-left: auto; font-style: normal; }
+  .sx-mock-hero { height: 44%; margin: 3% 5%; border-radius: 10px; background: linear-gradient(120deg, oklch(0.8 0.06 40), oklch(0.7 0.08 20)); display: flex; align-items: center; padding: 0 6%; }
+  .sx-mock-hero div { display: grid; gap: 8px; width: 46%; }
+  .sx-mock-hero i { height: 12px; border-radius: 4px; background: oklch(1 0 0 / 0.85); } .sx-mock-hero i.short { width: 60%; }
+  .sx-mock-hero u { justify-self: start; margin-top: 6px; font-size: 11px; color: oklch(1 0 0 / 0.8); text-decoration: none; }
+  .sx-mock-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 3%; margin: 0 5%; height: 24%; }
+  .sx-mock-grid span { border-radius: 8px; background: var(--surface); }
+  .sx-ink { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+  .sx-ink path { fill: none; stroke: oklch(0.55 0.22 27); stroke-width: 3.4; stroke-linecap: round; stroke-dasharray: 1; stroke-dashoffset: 1; }
+  .sx-redpen.is-marked .sx-ink path { animation: sx-ink 0.9s ease-out forwards; }
+  .sx-redpen.is-marked .sx-ink path:nth-child(2) { animation-delay: 0.9s; } .sx-redpen.is-marked .sx-ink path:nth-child(3) { animation-delay: 1.8s; } .sx-redpen.is-marked .sx-ink path:nth-child(4) { animation-delay: 2.6s; }
+  @keyframes sx-ink { to { stroke-dashoffset: 0; } }
+  .sx-note { position: absolute; margin: 0; max-width: 200px; color: oklch(0.5 0.22 27); font: italic 600 clamp(11px, 1.3vw, 16px)/1.15 "Bradley Hand", "Segoe Print", "Comic Sans MS", cursive; opacity: 0; transform: rotate(-4deg) translateY(4px); }
+  .sx-redpen.is-marked .sx-note { animation: sx-note 0.4s var(--ease) forwards; }
+  .sx-note.n1 { right: 3%; top: 60%; animation-delay: 0.7s !important; background: oklch(1 0 0 / 0.85); padding: 2px 6px; }
+  .sx-note.n2 { right: 13%; top: 9%; max-width: 230px; text-align: right; animation-delay: 1.6s !important; }
+  .sx-note.n3 { left: 9%; top: 57%; animation-delay: 2.4s !important; transform: rotate(3deg); color: oklch(0.98 0 0); }
+  .sx-note.n4 { left: 30%; bottom: 3%; animation-delay: 3.3s !important; }
+  @keyframes sx-note { to { opacity: 1; transform: rotate(-4deg); } }
+  .sx-redpen-copy .sx-btn { margin: 10px 8px 0 0; }
+  @media (max-width: 800px) { .sx-redpen { grid-template-columns: 1fr; } .sx-note { max-width: 130px; font-size: 10.5px; } .sx-note.n2 { top: 8%; max-width: 150px; } }
+
+  /* 16 — code */
+  .sx-code { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 24px; background: oklch(0.2 0.01 260); }
+  .sx-editor { position: relative; margin: 0; padding: 22px; border-radius: 16px; background: oklch(0.15 0.01 260); color: oklch(0.88 0 0); font: 13px/1.7 ui-monospace, "SF Mono", Menlo, monospace; min-height: 300px; white-space: pre-wrap; overflow: hidden; }
+  .sx-editor .lq { color: oklch(0.8 0.13 75); } .sx-editor .tg { color: oklch(0.76 0.12 245); } .sx-editor .st { color: oklch(0.8 0.12 150); }
+  .sx-caret { display: inline-block; width: 8px; height: 16px; background: oklch(0.8 0.13 75); vertical-align: middle; animation: sx-blink 1s steps(1) infinite; }
+  .sx-code.is-done .sx-caret { opacity: 0; }
+  @keyframes sx-blink { 50% { opacity: 0; } }
+  .sx-result { display: grid; place-items: center; border-radius: 16px; background: oklch(0.96 0 0); padding: 18px; }
+  .sx-res-frame { width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: center; padding: 20px; border-radius: 14px; border: 2px dashed oklch(0.75 0 0); transition: 0.5s var(--ease); }
+  .sx-res-frame.on { border-style: solid; border-color: transparent; background: oklch(0.93 0.03 230); }
+  .sx-result [class^='sx-res-'] { opacity: 0; transform: translateY(10px); transition: 0.5s var(--ease); }
+  .sx-result .sx-res-frame, .sx-result .sx-res-text { opacity: 1; transform: none; }
+  .sx-result .on { opacity: 1 !important; transform: none !important; }
+  .sx-res-title { margin: 0 0 6px; font: 800 30px/1 "Big Shoulders Display", sans-serif; }
+  .sx-res-p { margin: 0 0 12px; font-size: 13px; color: var(--muted); }
+  .sx-res-btn { display: inline-block; padding: 8px 14px; border-radius: 999px; background: var(--ink); color: var(--bg); font-size: 12px; }
+  .sx-res-img { aspect-ratio: 4 / 3; border-radius: 10px; background: oklch(0.8 0.04 230) center / cover no-repeat; }
+  @media (max-width: 800px) { .sx-code { grid-template-columns: 1fr; } .sx-editor { font-size: 11px; min-height: 250px; } }
+
+  /* 17 — notes */
+  .sx-notes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 26px; padding: 30px 0 10px; background: none; overflow: visible; }
+  .sx-notecard { position: relative; display: flex; flex-direction: column; min-height: 300px; padding: 30px 26px 24px; background: oklch(0.985 0.012 var(--h, 90)); box-shadow: 0 20px 40px -26px oklch(0.2 0.03 80 / 0.5); transform: rotate(var(--r)); transition: transform 0.45s var(--ease), box-shadow 0.45s; color: inherit; text-decoration: none; }
+  .sx-notecard.t-olive { --h: 110; } .sx-notecard.t-blue { --h: 240; } .sx-notecard.t-rose { --h: 20; }
+  .sx-notecard:hover { transform: rotate(0) translateY(-8px); box-shadow: 0 30px 50px -26px oklch(0.2 0.03 80 / 0.55); }
+  .sx-tape { position: absolute; top: -12px; left: 50%; width: 110px; height: 28px; margin-left: -55px; background: oklch(0.9 0.05 var(--h) / 0.75); transform: rotate(-3deg); }
+  .sx-notecard small { color: var(--muted); font-size: 12px; }
+  .sx-notecard h3 { font-size: 24px; margin: 10px 0 16px; }
+  .sx-lines { flex: 1; background: repeating-linear-gradient(transparent 0 23px, oklch(0.85 0.03 var(--h)) 23px 24px); min-height: 70px; }
+  .sx-notecard em { font-style: normal; font-weight: 600; margin-top: 14px; }
+  @media (max-width: 800px) { .sx-notes { grid-template-columns: 1fr; } .sx-notecard { min-height: 220px; } }
+
+  /* 18 — globe */
+  .sx-globe-stage { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 0.8fr); gap: 30px; align-items: center; }
+  .sx-globe { width: 100%; max-width: 520px; height: auto; aspect-ratio: 1; margin: 0 auto; cursor: grab; touch-action: pan-y; }
+  .sx-places { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; }
+  .sx-places li { display: grid; grid-template-columns: 14px 1fr; gap: 0 12px; align-items: baseline; }
+  .sx-places i { width: 12px; height: 12px; border-radius: 50%; background: oklch(0.62 0.17 30); }
+  .sx-places i.home { background: oklch(0.5 0.15 245); }
+  .sx-places b { font-size: 20px; } .sx-places span { grid-column: 2; color: var(--muted); font-size: 14px; }
+  .sx-places .todo { opacity: 0.6; } .sx-places .todo i { background: var(--line); }
+  @media (max-width: 800px) { .sx-globe-stage { grid-template-columns: 1fr; } }
+
+  /* 19 — board */
+  .sx-board { --u: 0; background: oklch(0.96 0.015 245); }
+  .sx-board-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 14px; align-items: end; margin-bottom: 22px; }
+  .sx-usage { min-width: 260px; } .sx-usage span { font-size: 15px; } .sx-used { font-size: 22px; }
+  .sx-usage-bar { height: 10px; border-radius: 10px; background: var(--bg); margin-top: 6px; overflow: hidden; }
+  .sx-usage-bar i { display: block; height: 100%; width: calc(var(--u) * 100%); background: oklch(0.5 0.16 245); transition: width 0.6s var(--ease); }
+  .sx-cols { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+  .sx-col { padding: 14px; border-radius: 16px; background: oklch(1 0 0 / 0.6); min-height: 280px; }
+  .sx-col h4 { margin: 0 0 12px; font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+  .sx-col-body { display: grid; gap: 8px; }
+  .sx-ticket { padding: 12px 14px; border-radius: 12px; background: var(--bg); box-shadow: 0 6px 14px -10px oklch(0 0 0 / 0.4); display: flex; justify-content: space-between; gap: 10px; font-size: 13.5px; animation: sx-pop 0.4s var(--ease); }
+  .sx-ticket small { color: var(--muted); white-space: nowrap; }
+  .sx-ticket.doing { outline: 2px solid oklch(0.75 0.12 75); }
+  .sx-ticket.done b { text-decoration: line-through; color: var(--muted); font-weight: 500; }
+  @media (max-width: 700px) { .sx-cols { grid-template-columns: 1fr; } .sx-col { min-height: 0; } .sx-col-body { min-height: 50px; } }
+
+  /* 20 — mad libs */
+  .sx-libs { background: oklch(0.94 0.04 95); }
+  .sx-sentence { font-size: clamp(26px, 3.4vw, 50px); line-height: 1.5; letter-spacing: -0.02em; font-weight: 500; margin: 0 0 30px; max-width: 1200px; }
+  .sx-blank { display: inline-block; position: relative; margin: 0 0.22em; }
+  .sx-blank select { appearance: none; -webkit-appearance: none; font: inherit; color: oklch(0.42 0.14 255); background: none; border: 0; border-bottom: 3px solid currentColor; padding: 0 0.8em 0 0.05em; cursor: pointer; transition: width 0.35s var(--ease); max-width: 100%; }
+  .sx-blank::after { content: '▾'; position: absolute; right: 0.08em; bottom: 0.3em; font-size: 0.45em; color: oklch(0.42 0.14 255); pointer-events: none; }
+  .sx-blank select:focus-visible { outline: 2px solid var(--ink); outline-offset: 4px; }
+  .sx-libs-foot { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+  .sx-libs-note { color: var(--muted); font-size: 14px; }
+</style>

@@ -13,7 +13,7 @@ import ServicesStack from './ServicesStack.astro';
 import { projects } from '../data/projects';
 // Selected work opens on the first six projects; "Load more" brings in the rest.
 const firstShown = 6;
-const marqueeItems = ['Shopify', 'Webflow', 'WordPress', 'Migrations', 'Technical SEO', 'Integrations'];
+const marqueeItems = ['Shopify', 'Webflow', 'WordPress', 'Performance', 'Technical SEO', 'Integrations'];
 
 ---
 <div class="wrap">
@@ -28,7 +28,7 @@ const marqueeItems = ['Shopify', 'Webflow', 'WordPress', 'Migrations', 'Technica
   <VideoReviews />
   <section id="services" class="services-section">
     <SectionTitle title="SERVICES" detail="From the first build to what comes next" dots />
-    <div class="intro-split section-intro" data-reveal><div class="intro-aside"><span class="tiny-heading">What I do</span><p>Build, migrate, improve<br />and support websites</p></div><p class="lead" data-lines>Your vision. <br />The right development.</p></div>
+    <div class="intro-split section-intro" data-reveal><div class="intro-aside"><span class="tiny-heading">What I do</span><p>Build, improve<br />and support websites</p></div><p class="lead" data-lines>Your vision. <br />The right development.</p></div>
     <ServicesStack />
   </section>
   <ExperienceSection />

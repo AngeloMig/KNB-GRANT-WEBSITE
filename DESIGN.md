@@ -29,3 +29,12 @@ Mobile refinement: service headings are26px, body copy13px and compact CTA label
 
 
 Responsive service refinements (13 November 2026): phone audit scores use16px numerals, vector CTA arrows share the site's canonical Arrow shape, and the migration sequence uses centered nodes/labels. Support-page heading follows the main page-title scale on desktop/tablet with a44–72px mobile range. Audit readiness persists through mobile scroll momentum/browser-bar height changes. At tablet widths761–1050px the support/audit widget follows the copy in a full-width row. Full-width homepage bands follow the content viewport to avoid scrollbar overhang.
+
+
+15 November2026 — Website performance & SEO replaces the migration service card. The owner selected before/after concepts4 and10: plain-language illustrative checks under each score, plus a muted-red→green surface and a clipped solid-color fill on the background word. The original centered/native-scroll controller remains; the migration diagram and its public service wording have been removed. Examples remain labelled and do not represent measured client outcomes.
+
+
+15 November2026 — The performance card includes five native expandable audit-scope rows. Its primary CTA reads “Get my free website audit” with an action prompt and personal-review reassurance; phone CTA48px, larger screens52px. Fine-pointer arrow hover is a short diagonal movement, disabled for reduced motion. Scores remain illustrative.
+
+
+15 November2026 — The owner selected audit-scope design3 (Underlined tabs), replacing the five-row accordion. Five topics share one explanation area, with a green underline and a brief220ms switch transition. Keyboard arrows/Home/End and reduced motion are supported; tabs wrap on narrow screens. All five explanations remain readable before JavaScript enhancement.

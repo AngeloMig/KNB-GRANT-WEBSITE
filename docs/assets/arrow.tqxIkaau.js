@@ -1,0 +1,1 @@
+var e=(e=!1)=>`<svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true" class="arrow-icon${e?` diagonal`:``}"><path d="M4 12h15M12 5l7 7-7 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;export{e as t};

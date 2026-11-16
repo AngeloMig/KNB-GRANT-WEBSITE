@@ -1,0 +1,29 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import Arrow from '../../components/Arrow.astro';
+import AuditScopeVariant from '../../components/AuditScopeVariant.astro';
+import { auditIncludedIdeas } from '../../data/audit-included-ideas';
+import { auditCardMarkup } from '../../scripts/service-card-media';
+import { withBase } from '../../utils/paths';
+import '../../styles/service-card-media.css';
+import '../../styles/audit-included-preview.css';
+export function getStaticPaths(){return import.meta.env.DEV?[{params:{preview:'ideas'}}]:[];}
+---
+<BaseLayout title="20 Audit Scope Designs | Grant Dev14" description="Local preview of twenty designs for what is included in Grant’s free website audit." noindex>
+  <div class="wrap inc-root">
+    <header class="inc-intro"><a class="text-link" href={withBase('/#services')}>Back to the homepage <Arrow diagonal/></a><h1 class="display">A clearer picture<br/>of your audit.</h1><p>Twenty ways to present what’s included. Same five areas, different layouts and interactions.</p></header>
+    <div class="inc-toolbar"><label>Choose a design<select id="inc-select">{auditIncludedIdeas.map((idea,i)=><option value={i}>{String(i+1).padStart(2,'0')} — {idea.name}</option>)}</select></label><div class="inc-page-controls"><button type="button" id="inc-prev" aria-label="Previous design"><span><Arrow/></span></button><span id="inc-count">01 / 20</span><button type="button" id="inc-next" aria-label="Next design"><Arrow/></button></div><button type="button" id="inc-all" aria-pressed="false">Show all 20</button><label class="inc-still"><input type="checkbox" id="inc-still"/>Reduce motion</label></div>
+    <details class="inc-directory"><summary>Browse the 20 designs<span class="inc-plus" aria-hidden="true">+</span></summary><nav aria-label="Audit scope designs">{auditIncludedIdeas.map((idea,i)=><a href={`#audit-scope-${i+1}`} data-inc-select={i}><span>{String(i+1).padStart(2,'0')}</span>{idea.name}</a>)}</nav></details>
+    <div class="inc-context"><p><strong>Design preview</strong> These are scope presentations, not completed audits. No findings, enquiries or choices are sent from this page.</p><details><summary>See the report this sits beneath<span class="inc-plus" aria-hidden="true">+</span></summary><div set:html={auditCardMarkup(false)}/></details></div>
+    <div class="inc-stage">{auditIncludedIdeas.map((idea,i)=><section class="inc-variant" data-inc-variant={i} id={`audit-scope-${i+1}`} aria-labelledby={`inc-title-${i}`} hidden={i!==0}>
+      <header class="inc-variant-info"><div><span class="inc-design-label">Design {String(i+1).padStart(2,'0')}{'recommended' in idea&&idea.recommended&&<small>Recommended</small>}</span><h2 id={`inc-title-${i}`}>{idea.name}</h2><p>{idea.why}</p></div><p class="inc-try"><strong>Try it</strong>{idea.hint}</p></header>
+      <div class="inc-canvas"><div class="inc-canvas-copy"><span class="inc-canvas-word" aria-hidden="true">AUDIT</span><h2>Website<br/>performance &amp; SEO</h2><p>Find out what’s holding your website back, with clear advice on what to improve first.</p><a href={withBase('/contact/#audit')}>Get my free website audit <Arrow diagonal/></a><small>Grant reviews your website and emails you the findings. Free, no obligation.</small></div><div class="inc-demo"><AuditScopeVariant variant={i+1}/></div></div>
+    </section>)}</div>
+    <p class="sr-only" id="inc-announcement" role="status" aria-live="polite"></p>
+    <noscript><style is:inline>.inc-variant[hidden]{display:block!important}.inc-root [role=tabpanel][hidden]{display:block!important}.inc-root [data-inc-full][hidden]{display:block!important}</style></noscript>
+  </div>
+</BaseLayout>
+<script>
+  import { mountAuditIncludedPreview } from '../../scripts/audit-included-preview';
+  document.querySelectorAll<HTMLElement>('.inc-root').forEach(mountAuditIncludedPreview);
+</script>

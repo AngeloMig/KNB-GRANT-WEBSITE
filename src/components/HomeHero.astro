@@ -561,9 +561,13 @@ import ProjectOrbit from './ProjectOrbit.astro';
     // megabyte, and a long burst of setup work) waits until the visitor first touches, scrolls or types,
     // so it never competes with the page opening. It then starts once any scrolling has paused, so the
     // setup never lands in the middle of a swipe.
+    // Measured: the setup is over a second of main-thread work on a mid-range phone, so it now waits
+    // until the orbit is at least half on screen (the visitor is looking at it, not scrolling past),
+    // scrolling has properly stopped (a short pause between swipes isn't enough), and the browser is idle.
     let orbitNear = false, modelWanted = false, settleTimer = 0;
-    const tryModels = () => { if (orbitNear && modelWanted) void loadMobileModels(); };
-    const settled = () => { clearTimeout(settleTimer); settleTimer = window.setTimeout(tryModels, 350); };
+    const idle = (fn: () => void) => ('requestIdleCallback' in window ? requestIdleCallback(fn, { timeout: 1500 }) : setTimeout(fn, 1));
+    const tryModels = () => { if (orbitNear && modelWanted) idle(() => { if (orbitNear) void loadMobileModels(); }); };
+    const settled = () => { clearTimeout(settleTimer); settleTimer = window.setTimeout(tryModels, 900); };
     const want = () => {
       if (modelWanted) { settled(); return; }
       modelWanted = true;
@@ -573,9 +577,9 @@ import ProjectOrbit from './ProjectOrbit.astro';
     ['pointerdown', 'touchstart', 'keydown'].forEach((t) => addEventListener(t, want, { passive: true }));
     addEventListener('scroll', () => { if (!modelLoading) want(); }, { passive: true });
     const modelObserver = new IntersectionObserver(([entry]) => {
-      orbitNear = entry.isIntersecting;
+      orbitNear = entry.isIntersecting && entry.intersectionRatio >= 0.5;
       if (orbitNear && modelWanted) settled();
-    }, { rootMargin: '100px' });
+    }, { threshold: [0, 0.5] });
     modelObserver.observe(ob);
     mobileModels.addEventListener('change', () => { if (mobileModels.matches) tryModels(); });
 
@@ -664,7 +668,9 @@ import ProjectOrbit from './ProjectOrbit.astro';
       checkQueued = false;
       if (!menuBtn || root.classList.contains('menu-open') || root.classList.contains('menu-closing')) return;
       const b = menuBtn.getBoundingClientRect();
-      root.classList.toggle('past-hero', heroBottom - scrollY < b.top + b.height / 2);
+      // On the button itself, not <html>: a class change on the root makes the browser re-check the
+      // styles of the whole page (about 70ms on a laptop), right in the middle of a scroll.
+      menuBtn.classList.toggle('past-hero', heroBottom - scrollY < b.top + b.height / 2);
     };
     requestAnimationFrame(() => { measureHero(); checkPast(); });
     addEventListener('resize', () => { measureHero(); checkPast(); });
@@ -809,11 +815,13 @@ import ProjectOrbit from './ProjectOrbit.astro';
   /* While the orbit is being dragged nothing on the page can be selected. */
   :global(html.is-orbit-dragging), :global(html.is-orbit-dragging *) { -webkit-user-select: none; user-select: none; cursor: grabbing; }
   /* The header shares the hero's wash (full width), and its menu button and "Let's talk" the deep shade. */
-  :global(html.hero-tinted .site-header) { background: transparent; isolation: isolate; }
-  :global(html.hero-tinted .site-header)::before { content: ''; position: absolute; z-index: -1; inset: 0; background: var(--hero-wash); transition: background-color 1.4s var(--ease); }
+  /* The header box stops at the 1720px content column, so on wider screens the wash reaches out past
+     it to the screen edges (otherwise the plain page shows either side of the header). */
+  :global(html.hero-tinted .site-header) { position: relative; background: transparent; isolation: isolate; }
+  :global(html.hero-tinted .site-header)::before { content: ''; position: absolute; z-index: -1; inset: 0 calc(-1 * max(0px, (100vw - 1720px) / 2)); background: var(--hero-wash); transition: background-color 1.4s var(--ease); pointer-events: none; }
   :global(html.hero-tinted .menu-toggle) { transition: background-color 1.4s var(--ease), transform 0.3s var(--ease); }
   /* Only over the hero: once it has scrolled past the button, the button eases back to black. */
-  :global(html.hero-tinted:not(.past-hero) .menu-toggle) { background-color: var(--hero-ink); }
+  :global(html.hero-tinted .menu-toggle:not(.past-hero)) { background-color: var(--hero-ink); }
   :global(html.hero-tinted .header-contact) { color: var(--hero-ink); transition: color 1.4s var(--ease); }
 
   /* Small laptops: the intro line gets its own row, with the buttons and the quote side by side below. */

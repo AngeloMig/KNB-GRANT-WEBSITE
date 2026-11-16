@@ -8,8 +8,12 @@ import '../styles/services-stack.css';
 <div class="service-stack">
   {services.map((service,index) => <article class:list={['sv-stack-card',{'sv-stack-detail':index>2}]} style={`--i:${index};--hue:${service.shots[0].hue}`}>
     <div class="sv-stack-inner">
-      <span class="sv-stack-word" aria-hidden="true">{service.short}</span>
-      <div class="sv-stack-text"><h3>{service.name}</h3><p class:list={{'service-copy-full':Boolean(service.mobileText)}}>{service.text}</p>{service.mobileText && <p class="service-copy-compact">{service.mobileText}</p>}<small>{service.tags}</small><a href={service.href}>{serviceAction(service)} <Arrow diagonal /></a></div>
+      <span class="sv-stack-word" data-word={service.short} aria-hidden="true">{service.short}</span>
+      <div class="sv-stack-text"><h3>{service.name}</h3><p class:list={{'service-copy-full':Boolean(service.mobileText)}}>{service.text}</p>{service.mobileText && <p class="service-copy-compact">{service.mobileText}</p>}<small>{service.tags}</small>
+        {service.short === 'Performance' && <p class="sv-audit-prompt">Not sure what’s holding your website back?</p>}
+        <a class:list={{'sv-audit-cta':service.short === 'Performance'}} href={service.href}>{serviceAction(service)} <Arrow diagonal /></a>
+        {service.short === 'Performance' && <p class="sv-audit-reassurance">Grant reviews your website and emails you the findings. <strong>Free, no obligation.</strong></p>}
+      </div>
       <div class="sv-stack-media" set:html={serviceMediaMarkup(service)} />
     </div>
   </article>)}

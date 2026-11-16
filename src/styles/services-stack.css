@@ -8,6 +8,15 @@
 .service-stack .sv-stack-text small { font-size:11px; color:var(--muted); }
 .service-stack .sv-stack-text>a { display:inline-flex; align-items:center; justify-content:space-between; gap:20px; min-height:48px; margin-top:4px; padding:12px 20px; border-radius:999px; background:var(--ink); color:var(--bg); font-size:14px; text-decoration:none; }
 .service-stack .sv-stack-text>a:hover { background:oklch(.3 0 0); }
+.service-stack .sv-stack-text .sv-audit-prompt { margin-top:12px; color:var(--ink); font-weight:500; }
+.service-stack .sv-stack-text .sv-audit-cta { min-height:52px; margin-top:0; padding-inline:24px; gap:28px; transition:background .2s; }
+.service-stack .sv-audit-cta>.arrow-icon { flex:none; transition:transform .28s cubic-bezier(.22,1,.36,1); }
+.service-stack .sv-audit-cta:focus-visible { outline:2px solid var(--ink); outline-offset:5px; }
+.service-stack .sv-stack-text .sv-audit-reassurance { max-width:38ch; font-size:12px; line-height:1.6; }
+.service-stack .sv-audit-reassurance strong { font-weight:500; color:var(--ink); }
+@media(hover:hover) and (pointer:fine) {
+  .service-stack .sv-audit-cta:hover>.arrow-icon { transform:translate(3px,-3px); }
+}
 .service-stack .sv-stack-word { position:absolute; left:24px; bottom:0; max-width:calc(100% - 48px); overflow:hidden; white-space:nowrap; color:var(--ink); opacity:.055; font-family:'Big Shoulders Display',Impact,sans-serif; font-size:clamp(90px,14vw,180px); font-weight:800; line-height:.82; text-transform:uppercase; pointer-events:none; z-index:0; }
 .service-stack .sc-project img { border-radius:14px; }
 .service-stack .sc-project figcaption { display:flex; flex-wrap:wrap; justify-content:space-between; gap:6px 16px; color:var(--ink); opacity:1; font-size:11px; line-height:1.5; }
@@ -23,9 +32,16 @@
   .service-stack .sv-stack-text p { font-size:13px; line-height:1.55; }
   .service-stack .sv-stack-text small { font-size:10px; }
   .service-stack .sv-stack-text>a { min-height:44px; max-width:100%; padding:10px 14px; gap:12px; font-size:12px; white-space:nowrap; }
+  .service-stack .sv-stack-text .sv-audit-cta { min-height:48px; padding:12px 18px; gap:16px; }
+  .service-stack .sv-stack-text .sv-audit-prompt { margin-top:4px; }
+  .service-stack .sv-stack-text .sv-audit-reassurance { font-size:11px; }
   .service-stack .sv-stack-media { order:-1; }
   .service-stack .sv-stack-detail .sv-stack-media { order:0; }
   .service-stack .sv-stack-word { left:16px; max-width:calc(100% - 32px); font-size:90px; }
+}
+@media(prefers-reduced-motion:reduce) {
+  .service-stack .sv-stack-text .sv-audit-cta,.service-stack .sv-audit-cta>.arrow-icon { transition:none; }
+  .service-stack .sv-audit-cta:hover>.arrow-icon { transform:none; }
 }
 @media(max-height:650px),(prefers-reduced-motion:reduce) {
   .service-stack .sv-stack-card { position:relative; top:auto; }
