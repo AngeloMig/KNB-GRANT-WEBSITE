@@ -47,8 +47,8 @@ export const videoReviews: VideoReview[] = [
   },
   {
     name: 'Hans',
-    // From the video ("I've managed him for some of those years"). Swap in his job title and company when we have them.
-    role: 'Grant’s former manager · 4 years working together',
+    // From the video ("I've managed him for some of those years"); he was at Rivyl, like Carlos.
+    role: 'Managed Grant at Rivyl · 4 years working together',
     src: '/videos/hans.mp4',
     poster: '/videos/hans.jpg',
     duration: '0:29',
