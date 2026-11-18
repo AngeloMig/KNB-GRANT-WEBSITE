@@ -37,7 +37,7 @@ export const showPlaceholdersLive = true;
 export const videoReviews: VideoReview[] = [
   {
     name: 'Carlos',
-    role: 'CEO & Owner, MDO Digital · formerly Project Manager at Rivyl',
+    role: 'CEO & Owner, MDO Digital · formerly Technical Director at Rivyl',
     src: '/videos/carlos-mdo-digital.mp4',
     poster: '/videos/carlos-mdo-digital.jpg',
     duration: '0:55',
@@ -45,8 +45,17 @@ export const videoReviews: VideoReview[] = [
     transcript: "Yeah, so I've been working with Grant for quite a while now. It's been, I believe, more than four years across a range of different industries, especially around Shopify development. He's just an absolute weapon when it comes to Shopify, especially with some of the more curly questions or situations. He's always got a solution ready to go. And if he doesn't, he always tests solutions and actually lets you know which one's going to be the best for the situation. So yeah, I've worked with him quite extensively at Rivyl, and I'm also employing him now with my own business, MDO. So yeah, Grant's just been a phenomenal worker. Yeah, absolute legend.",
     canvas: 'lilac',
   },
-  // Hans: waiting for his video. Replace this placeholder with his file when it arrives.
-  { name: 'Hans', role: 'Video coming soon', duration: '0:10', canvas: 'olive', placeholder: true },
+  {
+    name: 'Hans',
+    // From the video ("I've managed him for some of those years"). Swap in his job title and company when we have them.
+    role: 'Grant’s former manager · 4 years working together',
+    src: '/videos/hans.mp4',
+    poster: '/videos/hans.jpg',
+    duration: '0:29',
+    pullQuote: 'Any company would be fortunate to have him on their team.',
+    transcript: "Hi, my name is Hans, and I've worked with Grant for four years, and I've managed him for some of those years as well. Grant is one of the most talented and gifted Shopify developers that I've worked with, and whenever we had a big problem, Grant would always provide a solution for those problems. And any project and any company would be fortunate to have him on their team.",
+    canvas: 'olive',
+  },
 ];
 
 export const textReviews: TextReview[] = [
